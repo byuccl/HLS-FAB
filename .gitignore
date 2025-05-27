@@ -1,0 +1,14 @@
+.venv/
+*.cfg
+.Practice/
+results/solutions/
+results/solutions_backup/
+*__pycache__*
+*.vscode/
+.vscode/
+../.vscode/
+*_ide/
+*.txt
+*.pyc
+dataset/kernels/*
+*.egg-info
