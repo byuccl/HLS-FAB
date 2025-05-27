@@ -4,13 +4,14 @@
 ## Current Kernels in Dataset
 
 Kernels that we have:
-| # | Category                          | Kernel Count | Kernels |
-|---|-----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|---------|
-| 1 | Element-wise & Activation         | 4           | `absolute_value_int8`, `subtract_float64`, `zero_mean_norm_float64`, `relu_activation_float32`|
-| 2 | Spatial / Linear-Algebra          | 5           | `dot_product_float32`, `matrix_multiply_int32`, `affine_float32`, `conv2d_int16`, `scale_matrix_3d_int8` |
-| 3 | Reductions & Statistics / Loss    | 3           | `mean_float32`, `std_deviation_float32`, `mean_var_float64`,  |
-| 4 | Bitwise, Comparison, Casting & Data movement / Padding | 0           | |
-| 5 | Signal & Image Processing         | 2           | `fir_filter_float32`, `sobel_edge_detect_uint8` |
+
+| #  | Category                                          | Kernel Count | Kernels                                                                                             |
+|----|---------------------------------------------------|--------------|------------------------------------------------------------------------------------------------------|
+| 1  | Element-wise & Activation                         | 4            | `absolute_value_int8`, `subtract_float64`, `zero_mean_norm_float64`, `relu_activation_float32`       |
+| 2  | Spatial / Linear-Algebra                          | 5            | `dot_product_float32`, `matrix_multiply_int32`, `affine_float32`, `conv2d_int16`, `scale_matrix_3d_int8` |
+| 3  | Reductions & Statistics / Loss                    | 3            | `mean_float32`, `std_deviation_float32`, `mean_var_float64`                                          |
+| 4  | Bitwise, Comparison, Casting & Data Movement / Padding | 0            | —                                                                                                    |
+| 5  | Signal & Image Processing                         | 2            | `fir_filter_float32`, `sobel_edge_detect_uint8`                                                      |
 
 ## Categories for Kernels
 
