@@ -29,7 +29,7 @@ These are the kernels that deal with DSP or Image processing. Filtering, transfo
 
 ## generate_test.py
 We have a script called `generate_tests.py` within the `dataset` folder. This script uses the example kernels in the `examples` folder to make an LLM call. The response of the LLM is 2 files which are the `canonical_scalar.cc` and `generate.py` for each new kernel. 
-Prompt for Generate Tests
+### Prompt for Generate Tests
 ```python
 SYSTEM_PROMPT = """
 You are a part of a benchmarking system for HLS (High Level Synthesis).
@@ -49,7 +49,7 @@ desired_test_description = (
 ```
 
 ## Credit for kernels
-[Vitis_Libraries](https://github.com/Xilinx/Vitis_Libraries)
-[HiFlipVX](https://github.com/TUD-ADS/HiFlipVX)
-[Edge Detector HW/SW Co-design on FPGA](https://github.com/rezaAdinepour/Edge-Detector-Co-Design)
-[HLS-Project] (https://github.com/JohnBagshaw/HLS-Project)
+[Vitis_Libraries](https://github.com/Xilinx/Vitis_Libraries)<br>
+[HiFlipVX](https://github.com/TUD-ADS/HiFlipVX)<br>
+[Edge Detector HW/SW Co-design on FPGA](https://github.com/rezaAdinepour/Edge-Detector-Co-Design)<br>
+[HLS-Project](https://github.com/JohnBagshaw/HLS-Project)<br>
