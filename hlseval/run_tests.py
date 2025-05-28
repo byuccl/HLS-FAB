@@ -46,7 +46,7 @@ def test_kernel(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=0):
         # Initialize result validation variables    
         match_status = "unknown"    
         match_details = None    
-        mismatch_info = ""  
+        testbench_info = ""  
 
         print(f"\n--- Testing kernel: {name} ---")    
             
@@ -205,12 +205,14 @@ def test_kernel(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=0):
                                     "max_relative_diff": float(rel_diff),  
                                     "mean_relative_diff": float(rel_diff)  
                                 }  
+                                testbench_info = f"""
+Results mismatch: Scalar values differ
+\tExpected: {expected_scalar}, Actual: {actual_scalar}
+\tAbsolute difference: {abs_diff}
+\tRelative difference: {rel_diff}
+\tTolerances used: rtol={rtol}, atol={atol}
+                                """
                                 
-                                print(f"Results mismatch: Scalar values differ")  
-                                print(f"   Expected: {expected_scalar}, Actual: {actual_scalar}")  
-                                print(f"   Absolute difference: {abs_diff}")  
-                                print(f"   Relative difference: {rel_diff}")  
-                                print(f"   Tolerances used: rtol={rtol}, atol={atol}")  
                         else:  
                             # Array comparison with tolerance for floating point  
                             if is_float_type:  
@@ -258,11 +260,11 @@ def test_kernel(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=0):
                                     
                                     # Output sample mismatches  
                                     if mismatch_count > 0:  
-                                        mismatch_info += "\nSample mismatches (expected vs. actual):\n"  
+                                        testbench_info += "\nSample mismatches (expected vs. actual):\n"  
                                         mismatch_indices = np.where(~matches)  
                                         for i in range(min(5, len(mismatch_indices[0]))):  
                                             idx = tuple(coord[i] for coord in mismatch_indices)  
-                                            mismatch_info += f"  At position {idx}: {expected_output[idx]} vs {actual_output[idx]}\n"  
+                                            testbench_info += f"  At position {idx}: {expected_output[idx]} vs {actual_output[idx]}\n"  
                             else:  
                                 # For non-floating point types, use exact equality  
                                 if np.array_equal(expected_output, actual_output):  
@@ -285,7 +287,7 @@ def test_kernel(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=0):
                 "status": "success",    
                 "match_status": match_status,    
                 "match_details": match_details, 
-                "mismatch_info": mismatch_info,
+                "testbench_info": testbench_info,
                 "output_matrix_index": output_matrix_indices,    
                 "stdout": stdout    
             }    
@@ -307,8 +309,8 @@ def test_kernel(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=0):
                 print(f"Error: {stderr}")    
             results[name] = {    
                 "status": "failure",    
-                "match_status": match_status,    
-                "mismatch_info": mismatch_info,    
+                "match_status": "C++ implementation failed to compile. Unable to compare results to expected ouptut.",    
+                "testbench_info": stderr if stderr else "",    
                 "return_code": return_code,    
                 "stderr": stderr if stderr else "",    
                 "stdout": stdout if stdout else ""    
