@@ -26,3 +26,30 @@ This category of kernel are all operations that collapse dimensions or compute a
 These kernels are low level operations logical or bitwise. They deal with popcount, equality/greater/less predicates, type-conversions, padding and shuffles.
 ### Signal & Image Processing
 These are the kernels that deal with DSP or Image processing. Filtering, transformations, blurs, edge detection, etc. 
+
+## generate_test.py
+We have a script called `generate_tests.py` within the `dataset` folder. This script uses the example kernels in the `examples` folder to make an LLM call. The response of the LLM is 2 files which are the `canonical_scalar.cc` and `generate.py` for each new kernel. 
+Prompt for Generate Tests
+```python
+SYSTEM_PROMPT = """
+You are a part of a benchmarking system for HLS (High Level Synthesis).
+You are very skilled both in writing python and C++ code.
+Your job is to create the base code for tests within the benchmark.
+Each test should have a C++ implementation that hasn't been accellerated at all. This will serve as a functional example and provide a method to test HLS solutions.
+While this C++ implementation will not be synthesized for HLS, you should avoid using techniques and libraries that would fail to synthesize.
+Additionally, each test within the benchmark will have a Python file with a description of the task and functions to facilitate testing.
+Both these files should follow the patterns set out by the provided examples.
+Produce only the code requested, no main, no additional examples or code, and no wrappers of any kind.
+"""
+
+desired_test = "new_kernel_name"
+desired_test_description = (
+    "Description for what the new kernel does."
+)
+```
+
+## Credit for kernels
+[Vitis_Libraries](https://github.com/Xilinx/Vitis_Libraries)
+[HiFlipVX](https://github.com/TUD-ADS/HiFlipVX)
+[Edge Detector HW/SW Co-design on FPGA](https://github.com/rezaAdinepour/Edge-Detector-Co-Design)
+[HLS-Project] (https://github.com/JohnBagshaw/HLS-Project)
