@@ -30,13 +30,10 @@ Run the `hls_completions.py` in the `hlseval` main directory.
   - Example: ```python hls_completions.py amd --mode optimization --goals "Reduce BRAM Usage"```
   - Don't forget to activate Vitis `source tools/Xilinx/Vitis/2024.2/settings64.sh`
   - The output will be in a `solutions` folder in the `results` directory.
-### 6. Run the tests: 
-The directory `results/testing` contains the script `run_tests.py` which will run all the tests.
-### 7. Analyze results: 
+### 6. Analyze results: 
 Look at the results from the scripts.
-  - The first place to look is the `results/testing` folder. The file `test_results.json` contains all the kernels expected and actual outputs and whether or not the programs compiled and were successful matches with the expected. 
-  - The second place to look for results is in the `solutions` directory. There are subfolders for each model and each model has different attempts. Each attempt number contains the kernels results with a file called `kernel_name_data.json`. This file contains the errors, warnings, and performance data. Each attempt will show if the model used the feedback and followed the guidelines you provided it. 
-### 8. Makefile Completions: 
+  - The dirctory which holds all the results is in the `results/solutions` directory. There are subfolders for each model and each model has different attempts. Each attempt number contains the kernels results with a file called `kernel_name_data.json`. This file contains the errors, warnings, and performance data. Each attempt will show if the model used the feedback and followed the guidelines you provided it. Furthermore, the file `test_results.json` contains all the kernels expected and actual outputs and whether or not the programs compiled and were successful matches with the expected. 
+### 7. Makefile Completions: 
 There is a make file rule for replacing the individual steps 3-6.
   - `make` from within the `hlseval` directory will run steps 3-6.
   - `make clean` will clean the unnecessary files for analysis.

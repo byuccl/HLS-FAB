@@ -55,7 +55,6 @@ def run_vitis_tools(filepath, kernel_name):
         package.output.syn=false
         syn.top={kernel_name}
         syn.file={filepath}{kernel_name}.cpp
-        auto_unroll = none
         """
         )
     try:
