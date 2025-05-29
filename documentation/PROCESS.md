@@ -37,3 +37,5 @@ Look at the results from the scripts.
 There is a make file rule for replacing the individual steps 3-6.
   - `make` from within the `hlseval` directory will run steps 3-6.
   - `make clean` will clean the unnecessary files for analysis.
+
+  ![Diagram of the system](./ProcessHLSEVAL.png)
