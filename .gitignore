@@ -1,6 +1,6 @@
 .venv/
 *.cfg
-.Practice/
+.practice/
 results/solutions/
 results/solutions_backup/
 *__pycache__*
