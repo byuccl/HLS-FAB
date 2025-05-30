@@ -55,6 +55,10 @@ def run_vitis_tools(filepath, kernel_name):
         package.output.syn=false
         syn.top={kernel_name}
         syn.file={filepath}{kernel_name}.cpp
+        # tb.file={filepath}{kernel_name}_tb.cpp
+        # csim.O=true
+        # csim.code_analyzer=0
+        # csim.setup=true
         """
         )
     try:
