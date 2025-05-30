@@ -16,9 +16,14 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "iir_filter_float32"
+desired_test = "reduce_avg_uint8"
 desired_test_description = (
-    "Applies an infinite impulse response (IIR) filter to a 32-bit floating point signal."
+    """
+The Reduce function reduces the matrix to a vector by treating rows/cols as set of 1-D vectors and performing specified operation on vectors until a single row/col is obtained.
+For the Reduce Average function, the operation is to be done in the following way:
+The output is the mean vector of all of the matrix’s rows/columns.
+The width and height of the original matrix are both 128
+    """
 )
 
 # Open example files
