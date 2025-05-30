@@ -168,6 +168,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         except FileExistsError:
             print(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
     try:
+        print("Starting Vitis Run")
         vitis_output = run_vitis_tools(f"{solutions_path}/", kernel_name)
         vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
     except VitisTimeoutError:#FIXME: What to do when there is a timeout error?

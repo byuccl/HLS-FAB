@@ -16,9 +16,9 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "iir_filter_float32"
+desired_test = "iir_filter_dirII_float32"
 desired_test_description = (
-    "Applies an infinite impulse response (IIR) filter to a 32-bit floating point signal."
+    "Applies an infinite impulse response (IIR) filter Direct Form II Transposed to a 32-bit floating point signal."
 )
 
 # Open example files
