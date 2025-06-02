@@ -175,11 +175,11 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         print("Starting Vitis Run")
         vitis_output = run_vitis_tools(f"{solutions_path}/", kernel_name)
         vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
-    except VitisTimeoutError:#FIXME: What to do when there is a timeout error?
+    except VitisTimeoutError:
         print("WARNING: Vitis timed out")
         vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
         vitis_feedback['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
-        vitis_feedback['goals'].extend(["Do not unroll completely or partition complete arrays."])
+        vitis_feedback['goals'].extend(["Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
         return 1, vitis_feedback
 
     result_path = f"{model}/{kernel_name}/attempts_{attempt+1}"

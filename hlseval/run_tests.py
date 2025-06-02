@@ -266,22 +266,58 @@ Results mismatch: Scalar values differ
                                             idx = tuple(coord[i] for coord in mismatch_indices)  
                                             testbench_info += f"  At position {idx}: {expected_output[idx]} vs {actual_output[idx]}\n"  
                             else:  
-                                # For non-floating point types, use exact equality  
-                                if np.array_equal(expected_output, actual_output):  
-                                    match_status = "match"  
-                                    print("C++ implementation result matches expected output")  
-                                else:  
-                                    # The original mismatch calculation code  
-                                    match_status = "mismatch"  
-                                    mismatch_count = np.sum(expected_output != actual_output)  
-                                    total_elements = expected_output.size  
-                                    mismatch_percentage = (mismatch_count / total_elements) * 100  
-            else:    
-                if expected_result is None:    
-                    print("No expected result available for comparison")    
-                if cpp_result_matrix is None:    
-                    print("No C++ result matrix could be extracted from output")    
-                
+                                # For non-floating point types, use exact equality      
+                                if np.array_equal(expected_output, actual_output):      
+                                    match_status = "match"      
+                                    print("C++ implementation result matches expected output")      
+                                else:    
+                                    match_status = "mismatch"      
+            
+                                    # Calculate how many elements don't match      
+                                    mismatch_mask = expected_output != actual_output  
+                                    mismatch_count = np.sum(mismatch_mask)      
+                                    total_elements = expected_output.size      
+                                    mismatch_percentage = (mismatch_count / total_elements) * 100      
+                                    
+                                    # Calculate detailed statistics on differences for integers  
+                                    abs_diff = np.abs(expected_output.astype(np.int64) - actual_output.astype(np.int64))  
+                                    max_abs_diff = np.max(abs_diff)  
+                                    mean_abs_diff = np.mean(abs_diff)  
+                                    
+                                    # Handle division by zero in relative difference calculation  
+                                    with np.errstate(divide='ignore', invalid='ignore'):  
+                                        rel_diff = abs_diff / (np.abs(expected_output.astype(np.float64)) + 1e-10)  
+                                        rel_diff = np.where(np.isfinite(rel_diff), rel_diff, 0)  
+                                    max_rel_diff = np.max(rel_diff)  
+                                    mean_rel_diff = np.mean(rel_diff)  
+                                    
+                                    match_details = {  
+                                        "mismatch_count": int(mismatch_count),  
+                                        "total_elements": int(total_elements),  
+                                        "mismatch_percentage": float(mismatch_percentage),  
+                                        "max_absolute_diff": int(max_abs_diff),  
+                                        "mean_absolute_diff": float(mean_abs_diff),  
+                                        "max_relative_diff": float(max_rel_diff),  
+                                        "mean_relative_diff": float(mean_rel_diff)  
+                                    }  
+                                    
+                                    print(f"Results mismatch: {mismatch_count}/{total_elements} elements ({mismatch_percentage:.2f}%)")  
+                                    print(f"   Max absolute difference: {max_abs_diff}")  
+                                    print(f"   Mean absolute difference: {mean_abs_diff}")  
+                                    
+                                    # Output sample mismatches  
+                                    if mismatch_count > 0:  
+                                        testbench_info = "\nSample mismatches (expected vs. actual):\n"  
+                                        mismatch_indices = np.where(mismatch_mask)  
+                                        for i in range(min(5, len(mismatch_indices[0]))):  
+                                            idx = tuple(coord[i] for coord in mismatch_indices)  
+                                            testbench_info += f"  At position {idx}: {expected_output[idx]} vs {actual_output[idx]}\n"  
+                                        else:    
+                                            if expected_result is None:    
+                                                print("No expected result available for comparison")    
+                                            if cpp_result_matrix is None:    
+                                                print("No C++ result matrix could be extracted from output")    
+                                        
             # Store results    
             results[name] = {    
                 "status": "success",    
