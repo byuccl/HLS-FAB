@@ -837,8 +837,8 @@ int main() {{
         temp_cpp = os.path.join(temp_dir, f"{kernel_name}_test.cpp")  
         with open(temp_cpp, 'w', encoding='utf-8') as f:  
             f.write(test_code)  
-        with open(f"{project_dir}/{kernel_testbench}", 'w', encoding='utf-8') as f:  
-            f.write(test_code)  
+        # with open(f"{project_dir}/{kernel_testbench}", 'w', encoding='utf-8') as f:  
+        #     f.write(test_code)  
 
         # Compile the C++ file  
         exec_path = os.path.join(temp_dir, kernel_name)  

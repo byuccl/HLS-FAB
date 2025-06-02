@@ -16,9 +16,9 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "iir_filter_dirII_float32"
+desired_test = "matrix_vector_multiply_int32"
 desired_test_description = (
-    "Applies an infinite impulse response (IIR) filter Direct Form II Transposed to a 32-bit floating point signal."
+    "Multiplies a 32-bit int matrix by a 32-bit int vector, resulting in a 32-bit int vector."
 )
 
 # Open example files
@@ -160,15 +160,15 @@ pathlib.Path(f"dataset/generated_tests/{desired_test}").mkdir(parents=True, exis
 
 
 # Write all json data to a file
-try:
-    with open(
-        f"dataset/generated_tests/{desired_test}/canonical_scalar.json", "x"
-    ) as file:
-        json.dump(response, file, indent=4)
-except FileExistsError:
-    print(
-        f"The file dataset/generated_tests/{desired_test}/canonical_scalar.json already exists. Skipping file."
-    )
+# try:
+#     with open(
+#         f"dataset/generated_tests/{desired_test}/canonical_scalar.json", "x"
+#     ) as file:
+#         json.dump(response, file, indent=4)
+# except FileExistsError:
+#     print(
+#         f"The file dataset/generated_tests/{desired_test}/canonical_scalar.json already exists. Skipping file."
+#     )
 
 # Write just the code to a file
 try:
@@ -202,15 +202,15 @@ result = {
     },
 }
 # Write all json data to a file
-try:
-    with open(
-        f"dataset/generated_tests/{desired_test}/generate.json", "x"
-    ) as file:
-        json.dump(response, file, indent=4)
-except FileExistsError:
-    print(
-        f"The file dataset/generated_tests/{desired_test}/generate.json already exists. Skipping file."
-    )
+# try:
+#     with open(
+#         f"dataset/generated_tests/{desired_test}/generate.json", "x"
+#     ) as file:
+#         json.dump(response, file, indent=4)
+# except FileExistsError:
+#     print(
+#         f"The file dataset/generated_tests/{desired_test}/generate.json already exists. Skipping file."
+#     )
 
 # Write just the code to a file
 try:
