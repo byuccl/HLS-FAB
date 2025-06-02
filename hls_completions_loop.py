@@ -69,7 +69,7 @@ def run_vitis_tools(filepath, kernel_name):
                 "--work_dir",
                 filepath,
             ], 
-            timeout=70, # If it is running for 70 seconds then throw an exception and continue with other kernels
+            timeout=200,
             capture_output=True, 
             text=True
         )
@@ -84,11 +84,12 @@ def feedback_prompt(prev_code, feedback):
 
         {prev_code}
 
-        Here is some feedback from the synthesis report:
+        Here is some feedback from the synthesis report and the testbench:
 
         {json.dumps(feedback, indent=2)}
 
         Please modify the code using the goals from the feedback as a guideline.
+        Prioritize fixing errors from either the testbench or the synthesis above all other goals.
         """
 
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
@@ -169,9 +170,11 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
     try:
         vitis_output = run_vitis_tools(f"{solutions_path}/", kernel_name)
         vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
-    except VitisTimeoutError:#FIXME: What to do when there is a timeout error?
-        print("Vitis threw an error:", VitisTimeoutError)
+    except VitisTimeoutError:
+        print("WARNING: Vitis timed out")
         vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+        vitis_feedback['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
+        vitis_feedback['goals'].extend(["Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
         return 1, vitis_feedback
 
     result_path = f"{model}/{kernel_name}/attempts_{attempt+1}"
@@ -182,12 +185,12 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
     print(f"\nResults saved to {testbench_output_path}")  
     testbench_status = testbench_output[kernel_name]["status"]
     testbench_match_status = testbench_output[kernel_name]["match_status"]
-    testbench_mismatch_info = testbench_output[kernel_name]["mismatch_info"]
+    testbench_info = testbench_output[kernel_name]["testbench_info"]
     testbench_feedback = f"""
     Testbench feedback:\n
     C++ Compilation: {testbench_status}
     Match status: {testbench_match_status}
-    Mismatch info: {testbench_mismatch_info}
+    Testbench info: {testbench_info}
     """
     feedback = f"""
     Vitis feedback:\n
@@ -200,6 +203,8 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
 def process_kernel(model, test, workflow, passes=3, mode="optimization", goals=None):
     kernel_name = test["kernel_name"]
     prev_ret_code = -1
+    testbench_status = "failure"
+    testbench_match_status = ""
     feedback = None
     timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     print(f"\nStarting Kernel {kernel_name} at {timestamp}")
@@ -226,7 +231,7 @@ def process_kernel(model, test, workflow, passes=3, mode="optimization", goals=N
         prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, mode, feedback, goals=current_goals)
         print(feedback)
 
-        if prev_ret_code == 0:
+        if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
             print(f"{kernel_name} compiled successfully on attempt {attempt+1}.")
             if mode == "correction":
                 return
@@ -267,7 +272,7 @@ if __name__ == "__main__":
     # Add any models you want completions run for to this list
     # models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
     models = ["gpt-4o"]
-    passes = 3
+    passes = 6
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
     

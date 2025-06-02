@@ -16,9 +16,14 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "fir_filter_float32"
+desired_test = "reduce_avg_uint8"
 desired_test_description = (
-    "Applies a finite impulse response (FIR) filter to a 32-bit floating-point signal."
+    """
+The Reduce function reduces the matrix to a vector by treating rows/cols as set of 1-D vectors and performing specified operation on vectors until a single row/col is obtained.
+For the Reduce Average function, the operation is to be done in the following way:
+The output is the mean vector of all of the matrix’s rows/columns.
+The width and height of the original matrix are both 128
+    """
 )
 
 # Open example files
@@ -115,6 +120,7 @@ The following is an example of the matching 'generate.py' file for the same 'zer
 canonical_line = f"""
 Your task is to create a 'canonical_scalar.cc function for the following test:\n{desired_test}: {desired_test_description}'\n\n
 Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
+If there are constants then include them as #define preprocessors. 
 """
 
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
@@ -189,6 +195,7 @@ Your task is to create a 'generate.py script for the following test:\n{desired_t
 The following is the 'canonical_scalar.cc' file for this test: \n```\n{current_scalar}\n```\n\n
 Use the same naming convention for variables using input_ for inputs and output_ for outputs. 
 Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
+If there are constants then include them at the top of the file as variables. 
 """
 response = coder(prompt + generate_line)
 

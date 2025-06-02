@@ -2,7 +2,6 @@
 all: 
 	make dataset 
 	make run_completions_loop
-	make test 
 generate_tests:
 	@echo "Generating tests..."
 	python3 dataset/generate_tests.py $(WORKFLOW)
