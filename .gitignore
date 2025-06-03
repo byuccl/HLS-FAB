@@ -15,3 +15,4 @@ dataset/kernels/*
 dataset/hlseval.jsonl
 kernel.json
 temp.cc
+results/saved_results/

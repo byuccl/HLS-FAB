@@ -16,9 +16,9 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "matrix_vector_multiply_int32"
+desired_test = "dot_product_float64"
 desired_test_description = (
-    "Multiplies a 32-bit int matrix by a 32-bit int vector, resulting in a 32-bit int vector."
+    "Calculates the dot product of two 64-bit floating-point vectors."
 )
 
 # Open example files
