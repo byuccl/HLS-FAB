@@ -29,7 +29,7 @@
 	HLS Stand for High Level Synthesis. It is a way to create higher level code for HDL and digital designs. Usually the code is C that is then optimized using #pragma directives for HLS specifcally. **This is the main topic you need to familiarize yourself with to begin.** We are evaluating the effecitveness and then trying to improve the models ability to write this HLS C code. 
 - [Vitis: HLS • BYU Computing Bootcamp](https://byu-cpe.github.io/ComputingBootCamp/tutorials/vitis_hls/)
 - [High-level synthesis - Wikipedia](https://en.wikipedia.org/wiki/High-level_synthesis)
-- [Vitis HLS Guide](https://docs.amd.com/r/en-US/ug1399-vitis-hls/Introduction)
+- [Vitis HLS Guide](https://docs.amd.com/r/2023.1-English/ug1399-vitis-hls)
 - [ECEn 625 Class Labs](https://byu-cpe.github.io/ecen625/labs/lab-vitis-hls/) *Start with Lab 4 and then do Lab 5.*
 
 ### What is HLSEval?

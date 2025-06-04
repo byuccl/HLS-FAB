@@ -16,26 +16,9 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "accumulate_opencv"
+desired_test = "dot_product_float64"
 desired_test_description = (
-    """
-The accumulate function adds an image (src1) to the accumulator image (src2), and generates the accumulated result image (dst).
-
-dst[i] = |src1[i] + src2[i]|
-
-dst[i] is the i-th element of the output array.
-src1[i] is the i-th element of the first input array.
-src2[i] is the i-th element of the second input array.
-
-
-The input image will be 128x128 pixels
-Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
-Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer
-The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
-Implementation details should match the OpenCV Reduce implementation
-
-void accumulate_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint8_t*)dst_hls.data);
-    """
+    "Calculates the dot product of two 64-bit floating-point vectors."
 )
 
 
@@ -178,15 +161,15 @@ pathlib.Path(f"dataset/generated_tests/{desired_test}").mkdir(parents=True, exis
 
 
 # Write all json data to a file
-try:
-    with open(
-        f"dataset/generated_tests/{desired_test}/canonical_scalar.json", "x"
-    ) as file:
-        json.dump(response, file, indent=4)
-except FileExistsError:
-    print(
-        f"The file dataset/generated_tests/{desired_test}/canonical_scalar.json already exists. Skipping file."
-    )
+# try:
+#     with open(
+#         f"dataset/generated_tests/{desired_test}/canonical_scalar.json", "x"
+#     ) as file:
+#         json.dump(response, file, indent=4)
+# except FileExistsError:
+#     print(
+#         f"The file dataset/generated_tests/{desired_test}/canonical_scalar.json already exists. Skipping file."
+#     )
 
 # Write just the code to a file
 try:
@@ -220,15 +203,15 @@ result = {
     },
 }
 # Write all json data to a file
-try:
-    with open(
-        f"dataset/generated_tests/{desired_test}/generate.json", "x"
-    ) as file:
-        json.dump(response, file, indent=4)
-except FileExistsError:
-    print(
-        f"The file dataset/generated_tests/{desired_test}/generate.json already exists. Skipping file."
-    )
+# try:
+#     with open(
+#         f"dataset/generated_tests/{desired_test}/generate.json", "x"
+#     ) as file:
+#         json.dump(response, file, indent=4)
+# except FileExistsError:
+#     print(
+#         f"The file dataset/generated_tests/{desired_test}/generate.json already exists. Skipping file."
+#     )
 
 # Write just the code to a file
 try:

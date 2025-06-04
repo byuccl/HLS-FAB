@@ -782,7 +782,7 @@ def run_cpp_with_inputs(kernel_name, inputs, input_types=None, model_dir="gpt-4o
         initializations_str = "\n".join(array_initializations)  
         cleanup_str = "\n".join(cleanup_code)  
         kernel_call = f"    {kernel_name}({', '.join(kernel_args)});"  
-          
+        
         # Create the test C++ code  
         test_code = f"""      
 #include <iostream>      
@@ -793,7 +793,7 @@ def run_cpp_with_inputs(kernel_name, inputs, input_types=None, model_dir="gpt-4o
 #include <cstdint>  // Required for int8_t, uint8_t, etc.      
       
 // Include the kernel code      
-{kernel_code}      
+{kernel_code}
       
 // Main function to test the kernel      
 int main() {{      
@@ -831,13 +831,15 @@ int main() {{
 }}      
 """  
 
-        # Write the test code to a temporary file  
+        # Write the test code to a temporary file 
+        project_dir = f"./results/solutions/{model_dir}"
+        kernel_testbench = f"{kernel_name}_tb.cpp"
         temp_cpp = os.path.join(temp_dir, f"{kernel_name}_test.cpp")  
         with open(temp_cpp, 'w', encoding='utf-8') as f:  
             f.write(test_code)  
-        with open("./temp.cc", 'w', encoding='utf-8') as f:  
-            f.write(test_code)  
-              
+        # with open(f"{project_dir}/{kernel_testbench}", 'w', encoding='utf-8') as f:  
+        #     f.write(test_code)  
+
         # Compile the C++ file  
         exec_path = os.path.join(temp_dir, kernel_name)  
         vitis_path = os.getenv('XILINX_VITIS')
@@ -847,7 +849,6 @@ int main() {{
         else:
             compile_cmd = ["g++", "-std=c++11", temp_cpp, "-o", exec_path]  
 
-              
         try:  
             compile_result = subprocess.run(  
                 compile_cmd,   

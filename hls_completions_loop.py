@@ -55,6 +55,10 @@ def run_vitis_tools(filepath, kernel_name):
         package.output.syn=false
         syn.top={kernel_name}
         syn.file={filepath}{kernel_name}.cpp
+        # tb.file={filepath}{kernel_name}_tb.cpp
+        # csim.O=true
+        # csim.code_analyzer=0
+        # csim.setup=true
         """
         )
     try:
@@ -168,13 +172,16 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         except FileExistsError:
             print(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
     try:
+        print("Starting Vitis Run")
         vitis_output = run_vitis_tools(f"{solutions_path}/", kernel_name)
         vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
     except VitisTimeoutError:
         print("WARNING: Vitis timed out")
         vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
         vitis_feedback['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
-        vitis_feedback['goals'].extend(["Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
+        vitis_feedback['goals'].extend([
+            "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
+            "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
         return 1, vitis_feedback
 
     result_path = f"{model}/{kernel_name}/attempts_{attempt+1}"
