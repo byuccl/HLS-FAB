@@ -16,10 +16,21 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "dot_product_float64"
+desired_test = "auto_exposure_correction_opencv"
 desired_test_description = (
-    "Calculates the dot product of two 64-bit floating-point vectors."
+    """
+Auto exposure correction improves contrast and brightness of the image and also corrects the exposure of the input frame. The algorithm uses luminence histogram equalization to improve overall exposure and contrast of the image. Luminence (V) is extracted after converting input image to HSV color space. Once the algorthm is applied the image is converted back to RGB color space.
+
+The input image will be 128x128 pixels
+Each pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV implementation unless otherwise specified
+
+void auto_exposure_correction_opencv((uint8_t*)in_img.data, (uint8_t*)out_img_hls.data);
+    """
 )
+
 
 
 # Open example files
