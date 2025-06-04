@@ -8,6 +8,7 @@ import numpy as np
 import json
 
 C_TO_NUMPY_DTYPE = {
+    "int": "int",
     "int8_t": "int8",
     "uint8_t": "uint8",
     "int16_t": "int16",

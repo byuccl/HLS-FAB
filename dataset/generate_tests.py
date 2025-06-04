@@ -16,15 +16,28 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "reduce_avg_uint8"
+desired_test = "accumulate_opencv"
 desired_test_description = (
     """
-The Reduce function reduces the matrix to a vector by treating rows/cols as set of 1-D vectors and performing specified operation on vectors until a single row/col is obtained.
-For the Reduce Average function, the operation is to be done in the following way:
-The output is the mean vector of all of the matrix’s rows/columns.
-The width and height of the original matrix are both 128
+The accumulate function adds an image (src1) to the accumulator image (src2), and generates the accumulated result image (dst).
+
+dst[i] = |src1[i] + src2[i]|
+
+dst[i] is the i-th element of the output array.
+src1[i] is the i-th element of the first input array.
+src2[i] is the i-th element of the second input array.
+
+
+The input image will be 128x128 pixels
+Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV Reduce implementation
+
+void accumulate_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint8_t*)dst_hls.data);
     """
 )
+
 
 # Open example files
 with open("dataset/examples/absolute_value_int8/canonical_scalar.cc", "r") as f:
