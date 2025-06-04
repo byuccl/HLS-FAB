@@ -335,9 +335,9 @@ def generate_types(inputs):
             elif "output" in var_name:  
                 types[i]["in_out"] = "out"  
             else:  
-                # Default or error handling  
-                types[i]["in_out"] = "unknown"  
+                types[i]["in_out"] = "in"  # mark as an input if not otherwise specified
         else:  
-            types[i]["in_out"] = "unknown"  
+            types[i]["in_out"] = "in"  
+            # If not an array, must be an input
               
     return types  

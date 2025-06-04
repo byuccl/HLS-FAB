@@ -21,6 +21,7 @@ desired_test_description = (
     "Calculates the dot product of two 64-bit floating-point vectors."
 )
 
+
 # Open example files
 with open("dataset/examples/absolute_value_int8/canonical_scalar.cc", "r") as f:
     abs_scalar = f.read()
