@@ -17,3 +17,4 @@ kernel.json
 temp.cc
 **/generate.json
 **/canonical_scalar.json
+/results/saved_results
