@@ -1,3 +1,11 @@
+desired_test = "matrix_vector_multiply_float32"
+desired_test_description = (
+    """
+    Multiplies a 32-bit floating-point matrix by a 32-bit floating-point vector, resulting in a 32-bit floating-point vector.
+    """
+)
+
+
 desired_test = "accumulate_opencv"
 desired_test_description = (
     """
