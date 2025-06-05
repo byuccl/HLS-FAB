@@ -46,10 +46,6 @@ class PromptConstructor:
         self.examples = examples
         self.buffers = [p for p in func['parameters'] if self._is_buffer(p)]
         self.rtps = [p for p in func['parameters'] if not p['pointer']]
-        self.parameters = [p for p in func['parameters']]
-        for p in func['parameters']:
-            print(p['type'], p['name'], p['pointer'])
-        # print(self.parameters)
         self.call = self._construct_call()
 
         # --- Extract canonical solution and signature---
@@ -99,8 +95,6 @@ class PromptConstructor:
                         input_arrays.append(arr)
                 elif in_out == "out":
                     # It's a buffer output
-                    for j, buf in enumerate(self.buffers):
-                        if 
                     output_indices.append(i)  # Save the position; will generate later
                 elif in_out == "inout": # Handle the case when it is both an input and an output
                     output_indices.append(i)  # Save the position; will generate later
@@ -130,14 +124,22 @@ class PromptConstructor:
                 
             #Using the output indices, we can generate the outputs
             # print(input_arrays)
-            outputs = behavioral(*input_arrays, *rtp_values) if rtp_values else behavioral(*input_arrays)
-            print(outputs)
+            args = [*input_arrays]
+
+            if rtp_values:
+                args.extend(rtp_values)
+
+            if in_out_arrays:
+                args.extend(in_out_arrays)
+
+            outputs = behavioral(*args)
+            # print(outputs)
             if not isinstance(outputs, tuple):
                 outputs = (outputs,)
                 
             for i, arr in enumerate(outputs):
                 # Offset from input buffers
-                buf_index = #FIXME: Figure out how to get the correct index if it is just an output or a inout
+                buf_index = (len(input_arrays) + i) if (len(in_out_arrays) == 0) else (len(self.buffers) - len(in_out_arrays) + i) # The outputs are always last in the buffers so the indexes start after inputs. They overlap if they are inout so we need to take the length of inout_arrays from the end to start
                 buf_name = self.buffers[buf_index]["name"]
                 test_vectors["outputs"].append({
                     buf_name: arr.tolist(),

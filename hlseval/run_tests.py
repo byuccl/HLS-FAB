@@ -78,13 +78,13 @@ def test_kernel(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=0):
         rtps = [inp for inp in inputs if not isinstance(inp, np.ndarray) ]
         just_inputs = [
             arr for arr, type_info in zip(behavioral_inputs, input_types)
-            if type_info.get("in_out") == "in"
+            if type_info.get("in_out") == "in" or type_info.get("in_out") == "inout"
         ]
         # Determine output matrix index from input types if available  
         output_matrix_indices = []  
         if input_types:  
             for i, type_info in enumerate(input_types):  
-                if type_info.get('in_out') == 'out':  
+                if type_info.get('in_out') == 'out' or type_info.get('in_out') == 'inout':  
                     output_matrix_indices.append(i) 
                     print(f"Found output at index {i} from type information")  
                     # break  

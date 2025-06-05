@@ -84,6 +84,17 @@ void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (
 )
 
 
+desired_test = "axpy_int32_res"
+desired_test_description = (
+    """
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
+The output is the sum of these vectors in vector (Y_res)
+
+Y_res = alpha*X + Y
+
+The input vectors will be 4096 values long
+    """
+)
 
 desired_test = "axpy_int32"
 desired_test_description = (
