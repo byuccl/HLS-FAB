@@ -16,9 +16,19 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "dot_product_float64"
+desired_test = "scale_vector_uint16"
 desired_test_description = (
-    "Calculates the dot product of two 64-bit floating-point vectors."
+    """
+The scale vector function multiplies each element of 16 bit unsigned array (input) by some scalar value (alpha), and generates the resulting array (output)
+
+output[i] = input[i] * alpha
+
+output[i] is the i-th element of the output array.
+input[i] is the i-th element of the input array.
+alpha is the scalar value to be multiplied.
+
+The arrays will have 8192 unsigned 16 bit integers. 
+    """
 )
 
 

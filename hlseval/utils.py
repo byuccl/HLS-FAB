@@ -253,6 +253,14 @@ def get_cpp_type(input_val, type_info=None):
         return "int32_t"   
     elif isinstance(input_val, np.int64):  
         return "int64_t"  
+    elif isinstance(input_val, np.uint8):  
+        return "uint8_t"  
+    elif isinstance(input_val, np.uint16):  
+        return "uint16_t"    
+    elif isinstance(input_val, np.uint32):  
+        return "uint32_t"   
+    elif isinstance(input_val, np.uint64):  
+        return "uint64_t"  
     elif isinstance(input_val, np.float32):  
         return "float"  
     elif isinstance(input_val, float):

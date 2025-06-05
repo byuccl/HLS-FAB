@@ -1,3 +1,22 @@
+desired_test = "scale_vector_uint16"
+desired_test_description = (
+    """
+The scale vector function multiplies each element of 16 bit unsigned array (input) by some scalar value (alpha), and generates the resulting array (output)
+
+output[i] = input[i] * alpha
+
+output[i] is the i-th element of the output array.
+input[i] is the i-th element of the input array.
+alpha is the scalar value to be multiplied.
+
+The arrays will have 8192 unsigned 16 bit integers. 
+    """
+)
+
+
+
+
+
 desired_test = "matrix_vector_multiply_float32"
 desired_test_description = (
     """
@@ -24,7 +43,7 @@ Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned i
 The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
 Implementation details should match the OpenCV Reduce implementation
 
-void accumulate_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint8_t*)dst_hls.data);
+void accumulate_opencv((uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint8_t*)dst_hls.data);
     """
 )
 
