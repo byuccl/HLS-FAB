@@ -1,3 +1,89 @@
+desired_test = "auto_exposure_correction_opencv"
+desired_test_description = (
+    """
+Auto exposure correction improves contrast and brightness of the image and also corrects the exposure of the input frame. The algorithm uses luminence histogram equalization to improve overall exposure and contrast of the image. Luminence (V) is extracted after converting input image to HSV color space. Once the algorthm is applied the image is converted back to RGB color space.
+
+The input image will be 128x128 pixels
+Each pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV implementation unless otherwise specified
+
+void auto_exposure_correction_opencv((uint8_t*)in_img.data, (uint8_t*)out_img_hls.data);
+    """
+)
+
+
+desired_test = "add_weighted_opencv"
+desired_test_description = (
+    """
+The addweighted function calculates a weighted sum of two input images src1, src2 and generates the result in dst.
+
+
+dst[i] = alpha * src1[i] + beta * src2[i] + gamma
+
+dst[i] is the i-th element of the output array.
+src1[i] is the i-th element of the first input array.
+src2[i] is the i-th element of the second input array.
+
+
+The input image will be 128x128 pixels
+Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV Reduce implementation unless otherwise specified
+
+void add_weighted_opencv((uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint8_t*)dst_hls.data, float(alpha), float(beta), float(gamma));
+    """
+)
+
+
+desired_test = "accumulate_weighted_opencv"
+desired_test_description = (
+    """
+The accumulate weighted function computes the weighted sum of the input image (src1) and the accumulator image (src2) and generates the result in dst.
+
+dst[i] = alpha * src1[i] + (1-alpha) * src2[i]
+
+dst[i] is the i-th element of the output array.
+src1[i] is the i-th element of the first input array.
+src2[i] is the i-th element of the second input array.
+
+
+The input image will be 128x128 pixels
+Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV Reduce implementation unless otherwise specified
+
+void accumulate_weighted_opencv((uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data, float(alpha));
+    """
+)
+
+
+desired_test = "accumulate_squared_opencv"
+desired_test_description = (
+    """
+The accumulate square function adds the square of an image (src1) to the accumulator image (src2) and generates the accumulated result (dst).
+
+dst[i] = src1[i]^2 + src2[i]
+
+dst[i] is the i-th element of the output array.
+src1[i] is the i-th element of the first input array.
+src2[i] is the i-th element of the second input array.
+
+
+The input image will be 128x128 pixels
+Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV Reduce implementation unless otherwise specified
+
+void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data);
+    """
+)
+
+
 
 desired_test = "axpy_int32"
 desired_test_description = (
@@ -55,7 +141,7 @@ Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned i
 The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
 Implementation details should match the OpenCV Reduce implementation
 
-void accumulate_opencv((uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint8_t*)dst_hls.data);
+void accumulate_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data);
     """
 )
 

@@ -30,6 +30,7 @@ The input vectors will be 4096 values long
 )
 
 
+
 # Open example files
 with open("dataset/examples/absolute_value_int8/canonical_scalar.cc", "r") as f:
     abs_scalar = f.read()
