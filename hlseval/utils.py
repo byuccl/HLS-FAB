@@ -338,7 +338,9 @@ def generate_types(inputs):
         # Set in_out based on variable name  
         if i in input_vars:  
             var_name = input_vars[i].lower()  
-            if "input" in var_name:  
+            if "inout" in var_name:
+                types[i]["in_out"] = "inout"
+            elif "input" in var_name:  
                 types[i]["in_out"] = "in"  
             elif "output" in var_name:  
                 types[i]["in_out"] = "out"  

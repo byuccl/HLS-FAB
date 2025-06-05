@@ -20,21 +20,21 @@ def generate_inputs(seed=0):
         data = np.load('data.npz')  
         input_x_vector = data["input_x_vector"]
         input_alpha = data["input_alpha"]
-        input_y_vector = data["input_y_vector"]
+        inout_y_vector = data["inout_y_vector"]
     else:
         # Set a seed so the example inputs and outputs work correctly
         np.random.seed(seed)
 
         input_x_vector = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
         input_alpha = np.random.randint(-10, 10, dtype=np.int32)
-        input_y_vector = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
-    inputs = [input_x_vector, input_alpha, input_y_vector]
+        inout_y_vector = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
+    inputs = [input_x_vector, input_alpha, inout_y_vector]
 
     types = generate_types(inputs)  
     return {"inputs": inputs, "types": types}  
 
-def behavioral(input_x_vector, input_alpha, input_y_vector):
-    return input_alpha * input_x_vector + input_y_vector
+def behavioral(input_x_vector, input_alpha, inout_y_vector):
+    return input_alpha * input_x_vector + inout_y_vector
 
 examples = generate_examples(generate_inputs)
 
