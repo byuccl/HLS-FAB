@@ -1,3 +1,17 @@
+
+desired_test = "axpy_int32"
+desired_test_description = (
+    """
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
+The output is the sum of these vectors in vector (Y)
+
+Y = alpha*X + Y
+
+The input vectors will be 4096 values long
+    """
+)
+
+
 desired_test = "scale_vector_uint16"
 desired_test_description = (
     """
@@ -12,8 +26,6 @@ alpha is the scalar value to be multiplied.
 The arrays will have 8192 unsigned 16 bit integers. 
     """
 )
-
-
 
 
 

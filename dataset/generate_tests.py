@@ -16,18 +16,16 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "scale_vector_uint16"
+
+desired_test = "axpy_int32"
 desired_test_description = (
     """
-The scale vector function multiplies each element of 16 bit unsigned array (input) by some scalar value (alpha), and generates the resulting array (output)
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
+The output is the sum of these vectors in vector (Y)
 
-output[i] = input[i] * alpha
+Y = alpha*X + Y
 
-output[i] is the i-th element of the output array.
-input[i] is the i-th element of the input array.
-alpha is the scalar value to be multiplied.
-
-The arrays will have 8192 unsigned 16 bit integers. 
+The input vectors will be 4096 values long
     """
 )
 
