@@ -16,16 +16,18 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-
-desired_test = "axpy_int32_res"
+desired_test = "mat_mult_int16"
 desired_test_description = (
     """
-The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
-The output is the sum of these vectors in vector (Y_res)
+Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
 
-Y_res = alpha*X + Y
+Matrix 1 of MxN size 16-bit integers
+Matrix 2 of NxK size 16-bit integers 
+Result matrix of MxK size 16-bit integers
 
-The input vectors will be 4096 values long
+M = 64 
+N = 64
+K = 64
     """
 )
 

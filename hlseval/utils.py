@@ -241,60 +241,34 @@ def get_cpp_type(input_val, type_info=None):
         return type_info['type']  
         
     # Otherwise infer from the input value  
-    if isinstance(input_val, bool):  
-        return "bool"  
-    elif isinstance(input_val, int):  
-        return "int"  
-    elif isinstance(input_val, np.int8):  
-        return "int8_t"  
-    elif isinstance(input_val, np.int16):  
-        return "int16_t"    
-    elif isinstance(input_val, np.int32):  
-        return "int32_t"   
-    elif isinstance(input_val, np.int64):  
-        return "int64_t"  
-    elif isinstance(input_val, np.uint8):  
-        return "uint8_t"  
-    elif isinstance(input_val, np.uint16):  
-        return "uint16_t"    
-    elif isinstance(input_val, np.uint32):  
-        return "uint32_t"   
-    elif isinstance(input_val, np.uint64):  
-        return "uint64_t"  
-    elif isinstance(input_val, np.float32):  
-        return "float"  
-    elif isinstance(input_val, float):
-        return "double"
-    elif isinstance(input_val, np.float64):
-        return "double"
+    if isinstance(input_val, bool):  return "bool"  
+    elif isinstance(input_val, int): return "int"  
+    elif isinstance(input_val, np.int8): return "int8_t"  
+    elif isinstance(input_val, np.int16): return "int16_t"    
+    elif isinstance(input_val, np.int32): return "int32_t"   
+    elif isinstance(input_val, np.int64): return "int64_t"  
+    elif isinstance(input_val, np.uint8): return "uint8_t"  
+    elif isinstance(input_val, np.uint16): return "uint16_t"    
+    elif isinstance(input_val, np.uint32): return "uint32_t"   
+    elif isinstance(input_val, np.uint64): return "uint64_t"  
+    elif isinstance(input_val, np.float32): return "float"  
+    elif isinstance(input_val, float): return "double"
+    elif isinstance(input_val, np.float64): return "double"
     elif isinstance(input_val, np.ndarray):  
         # Map numpy dtypes to C++ types  
         dtype = input_val.dtype  
-        if dtype == np.float32:  
-            base_type = "float"  
-        elif dtype == np.float64:  
-            base_type = "double"  
-        elif dtype == np.int8:  
-            base_type = "int8_t"  
-        elif dtype == np.int16:  
-            base_type = "int16_t"  
-        elif dtype == np.int32:  
-            base_type = "int32_t"  
-        elif dtype == np.int64:  
-            base_type = "int64_t"  
-        elif dtype == np.uint8:  
-            base_type = "uint8_t"  
-        elif dtype == np.uint16:  
-            base_type = "uint16_t"  
-        elif dtype == np.uint32:  
-            base_type = "uint32_t"  
-        elif dtype == np.uint64:  
-            base_type = "uint64_t"  
-        elif dtype == np.bool_:  
-            base_type = "bool"  
-        else:  
-            raise ValueError(f"Unsupported numpy dtype: {dtype}")  
-            
+        if dtype == np.float32: base_type = "float"
+        elif dtype == np.float64: base_type = "double"  
+        elif dtype == np.int8: base_type = "int8_t"  
+        elif dtype == np.int16: base_type = "int16_t"  
+        elif dtype == np.int32: base_type = "int32_t"  
+        elif dtype == np.int64: base_type = "int64_t"  
+        elif dtype == np.uint8: base_type = "uint8_t"  
+        elif dtype == np.uint16: base_type = "uint16_t"  
+        elif dtype == np.uint32: base_type = "uint32_t"  
+        elif dtype == np.uint64: base_type = "uint64_t"  
+        elif dtype == np.bool_: base_type = "bool"  
+        else: raise ValueError(f"Unsupported numpy dtype: {dtype}")  
         # Add appropriate number of * based on dimensions  
         dimension = type_info.get('dimension', len(input_val.shape)) if type_info else len(input_val.shape)  
         if dimension == 0:  
@@ -303,51 +277,112 @@ def get_cpp_type(input_val, type_info=None):
     else:  
         return "void*"  # Default for unknown types  
     
+
+def get_cpp_type_str(dtype_str):
+    dtype_map = {
+        "int8": "int8_t", "uint8": "uint8_t",
+        "int16": "int16_t", "uint16": "uint16_t",
+        "int32": "int32_t", "uint32": "uint32_t",
+        "int64": "int64_t", "uint64": "uint64_t",
+        "float16": "half_float_type",
+        "float32": "float", "float64": "double",
+        "bool": "bool",
+        "int": "int",
+        "float": "float",
+    }
+    return dtype_map.get(dtype_str.lower(), "void*")
+
 def generate_types(inputs):  
-    """  
-    Generate types information for a list of inputs/outputs.  
-      
-    Args:  
-        inputs: List of input and output arrays/values  
-          
-    Returns:  
-        List of dictionaries with array_dimension and in_out information  
-    """  
-    types = []  
-      
-    # Get the calling frame to inspect variable names  
+    """
+    Generate comprehensive type information for a list of inputs/outputs,
+    including variable name, array dimension, I/O direction, and data type.
+
+    Args:
+        inputs (list): A list of input and output arrays/values.
+                       These should be the actual variables passed to the kernel
+                       from the `generate_inputs` function.
+
+    Returns:
+        list: A list of dictionaries, where each dictionary represents
+              the type information for a corresponding element in the `inputs` list.
+              Each dictionary will have:
+              - 'name' (str): The name of the variable in the caller's scope.
+              - 'array_dimension' (int): The number of dimensions for arrays (0 for scalars).
+              - 'in_out' (str): "in", "out", or "inout" based on variable name convention.
+              - 'dtype' (str): The data type (e.g., "int32", "float64", "int", "float", "bool").
+    """
+    types_info = []
+    
     import inspect  
-    frame = inspect.currentframe().f_back  
+    # Get the calling frame to inspect variable names
+    # This assumes generate_types is called directly by the generate_inputs function
+    frame = inspect.currentframe().f_back
+
+    # Create a mapping from object identity to variable name
+    # This is more robust than iterating through f_locals directly,
+    # especially if multiple variables have the same value.
+    var_name_map = {}
+    for name, value in frame.f_locals.items():
+        # Using id() for identity check to correctly map original variable names
+        # to the objects in the 'inputs' list.
+        # Check if the value is one of the inputs to avoid matching non-input variables.
+        if id(value) in [id(item) for item in inputs]:
+            var_name_map[id(value)] = name
       
-    # Find all variables in the caller's scope that match items in inputs  
-    input_vars = {}  
-    for name, value in frame.f_locals.items():  
-        for i, item in enumerate(inputs):  
-            if item is value:  # Using 'is' to check identity  
-                input_vars[i] = name  
-      
-    for i in range(len(inputs)):  
-        types.append({})  
-          
-        # Set array dimension  
-        if isinstance(inputs[i], np.ndarray):  
-            types[i]["array_dimension"] = inputs[i].ndim  
-        else:  
-            types[i]["array_dimension"] = 0  
-          
-        # Set in_out based on variable name  
-        if i in input_vars:  
-            var_name = input_vars[i].lower()  
-            if "inout" in var_name:
-                types[i]["in_out"] = "inout"
-            elif "input" in var_name:  
-                types[i]["in_out"] = "in"  
-            elif "output" in var_name:  
-                types[i]["in_out"] = "out"  
-            else:  
-                types[i]["in_out"] = "in"  # mark as an input if not otherwise specified
-        else:  
-            types[i]["in_out"] = "in"  
-            # If not an array, must be an input
-              
-    return types  
+    for i, item in enumerate(inputs):
+        type_dict = {}
+
+        # 1. Get Variable Name
+        # Try to retrieve the original variable name from the caller's scope
+        # Fallback to a generic name if not found
+        var_name = var_name_map.get(id(item), f"arg_{i}")
+        type_dict["name"] = var_name
+
+        # 2. Set Array Dimension
+        if isinstance(item, np.ndarray):
+            type_dict["array_dimension"] = item.ndim
+            type_dict["dtype"] = str(item.dtype)
+            type_dict["shape"] = list(item.shape) # Store actual shape as a list
+            type_dict["total_elements"] = item.size # Store total elements
+        elif isinstance(item, np.integer):
+            type_dict["array_dimension"] = 0
+            type_dict["dtype"] = str(item.dtype) # e.g., 'int32', 'int64'
+            type_dict["shape"] = [] # Scalar has no shape
+            type_dict["total_elements"] = 1 # Scalar has 1 element
+        elif isinstance(item, np.floating):
+            type_dict["array_dimension"] = 0
+            type_dict["dtype"] = str(item.dtype) # e.g., 'float32', 'float64'
+            type_dict["shape"] = [] # Scalar has no shape
+            type_dict["total_elements"] = 1 # Scalar has 1 element
+        elif isinstance(item, np.bool_):
+            type_dict["array_dimension"] = 0
+            type_dict["dtype"] = str(item.dtype) # e.g., 'bool_'
+            type_dict["shape"] = [] # Scalar has no shape
+            type_dict["total_elements"] = 1 # Scalar has 1 element
+        else:
+            type_dict["array_dimension"] = 0
+            # Get Python scalar type
+            if isinstance(item, int): type_dict["dtype"] = "int"
+            elif isinstance(item, float): type_dict["dtype"] = "float"
+            elif isinstance(item, bool): type_dict["dtype"] = "bool"
+            else: type_dict["dtype"] = "unknown" # Fallback for other scalar types
+            type_dict["shape"] = [] # Scalar has no shape
+            type_dict["total_elements"] = 1 # Scalar has 1 element
+
+        # 3. Set in_out based on variable name convention
+        # Convert the determined variable name to lowercase for consistent checking
+        lower_var_name = var_name.lower()
+        if "inout" in lower_var_name:
+            type_dict["in_out"] = "inout"
+        elif "output" in lower_var_name:
+            type_dict["in_out"] = "out"
+        elif "input" in lower_var_name:
+            type_dict["in_out"] = "in"
+        else:
+            # Default to "in" if no clear convention is found in the name
+            # You might want to refine this default based on your common patterns
+            type_dict["in_out"] = "in"
+
+        types_info.append(type_dict)
+
+    return types_info

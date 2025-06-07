@@ -1,3 +1,19 @@
+desired_test = "mat_mult_int16"
+desired_test_description = (
+    """
+Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
+
+Matrix 1 of MxN size 16-bit integers
+Matrix 2 of NxK size 16-bit integers 
+Result matrix of MxK size 16-bit integers
+
+M = 64 
+N = 64
+K = 64
+    """
+)
+
+
 desired_test = "auto_exposure_correction_opencv"
 desired_test_description = (
     """
