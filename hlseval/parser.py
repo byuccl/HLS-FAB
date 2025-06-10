@@ -8,6 +8,7 @@ in_file_path_mid = "/hls/syn/report/"
 rpt_file_end = "_csynth.rpt"
 log_folder_path = "/synth_logs/"
 saved_log_file = "/logs/hls_compile.log"
+saved_sim_log_file = "/logs/hls_run_csim.log"
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
@@ -61,7 +62,7 @@ def gather_feedback(synthesis_output, data=None, goals=None):
     return feedback
 
 # Function to parse through the HLS report and extract the relevant data
-def parse_hls_report(file_path):
+def parse_synth_report(file_path):
     data = {
         "Fmax": None,
         "lat_min": None,
@@ -129,6 +130,38 @@ def parse_hls_report(file_path):
 
     return data
 
+def parse_sim_report(file_path=None):
+    feedback = {
+        "status": "failed",
+        "match": "mismatch",
+        "errors": [],
+        "warnings": [],
+        "expected_v_actual": []
+    }
+    if file_path is not None:
+        try:
+            with open(file_path, 'r') as f:
+                lines = f.readlines()
+        except FileNotFoundError:
+            print(f"The file {file_path} does not exist.")
+            return feedback
+    num_mismatches = 0
+    for i, line in enumerate(lines):
+        if "Compilation Status:" in line:
+            feedback["status"] = line.split(":")[1].strip()
+        elif "PASS" in line:
+            feedback["match"] = "match"
+        elif "ERROR:" in line:
+            feedback["errors"].append(line.split("ERROR:")[1].strip())
+        elif "WARNING:" in line:
+            feedback["warnings"].append(line.split("WARNING:")[1].strip())
+        elif "FAIL:" in line:
+            feedback["expected_v_actual"].append(line.split("index")[1].strip())
+        elif "Percent Error:" in line:
+            feedback["percent_error"] = line.split(":")[1].strip()
+
+    
+    return feedback
 
 def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
     f""" 
@@ -146,9 +179,14 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
     out_data_path = f"{solutions_path}/{kernel_name}_data.json"
     log_file_dir = f"{solutions_path}{log_folder_path}"
     pathlib.Path(log_file_dir).mkdir(parents=True, exist_ok=True)
+    old_sim_log_file = f"{solutions_path}/logs/hls_run_csim.log"
     
     log_file = f"{log_file_dir}/{kernel_name}_synth{timestamp}.log"
 
+    final_feedback = {
+        "csim_feedback": None,
+        "synth_feedback": None,
+    }
     # Read in the log file from the HLS synthesis attempt
     try:
         with open(f"{solutions_path}{saved_log_file}", "r") as f:
@@ -164,25 +202,49 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
     try:
         with open(in_report_file, 'r') as file:
             report = file.read()
-            summary = parse_hls_report(in_report_file)
+            summary = parse_synth_report(in_report_file)
             with open(log_file, "a") as log:
                 log.write("\n\n")
                 log.write(report)
                 log.write("\n\n")
                 
-            feedback = gather_feedback(old_log, summary, goals=goals)
-            with open(out_data_path, 'w') as of:
-                json.dump(feedback, of, indent=4)
+            synth_feedback = gather_feedback(old_log, summary, goals=goals)
+
     except FileNotFoundError:
-        feedback = gather_feedback(old_log, goals=goals)
-        with open(out_data_path, 'w') as of:
-            json.dump(feedback, of, indent=4)
+        synth_feedback = gather_feedback(old_log, goals=goals)
+
         print(
             f"The file {in_report_file} does not exist."
         )
     
-    return feedback
+    # Check if the simulation was successful then add the data to json
+    try:
+        with open(old_sim_log_file, 'r') as file:
+            report = file.read()
+            with open(log_file, "a") as log:
+                log.write("\n\n")
+                log.write(report)
+                log.write("\n\n")
+                
+            sim_feedback = parse_sim_report(old_sim_log_file)
+            # with open(out_data_path, 'w') as of:
+            #     json.dump(feedback, of, indent=4)
+    except FileNotFoundError:
+        sim_feedback = parse_sim_report()
+        # with open(out_data_path, 'w') as of:
+        #     json.dump(feedback, of, indent=4)
+        print(
+            f"The file {old_sim_log_file} does not exist."
+        )
+    
+    
+    final_feedback["csim_feedback"] = sim_feedback
+    final_feedback["synth_feedback"] = synth_feedback    
+    with open(out_data_path, 'w') as of:
+        json.dump(final_feedback, of, indent=4)
+        
+    return final_feedback
 
 # # Example usage
 # if __name__ == "__main__":
-#     parse_hls_reports()
+#     parse_synth_reports()
