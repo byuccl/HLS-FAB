@@ -5,7 +5,7 @@ import tempfile
 import subprocess  
 import traceback  
 import json
-from hlseval import get_cpp_type_str, import_module_functions
+from hlseval.utils import get_cpp_type_str, import_module_functions
 
 
 class NumpyEncoder(json.JSONEncoder):  
@@ -24,7 +24,11 @@ class NumpyEncoder(json.JSONEncoder):
         elif isinstance(obj, (np.void, np.complex_)):  
             return str(obj)  
         return json.JSONEncoder.default(self, obj) 
-    
+   
+class CsimTimeoutError(Exception):
+    """Raised when Vitis HLS times out."""
+    pass
+
 
 def generate_h_file(kernel_code, model_dir, kernel_name):
     """
@@ -141,14 +145,14 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                status_message (str): "SUCCESS" if file generated, "FAILED" otherwise.
     """
     project_root = os.path.dirname(os.path.dirname(__file__))
-    cpp_kernel_file_abs_path = os.path.abspath(os.path.join(project_root, "results", "solutions", model_dir, f"{kernel_name}.cpp"))
+    cpp_kernel_file_abs_path = os.path.join(model_dir, f"{kernel_name}.cpp")
 
     if not os.path.exists(cpp_kernel_file_abs_path):
         print(f"C++ kernel file not found: {cpp_kernel_file_abs_path}")
         return None, test_data_json_path, f"FAILED: C++ kernel file not found: {cpp_kernel_file_abs_path}"
 
     # Create the path for the testbench file
-    testbench_cpp_file_path = os.path.join(project_root, "results", "solutions", model_dir, f"{kernel_name}_tb.cpp")
+    testbench_cpp_file_path = os.path.join(model_dir, f"{kernel_name}_tb.cpp")
     json_filename_only = os.path.basename(test_data_json_path)
 
     # --- Read types_metadata directly from the JSON file ---
@@ -175,8 +179,8 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
             kernel_code = f.read()  
     # Generating H File
     print("--- Generating H File for CSIM ---")
-    h_file_path = os.path.join(project_root, "results", "solutions", model_dir)
-    generate_h_file(kernel_code, h_file_path, kernel_name)
+    # h_file_path = os.path.join(project_root, "results", "solutions", model_dir)
+    generate_h_file(kernel_code, model_dir, kernel_name)
     
     # --- C++ Testbench Code Generation ---
     testbench_code = []
@@ -227,7 +231,8 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
     testbench_code.append("\n    int total_tests = 0;")
     testbench_code.append("    int failed_tests = 0;")
-    testbench_code.append(f"   int flat_idx = 0;")
+    testbench_code.append("    int flat_idx = 0;")
+    testbench_code.append("    float percent_error = 0.0;")
 
 
     # Loop through each test case
@@ -371,6 +376,8 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
         if in_out_status in ["out", "inout"]:
             # Get expected values from JSON
+            testbench_code.append(f"\n        uint32_t num_mismatches = 0;")
+            
             testbench_code.append(f"\n        // Get expected values for {var_name}")
             testbench_code.append(f"        auto {var_name}_expected_json = test_case.at(\"expected_outputs\").at(\"{var_name}\");")
             
@@ -385,6 +392,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                 testbench_code.append(f"        {cpp_base_type} {var_name}_expected_val = {var_name}_expected_json.get<{cpp_base_type}>();")
                 testbench_code.append(f"        if (!compare_numeric({var_name}_out_actual, {var_name}_expected_val)) {{")
                 testbench_code.append(f"            std::cout << \"  FAIL: Scalar '{var_name}' - Expected: \" << {var_name}_expected_val << \", Actual: \" << {var_name}_out_actual << std::endl;")
+                testbench_code.append("            num_mismatches++;")
                 testbench_code.append("            test_case_passed = false;")
                 testbench_code.append("        }")
                 testbench_code.append(f"        else {{ std::cout << \"  PASS: Scalar '{var_name}' matches.\" << std::endl; }}")
@@ -424,10 +432,14 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                         json_access_str = f"current_level_expected_json_{loop_vars[d]}" # Update for next level
 
                 cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
+                cout_loop_vars = "<<".join([f" \"[\" << {lv} <<  \"]\"" for lv in loop_vars])  # For output formatting
+                print(cout_loop_vars)
                 testbench_code.append(f"{indent}{cpp_base_type} expected_val = {json_access_str}.at({loop_vars[-1]}).get<{cpp_base_type}>();")
                 testbench_code.append(f"{indent}if (!compare_numeric({var_name}_arr{cpp_access_str}, expected_val)) {{")
-                testbench_code.append(f"{indent}    std::cout << \"  FAIL: {array_dimension}D Array '{var_name}' at index {cpp_access_str} - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr{cpp_access_str} << std::endl;")
+                testbench_code.append(f"{indent}    std::cout << \"  FAIL: {array_dimension}D Array '{var_name}' at index\" << {cout_loop_vars} << \"- Expected: \" << expected_val << \", Actual: \" << {var_name}_arr{cpp_access_str} << std::endl;")
                 testbench_code.append(f"{indent}    test_case_passed = false;")
+                testbench_code.append(f"{indent}    num_mismatches++;")
+
                 testbench_code.append(f"{indent}    // goto end_comparison_for_{var_name}; // Consider using for early exit on mismatch")
                 testbench_code.append(f"{indent}}}")
                 
@@ -451,12 +463,24 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     for cleanup_line in cleanup_deallocations:
         testbench_code.append(cleanup_line)
 
+    #Calculate the Percent Error
+    testbench_code.append("        if (num_mismatches > 0) {")
+    testbench_code.append(f"            percent_error = ((float)num_mismatches / {total_elements}) * 100.0;")
+    testbench_code.append("        } else {")
+    testbench_code.append("            percent_error = 0.0;")
+    testbench_code.append("        }")
+
     testbench_code.append("    }") # End of for-loop for test_cases_json
+    
+
+
 
 
     testbench_code.append("\n    std::cout << \"\\n--- Test Summary ---\" << std::endl;")
+    testbench_code.append("    std::cout << \"Compilation Status: success\" << std::endl;")
     testbench_code.append("    std::cout << \"Total Tests: \" << total_tests << std::endl;")
     testbench_code.append("    std::cout << \"Failed Tests: \" << failed_tests << std::endl;")
+    testbench_code.append("    std::cout << \"Percent Error: \" << percent_error << \"%\" << std::endl;")
     testbench_code.append("    if (failed_tests == 0) {")
     testbench_code.append("        std::cout << \"ALL TESTS PASSED!\" << std::endl;")
     testbench_code.append("        return 0;")
@@ -499,7 +523,7 @@ def write_json_test_data(filename, test_cases_list):
         raise
 
 
-def create_reference_data(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=0):
+def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
 
@@ -624,7 +648,7 @@ def create_reference_data(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=
         }
 
         # The JSON file path.
-        json_output_filename = os.path.join(project_root, "results", "solutions", model_dir, f"{name}_test_data.json")
+        json_output_filename = os.path.abspath(os.path.join(model_dir, f"{name}_test_data.json"))
 
         # Write this single test case to a JSON file
         try:
@@ -667,11 +691,11 @@ def create_reference_data(kernel_name=None, model_dir="gpt-4o/attempts_1", seed=
 
     return all_results
 
-def run_csim(kernel_name=None, model_dir="gpt-4o/axpy_int32/attempts_1"):
+def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1"):
     print("--- Preparing CSIM ---")
     result = create_reference_data(kernel_name, model_dir, seed=45)
     
-    project_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results", "solutions", model_dir)
+    project_dir = model_dir
     kernel_code_path = os.path.join(project_dir, f"{kernel_name}.cpp")
     kernel_testbench_path = os.path.join(project_dir, f"{kernel_name}_tb.cpp")
     
@@ -700,12 +724,12 @@ def run_csim(kernel_name=None, model_dir="gpt-4o/axpy_int32/attempts_1"):
             sim_result = subprocess.run(
                 sim_cmd,
                 capture_output=True,
-                check=True,
+                check=False,
                 timeout=120,  # Timeout after 2 minutes
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
-            return sim_stdout, sim_stderr, "SUCCESS: CSIM completed successfully."
+            return sim_result
 
         except subprocess.TimeoutExpired as e:
             print(f"CSIM timed out: {e}")
@@ -713,25 +737,26 @@ def run_csim(kernel_name=None, model_dir="gpt-4o/axpy_int32/attempts_1"):
             # Decode them just like you would from the result object
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
             sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-            print(sim_stdout)
-            return sim_stdout, sim_stderr, "WARNING: CSIM timed out. Code Analysis may be incomplete or invalid."
+            raise CsimTimeoutError(
+                f"CSIM timed out after {e.timeout} seconds. Output: {sim_stdout}, Error: {sim_stderr}"
+            )
+
 
         except subprocess.CalledProcessError as e: # Catch this specifically for non-zero exit codes
             print(f"CSIM failed with exit code {e.returncode}")
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
             sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-            print(sim_stdout)
-
-            return sim_stdout, sim_stderr, f"ERROR: CSIM failed with exit code {e.returncode}. Check stderr for details."
+            # print(sim_stdout)
+            return e
 
         except Exception as e:
             print(f"An unexpected error occurred during CSIM: {e}")
-            return None, None, f"ERROR: An unexpected error occurred during CSIM: {e}"
-        
+            return e
+                
 # --- Main execution block ---
 if __name__ == "__main__":
     # Ensure this path exists or is creatable
-    target_model_dir = "gpt-4o/mat_mult_int16/attempts_5"
+    target_model_dir = "./results/solutions/gpt-4o/mat_mult_int16/attempts_1"
 
     run_csim("mat_mult_int16", target_model_dir)
     # After running this, inspect the generated JSON file

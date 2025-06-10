@@ -10,6 +10,80 @@ import os
 import sys
 import traceback  
 import importlib.util
+from .hlscoder import HLSCoder
+
+
+def import_module_functions(kernel_name, function_names=None):      
+    """      
+    Dynamically import specified functions from the kernel's generate.py file.      
+    """      
+    if function_names is None:      
+        function_names = ["generate_inputs", "behavioral"]      
+          
+    # Get the project root directory (2 levels up from results/testing)      
+    project_root = os.path.dirname(os.path.dirname(__file__))     
+     
+          
+    # Add project root to sys.path to allow imports to work      
+    if project_root not in sys.path:      
+        sys.path.insert(0, project_root)      
+          
+    # Construct the relative path to the generate.py file      
+    module_path = os.path.join(project_root, "dataset", "kernels", kernel_name, "generate.py")    
+          
+    if not os.path.exists(module_path):      
+        print(f"Warning: Could not find generate.py for kernel '{kernel_name}' at path: {module_path}")      
+        return None      
+          
+    # Create a unique module name to avoid conflicts      
+    module_name = f"dynamic_kernel_{kernel_name}"      
+          
+    # Create spec from file path      
+    spec = importlib.util.spec_from_file_location(module_name, module_path)      
+    if spec is None:      
+        print(f"Error: Could not create module spec for {module_path}")      
+        return None      
+          
+    # Create module from spec      
+    module = importlib.util.module_from_spec(spec)      
+          
+    # Add the module to sys.modules      
+    sys.modules[module_name] = module      
+          
+    # Execute the module      
+    try:      
+        spec.loader.exec_module(module)      
+    except Exception as e:      
+        print(f"Error loading module {module_path}: {e}")  
+        print("Detailed traceback:")  
+        traceback.print_exc()  
+        return None      
+          
+    # Create a dictionary to hold the requested functions      
+    functions = {}      
+          
+    # Get the requested functions      
+    for func_name in function_names:      
+        if hasattr(module, func_name):      
+            functions[func_name] = getattr(module, func_name)      
+        else:      
+            print(f"Warning: Module {module_path} does not have a {func_name} function")      
+          
+    return functions    
+ 
+def get_cpp_type_str(dtype_str):
+    dtype_map = {
+        "int8": "int8_t", "uint8": "uint8_t",
+        "int16": "int16_t", "uint16": "uint16_t",
+        "int32": "int32_t", "uint32": "uint32_t",
+        "int64": "int64_t", "uint64": "uint64_t",
+        "float16": "half_float_type",
+        "float32": "float", "float64": "double",
+        "bool": "bool",
+        "int": "int",
+        "float": "float",
+    }
+    return dtype_map.get(dtype_str.lower(), "void*")
 
 
 def generate_examples(generate_function):
@@ -169,66 +243,6 @@ def get_vector_time(trace):
     return total_duration/(end-start)
 
 
-
-def import_module_functions(kernel_name, function_names=None):      
-    """      
-    Dynamically import specified functions from the kernel's generate.py file.      
-    """      
-    if function_names is None:      
-        function_names = ["generate_inputs", "behavioral"]      
-          
-    # Get the project root directory (2 levels up from results/testing)      
-    project_root = os.path.dirname(os.path.dirname(__file__))     
-     
-          
-    # Add project root to sys.path to allow imports to work      
-    if project_root not in sys.path:      
-        sys.path.insert(0, project_root)      
-          
-    # Construct the relative path to the generate.py file      
-    module_path = os.path.join(project_root, "dataset", "kernels", kernel_name, "generate.py")    
-          
-    if not os.path.exists(module_path):      
-        print(f"Warning: Could not find generate.py for kernel '{kernel_name}' at path: {module_path}")      
-        return None      
-          
-    # Create a unique module name to avoid conflicts      
-    module_name = f"dynamic_kernel_{kernel_name}"      
-          
-    # Create spec from file path      
-    spec = importlib.util.spec_from_file_location(module_name, module_path)      
-    if spec is None:      
-        print(f"Error: Could not create module spec for {module_path}")      
-        return None      
-          
-    # Create module from spec      
-    module = importlib.util.module_from_spec(spec)      
-          
-    # Add the module to sys.modules      
-    sys.modules[module_name] = module      
-          
-    # Execute the module      
-    try:      
-        spec.loader.exec_module(module)      
-    except Exception as e:      
-        print(f"Error loading module {module_path}: {e}")  
-        print("Detailed traceback:")  
-        traceback.print_exc()  
-        return None      
-          
-    # Create a dictionary to hold the requested functions      
-    functions = {}      
-          
-    # Get the requested functions      
-    for func_name in function_names:      
-        if hasattr(module, func_name):      
-            functions[func_name] = getattr(module, func_name)      
-        else:      
-            print(f"Warning: Module {module_path} does not have a {func_name} function")      
-          
-    return functions    
-
-
 # Helper function to determine C++ type for an input  
 def get_cpp_type(input_val, type_info=None):  
     """Determine the appropriate C++ type for an input value
@@ -276,21 +290,8 @@ def get_cpp_type(input_val, type_info=None):
         return base_type + '*' * dimension  
     else:  
         return "void*"  # Default for unknown types  
-    
 
-def get_cpp_type_str(dtype_str):
-    dtype_map = {
-        "int8": "int8_t", "uint8": "uint8_t",
-        "int16": "int16_t", "uint16": "uint16_t",
-        "int32": "int32_t", "uint32": "uint32_t",
-        "int64": "int64_t", "uint64": "uint64_t",
-        "float16": "half_float_type",
-        "float32": "float", "float64": "double",
-        "bool": "bool",
-        "int": "int",
-        "float": "float",
-    }
-    return dtype_map.get(dtype_str.lower(), "void*")
+
 
 def generate_types(inputs):  
     """
@@ -386,3 +387,25 @@ def generate_types(inputs):
         types_info.append(type_dict)
 
     return types_info
+
+def generate_one_completion(prompt, url, workflow, model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1):
+    
+    coder = HLSCoder(
+        model=model,
+        workflow=workflow,
+        temperature=temperature,
+        top_p=top_p,
+        url=url,
+        attempts=attempts,
+    )
+    response = coder(prompt)
+
+    result = {
+        "code": coder.extract_codeblock(response["response"]),
+        "stats": {
+            "token_usage": response["token_usage"],
+            "history": response["history"],
+        },
+    }
+
+    return result
