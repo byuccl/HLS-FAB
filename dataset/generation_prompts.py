@@ -166,6 +166,56 @@ void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (
 )
 
 
+desired_test = "axpy_int32_res"
+desired_test_description = (
+    """
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
+The output is the sum of these vectors in vector (Y_res)
+
+Y_res = alpha*X + Y
+
+The input vectors will be 4096 values long
+    """
+)
+
+desired_test = "axpy_int32"
+desired_test_description = (
+    """
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
+The output is the sum of these vectors in vector (Y)
+
+Y = alpha*X + Y
+
+The input vectors will be 4096 values long
+    """
+)
+
+
+desired_test = "scale_vector_uint16"
+desired_test_description = (
+    """
+The scale vector function multiplies each element of 16 bit unsigned array (input) by some scalar value (alpha), and generates the resulting array (output)
+
+output[i] = input[i] * alpha
+
+output[i] is the i-th element of the output array.
+input[i] is the i-th element of the input array.
+alpha is the scalar value to be multiplied.
+
+The arrays will have 8192 unsigned 16 bit integers. 
+    """
+)
+
+
+
+desired_test = "matrix_vector_multiply_float32"
+desired_test_description = (
+    """
+    Multiplies a 32-bit floating-point matrix by a 32-bit floating-point vector, resulting in a 32-bit floating-point vector.
+    """
+)
+
+
 desired_test = "accumulate_opencv"
 desired_test_description = (
     """

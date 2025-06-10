@@ -211,7 +211,7 @@ with open(f"dataset/generated_tests/{desired_test}/canonical_scalar.cc", "r") as
 generate_line = f"""
 Your task is to create a 'generate.py script for the following test:\n{desired_test}: {desired_test_description}'\n\n
 The following is the 'canonical_scalar.cc' file for this test: \n```\n{current_scalar}\n```\n\n
-Use the same naming convention for variables using input_ for inputs and output_ for outputs. 
+Use the same naming convention for variables using input_ for inputs and output_ for outputs and inout_ for combinations of the two.
 Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
 If there are constants then include them at the top of the file as variables. 
 """

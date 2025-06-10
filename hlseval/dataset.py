@@ -64,6 +64,7 @@ class PromptConstructor:
             test_vectors = {"inputs": [], "outputs": [], "rtps": []}
             output_indices = []
             input_arrays = []
+            in_out_arrays = []
             rtp_values = []
             # Loop through saving the inputs and rtps and the index for the outputs in order to generate the test vectors
             for i, arr in enumerate(arrays):
@@ -95,20 +96,50 @@ class PromptConstructor:
                 elif in_out == "out":
                     # It's a buffer output
                     output_indices.append(i)  # Save the position; will generate later
+                elif in_out == "inout": # Handle the case when it is both an input and an output
+                    output_indices.append(i)  # Save the position; will generate later
+                    if array_dim == 0:
+                        # It's a scalar RTP
+                        c_type = self.rtps[len(rtp_values)]["type"]
+                        try:
+                            np_type = C_TO_NUMPY_DTYPE[c_type]
+                        except KeyError:
+                            raise ValueError(f"Unsupported rtp type '{c_type}' in kernel '{self.name}'")
+                        test_vectors["rtps"].append({
+                            self.rtps[len(rtp_values)]["name"]: float(arr),
+                            "dtype": np_type
+                        })
+                        rtp_values.append(arr)
+                    # Check if the array is a buffer and input
+                    else:
+                        buf_name = self.buffers[len(input_arrays)]["name"]
+                        test_vectors["inputs"].append({
+                            buf_name: arr.tolist(),
+                            "dtype": str(arr.dtype)
+                        })
+                        in_out_arrays.append(arr)
 
                 else:
                     raise ValueError(f"Unknown in_out value '{in_out}' at index {i}")
                 
             #Using the output indices, we can generate the outputs
             # print(input_arrays)
-            outputs = behavioral(*input_arrays, *rtp_values) if rtp_values else behavioral(*input_arrays)
+            args = [*input_arrays]
+
+            if rtp_values:
+                args.extend(rtp_values)
+
+            if in_out_arrays:
+                args.extend(in_out_arrays)
+
+            outputs = behavioral(*args)
             # print(outputs)
             if not isinstance(outputs, tuple):
                 outputs = (outputs,)
                 
             for i, arr in enumerate(outputs):
                 # Offset from input buffers
-                buf_index = len(input_arrays) + i
+                buf_index = (len(input_arrays) + i) if (len(in_out_arrays) == 0) else (len(self.buffers) - len(in_out_arrays) + i) # The outputs are always last in the buffers so the indexes start after inputs. They overlap if they are inout so we need to take the length of inout_arrays from the end to start
                 buf_name = self.buffers[buf_index]["name"]
                 test_vectors["outputs"].append({
                     buf_name: arr.tolist(),

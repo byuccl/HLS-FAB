@@ -8,79 +8,9 @@ import pathlib
 import subprocess
 import argparse
 from datetime import datetime
-from hlseval import HLSCoder, get_kernel_code, gather_parsed_data, test_kernel, NumpyEncoder
+from hlseval import test_kernel
+import hlseval
 
-
-
-class VitisTimeoutError(Exception):
-    """Raised when Vitis HLS times out."""
-    pass
-
-
-def generate_one_completion(
-    prompt, url, workflow, model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1
-):
-    
-    coder = HLSCoder(
-        model=model,
-        workflow=workflow,
-        temperature=temperature,
-        top_p=top_p,
-        url=url,
-        attempts=attempts,
-    )
-    response = coder(prompt)
-
-    result = {
-        "code": coder.extract_codeblock(response["response"]),
-        "stats": {
-            "token_usage": response["token_usage"],
-            "history": response["history"],
-        },
-    }
-
-    return result
-
-# Run vitis tools on the generated code
-# This function will run the vitis tools on the generated code
-def run_vitis_tools(filepath, kernel_name):
-    with open("vitis_config.cfg", "w") as file:
-        file.write(
-            f"""
-        part=xazu1eg-sbva484-1-i
-
-        [hls]
-        flow_target=vivado
-        package.output.format=ip_catalog
-        package.output.syn=false
-        syn.top={kernel_name}
-        syn.file={filepath}{kernel_name}.cpp
-        # tb.file={filepath}{kernel_name}_tb.cpp
-        # csim.O=true
-        # csim.code_analyzer=0
-        # csim.setup=true
-        """
-        )
-    try:
-        result = subprocess.run(
-            [
-                "v++",
-                "-c",
-                "--mode",
-                "hls",
-                "--config",
-                "vitis_config.cfg",
-                "--work_dir",
-                filepath,
-            ], 
-            timeout=200,
-            capture_output=True, 
-            text=True
-        )
-        return result
-    except subprocess.TimeoutExpired:
-        raise VitisTimeoutError("Vitis tools stalled during HLS Synthesis.")
-    
 
 def feedback_prompt(prev_code, feedback):
     return f"""
@@ -98,10 +28,13 @@ def feedback_prompt(prev_code, feedback):
 
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
 amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
+byu_antrhopic_url = "https://api.anthropic.com/v1/complete"
+byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
+amd_anthropic_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
 
 model_parameters = {
                         "gpt-4o": {"amd_url": amd_gpt_url, "byu_url": byu_gpt_url},
-                        "Claude-3.5": {"url": "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"}
+                        "Claude-3.5": {"amd_url": amd_anthropic_url, "byu_url": byu_anthropic_url2}
                     }
     
 def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None, goals=None):
@@ -117,7 +50,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         url = (model_parameters[model])[f"{workflow}_url"]
 
 
-        response = generate_one_completion(
+        response = hlseval.generate_one_completion(
             prompt_with_context,
             workflow=workflow,
             model=model,
@@ -134,7 +67,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
 
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
-                file.write(get_kernel_code(test, solutions_path))
+                file.write(hlseval.get_kernel_code(test, solutions_path))
         except FileExistsError:
             print(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
 
@@ -151,7 +84,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
 
         new_prompt = feedback_prompt(prev_code=prev_code, feedback=prev_feedback)
         url = (model_parameters[model])[f"{workflow}_url"]
-        improved_code = generate_one_completion(
+        improved_code = hlseval.generate_one_completion(
             new_prompt,
             workflow=workflow,
             model=model,
@@ -168,43 +101,40 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
 
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
-                file.write(get_kernel_code(test, solutions_path))
+                file.write(hlseval.get_kernel_code(test, solutions_path))
         except FileExistsError:
             print(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
+        
+    # Run CSIM    
     try:
-        print("Starting Vitis Run")
-        vitis_output = run_vitis_tools(f"{solutions_path}/", kernel_name)
-        vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
-    except VitisTimeoutError:
+        print("--- Starting Vitis Run ---")
+        csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
+        timeout_csim = False
+        sim_returncode = csim_output.returncode
+    except hlseval.CsimTimeoutError as e:
+        timeout_csim = True
+        print("WARNING: Vitis timed out on Simulation")
+    # Run Synthesis
+    try:
+        print("--- Running CSYNTH ---")
+        synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
+        vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+        synth_returncode = synth_output.returncode
+    except hlseval.CsynthTimeoutError as e:
         print("WARNING: Vitis timed out")
-        vitis_feedback = gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
-        vitis_feedback['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
-        vitis_feedback['goals'].extend([
+        vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+        vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
+        vitis_feedback['synth_feedback']['goals'].extend([
             "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
             "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
-        return 1, vitis_feedback
-
-    result_path = f"{model}/{kernel_name}/attempts_{attempt+1}"
-    testbench_output = test_kernel(kernel_name=kernel_name, model_dir=result_path, seed=3)
-    testbench_output_path = f"results/solutions/{result_path}/test_results.json"
-    with open(testbench_output_path, 'w', encoding='utf-8') as f:  
-            json.dump(testbench_output, f, indent=2, cls=NumpyEncoder)  
-    print(f"\nResults saved to {testbench_output_path}")  
-    testbench_status = testbench_output[kernel_name]["status"]
-    testbench_match_status = testbench_output[kernel_name]["match_status"]
-    testbench_info = testbench_output[kernel_name]["testbench_info"]
-    testbench_feedback = f"""
-    Testbench feedback:\n
-    C++ Compilation: {testbench_status}
-    Match status: {testbench_match_status}
-    Testbench info: {testbench_info}
-    """
-    feedback = f"""
-    Vitis feedback:\n
-    {vitis_feedback}\n\n
-    {testbench_feedback}
-    """
-    return vitis_output.returncode, feedback
+        synth_returncode = 1
+        
+    
+    if timeout_csim:
+        vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim took too long."])
+    print("--- Vitis Run Completed ---")
+    returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
+    return returncode, vitis_feedback
 
 
 def process_kernel(model, test, workflow, passes=3, mode="optimization", goals=None):

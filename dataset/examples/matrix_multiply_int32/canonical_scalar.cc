@@ -9,7 +9,7 @@
 void matrix_multiply_int32(
     int32_t matrix1[MATRIX_1_HEIGHT][MATRIX_1_WIDTH], 
     int32_t matrix2[MATRIX_2_HEIGHT][MATRIX_2_WIDTH], 
-    int32_t result[MATRIX_1_WIDTH][MATRIX_2_HEIGHT])
+    int32_t result[MATRIX_1_HEIGHT][MATRIX_2_WIDTH])
 {
 // Ensure matrices are compatible for multiplication  
     if (MATRIX_1_WIDTH != MATRIX_2_HEIGHT) {  
