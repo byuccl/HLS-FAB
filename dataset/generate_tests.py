@@ -16,9 +16,31 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 
 # Set up prompt
-desired_test = "dot_product_float64"
+desired_test = "bilateral_filter_opencv"
 desired_test_description = (
-    "Calculates the dot product of two 64-bit floating-point vectors."
+    """
+In general, any smoothing filter smoothens the image which will affect the edges of the image. To preserve the edges while smoothing, a bilateral filter can be used. In an analogous way as the Gaussian filter, the bilateral filter also considers the neighboring pixels with weights assigned to each of them. These weights have two components, the first of which is the same weighing used by the Gaussian filter. The second component takes into account the difference in the intensity between the neighboring pixels and the evaluated one.
+
+The bilateral filter applied on an image is:  
+BF[I]_p = (1/W_p) ∑_(q∈S) G_σ_s(||p-q||)G_σ_r(||I_p-I_q||)I_q  
+  
+Where  
+W_p = ∑_(q∈S) G_σ_s(||p-q||)G_σ_r(||I_p-I_q||)  
+  
+and G_σ is a Gaussian filter with variance σ.  
+  
+The Gaussian filter is given by:  
+G_σ = e^(-(x^2+y^2)/(2σ^2))
+
+The input image will be 128x128 pixels
+Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+The filter size is 3.
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV implementation unless otherwise specified
+
+void bilateral_filter_opencv((uint8_t*)in_img.data, sigma_color, sigma_space, (uint8_t*)out_img.data);
+    """
 )
 
 
