@@ -700,18 +700,39 @@ def run_csim(kernel_name=None, model_dir="gpt-4o/axpy_int32/attempts_1"):
             sim_result = subprocess.run(
                 sim_cmd,
                 capture_output=True,
-                check=True
+                check=True,
+                timeout=120,  # Timeout after 2 minutes
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
-        except:
-            print("Exception thrown")
+            return sim_stdout, sim_stderr, "SUCCESS: CSIM completed successfully."
+
+        except subprocess.TimeoutExpired as e:
+            print(f"CSIM timed out: {e}")
+            # IMPORTANT: Access stdout and stderr from the exception object 'e'
+            # Decode them just like you would from the result object
+            sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+            sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
+            print(sim_stdout)
+            return sim_stdout, sim_stderr, "WARNING: CSIM timed out. Code Analysis may be incomplete or invalid."
+
+        except subprocess.CalledProcessError as e: # Catch this specifically for non-zero exit codes
+            print(f"CSIM failed with exit code {e.returncode}")
+            sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+            sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
+            print(sim_stdout)
+
+            return sim_stdout, sim_stderr, f"ERROR: CSIM failed with exit code {e.returncode}. Check stderr for details."
+
+        except Exception as e:
+            print(f"An unexpected error occurred during CSIM: {e}")
+            return None, None, f"ERROR: An unexpected error occurred during CSIM: {e}"
         
 # --- Main execution block ---
 if __name__ == "__main__":
     # Ensure this path exists or is creatable
-    target_model_dir = "gpt-4o/axpy_int32/attempts_1"
+    target_model_dir = "gpt-4o/mat_mult_int16/attempts_5"
 
-    run_csim("axpy_int32", target_model_dir)
+    run_csim("mat_mult_int16", target_model_dir)
     # After running this, inspect the generated JSON file
     # Example: cat results/solutions/gpt-4o/axpy_int32/attempts_6/axpy_int32_test_data.json

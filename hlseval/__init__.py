@@ -6,4 +6,4 @@ from .hlscoder import HLSCoder
 from .run_cpp import run_cpp_with_inputs
 from .parse_synth import gather_parsed_data
 from .run_tests import test_kernel, NumpyEncoder
-from csim import create_testbench
+from .csim import create_testbench
