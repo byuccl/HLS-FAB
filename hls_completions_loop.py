@@ -113,6 +113,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         sim_returncode = csim_output.returncode
     except hlseval.CsimTimeoutError as e:
         timeout_csim = True
+        sim_returncode = 1
         print("WARNING: Vitis timed out on Simulation")
     # Run Synthesis
     try:
@@ -180,6 +181,8 @@ def process_kernel(model, test, workflow, passes=3, mode="optimization", goals=N
 
 
 if __name__ == "__main__":
+
+
     parser = argparse.ArgumentParser(description="Run HLS kernel processing with optional goals.")
 
     parser.add_argument(
