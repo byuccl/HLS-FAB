@@ -40,8 +40,6 @@ def behavioral(input_vector1, input_vector2):
 
 examples = generate_examples(generate_inputs)
 
-# Combine the inputs and types into a single list
-examples = [example1, example2]
 
 # Create the prompt constructor.
 pc = PromptConstructor(
