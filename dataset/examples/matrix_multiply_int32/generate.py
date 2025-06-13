@@ -8,6 +8,13 @@ matrix1_width = 32
 matrix2_height = 32  
 matrix2_width = 24
 
+function_signature = """
+void matrix_multiply_int32(
+    int32_t matrix1[MATRIX_1_HEIGHT][MATRIX_1_WIDTH], 
+    int32_t matrix2[MATRIX_2_HEIGHT][MATRIX_2_WIDTH], 
+    int32_t result[MATRIX_1_HEIGHT][MATRIX_2_WIDTH])
+"""
+
 description = f"""
 This HLS kernel implements a function to multiply two matrices (A * B). 
 Parameters to the function include three int32_t 2D arrays, all intended to be interpreted as 2-dimensional arrays:
@@ -46,7 +53,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

@@ -5,6 +5,8 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 65536
 
+function_signature = "void zero_mean_norm_float64(double *in_vector, double *out_vector, double *mean)"
+
 description = f"""
 This HLS kernel implements a function that does a zero mean normalization on an input vector containing 64 values of float64 type.
 Parameters to the function include three float64 pointers:
@@ -43,7 +45,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

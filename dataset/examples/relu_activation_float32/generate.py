@@ -5,6 +5,8 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 262144
 
+function_signature = "void relu_activation_float32(float *in_vector, float *out_vector)"
+
 description = f"""
 This HLS kernel implements the ReLU activation function on a input vector of 64 values of type 32-bit floating-point.
 Parameters to the function include two float32 pointers:
@@ -40,7 +42,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

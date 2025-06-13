@@ -4,6 +4,9 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the number of values in the array
 num_values = 32768
+
+function_signature = "void mean_var_float64(double *in_buffer, double* out_mean, double* out_var)"
+
 description = f"""
 This HLS kernel implements a function to calculate both the mean and the variance of an input vector with values of float64 type.
 Parameters for this function include a float64 pointer:
@@ -45,7 +48,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples
