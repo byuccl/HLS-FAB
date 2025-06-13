@@ -90,6 +90,13 @@ Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
 
 IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
+
+In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
+1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed" or "Function 'main' returns nonzero value")
+2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
+3. Optimal performance - Reduce the latency while trying to also keep resource usage low
+
+Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
 api_key = os.environ["API_KEY"] # reads for the environment variable 'API_KEY'
@@ -545,12 +552,14 @@ def format_node_content(node):
 
 # Initialize the RAG components with appropriate embedding  
 def setup_rag():  
-    """Initialize the RAG components with appropriate embedding"""  
+    """Initialize RAG with a multi-content splitter for diverse document types."""  
     print("Loading documents...")  
     documents = SimpleDirectoryReader("./rag_data").load_data()  
-    print("Creating embedding model...")  
       
-    # Use HuggingFaceEmbedding if available, otherwise fallback to MockEmbedding  
+    print("Creating multi-content splitter...")  
+    content_splitter = MultiContentSplitter()  
+      
+    print("Creating embedding model...")  
     if HuggingFaceEmbedding is not None:  
         try:  
             embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")  
@@ -563,12 +572,20 @@ def setup_rag():
         print("Using MockEmbedding")  
         embed_model = MockEmbedding(embed_dim=1536)  
       
-    # Disable LLM in the global settings - we'll provide our own  
+    # Configure settings  
     Settings.llm = None  
     Settings.embed_model = embed_model  
       
+    print("Splitting documents based on content type...")  
+    # Split documents into nodes  
+    nodes = content_splitter.split_documents(documents)  
+      
+    print(f"Created {len(nodes)} nodes from {len(documents)} documents")  
+      
     print("Creating vector index...")  
-    index = VectorStoreIndex.from_documents(documents)  
+    # Create index from nodes instead of documents  
+    index = VectorStoreIndex(nodes)  
+      
     return index, embed_model  
 
 # Create a RAG search function that directly queries the index  

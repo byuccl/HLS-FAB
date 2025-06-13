@@ -144,6 +144,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                json_file_path (str): Path to the JSON test data file it relies on.
                status_message (str): "SUCCESS" if file generated, "FAILED" otherwise.
     """
+    mismatches_to_report = 10
     project_root = os.path.dirname(os.path.dirname(__file__))
     cpp_kernel_file_abs_path = os.path.join(model_dir, f"{kernel_name}.cpp")
 
@@ -391,10 +392,13 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
             if array_dimension == 0: # Scalar comparison
                 testbench_code.append(f"        {cpp_base_type} {var_name}_expected_val = {var_name}_expected_json.get<{cpp_base_type}>();")
                 testbench_code.append(f"        if (!compare_numeric({var_name}_out_actual, {var_name}_expected_val)) {{")
-                testbench_code.append(f"            std::cout << \"  FAIL: Scalar '{var_name}' - Expected: \" << {var_name}_expected_val << \", Actual: \" << {var_name}_out_actual << std::endl;")
-                testbench_code.append("            num_mismatches++;")
-                testbench_code.append("            test_case_passed = false;")
-                testbench_code.append("        }")
+                # FIXME: Commentted out these lines that cause context window to explode with failed test cases. Need to know if I should replace them with something else.
+                testbench_code.append(f"            if (num_mismatches < {mismatches_to_report}){{")
+                testbench_code.append(f"                std::cout << \"  FAIL: Scalar '{var_name}' - Expected: \" << {var_name}_expected_val << \", Actual: \" << {var_name}_out_actual << std::endl;")
+                testbench_code.append("             }")
+                testbench_code.append("             num_mismatches++;")
+                testbench_code.append("             test_case_passed = false;")
+                testbench_code.append("         }")
                 testbench_code.append(f"        else {{ std::cout << \"  PASS: Scalar '{var_name}' matches.\" << std::endl; }}")
 
 
@@ -402,12 +406,15 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                 testbench_code.append(f"\n        // Compare array {var_name}")
                 testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{")
                 testbench_code.append(f"            {cpp_base_type} expected_val = {var_name}_expected_json.at(i).get<{cpp_base_type}>();")
-                testbench_code.append(f"            if (!compare_numeric({var_name}_arr[i], expected_val)) {{")
-                testbench_code.append(f"                std::cout << \"  FAIL: Array '{var_name}' at flattened index [\" << i << \"] - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr[i] << std::endl;")
-                testbench_code.append("                test_case_passed = false;")
-                testbench_code.append("                // break; // Uncomment to stop on first mismatch for this array")
-                testbench_code.append("            }")
-                testbench_code.append("        }")
+                testbench_code.append(f"            if (!compare_numeric({var_name}_arr[i], expected_val)) {{")                
+                testbench_code.append(f"                if (num_mismatches < {mismatches_to_report}){{")
+                testbench_code.append(f"                    std::cout << \"  FAIL: Array '{var_name}' at flattened index [\" << i << \"] - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr[i] << std::endl;")
+                testbench_code.append("                 }")
+                testbench_code.append("                 num_mismatches++;")
+                testbench_code.append("                 test_case_passed = false;")
+                testbench_code.append("                 // break; // Uncomment to stop on first mismatch for this array")
+                testbench_code.append("             }")
+                testbench_code.append("         }")
                 testbench_code.append(f"        if (test_case_passed) std::cout << \"  PASS: Array '{var_name}' matches.\" << std::endl;")
                 
 
@@ -436,7 +443,9 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                 print(cout_loop_vars)
                 testbench_code.append(f"{indent}{cpp_base_type} expected_val = {json_access_str}.at({loop_vars[-1]}).get<{cpp_base_type}>();")
                 testbench_code.append(f"{indent}if (!compare_numeric({var_name}_arr{cpp_access_str}, expected_val)) {{")
-                testbench_code.append(f"{indent}    std::cout << \"  FAIL: {array_dimension}D Array '{var_name}' at index\" << {cout_loop_vars} << \"- Expected: \" << expected_val << \", Actual: \" << {var_name}_arr{cpp_access_str} << std::endl;")
+                testbench_code.append(f"{indent}    if (num_mismatches < {mismatches_to_report}){{")
+                testbench_code.append(f"{indent}        std::cout << \"  FAIL: {array_dimension}D Array '{var_name}' at index\" << {cout_loop_vars} << \"- Expected: \" << expected_val << \", Actual: \" << {var_name}_arr{cpp_access_str} << std::endl;")
+                testbench_code.append(f"{indent}    }}")
                 testbench_code.append(f"{indent}    test_case_passed = false;")
                 testbench_code.append(f"{indent}    num_mismatches++;")
 
