@@ -192,9 +192,11 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     testbench_code.append("#include <vector>")
     testbench_code.append("#include <string>")
     testbench_code.append("#include <cmath>") # For std::abs
+    testbench_code.append("#include <ap_int.h>") # For ap_int
     testbench_code.append("#include <limits>") # For numeric_limits epsilon
     testbench_code.append("#include \"nlohmann/json.hpp\"") # Assuming nlohmann/json.hpp is available in include path
     testbench_code.append("#include \"utils.hpp\"")    # Floating-point comparison helper function
+    testbench_code.append("#include \"nlohmann/apint_serializer.hpp\"")    # ap_int serializer
 
     # Include the actual kernel file using its absolute path (or a relative path if copied)
     # The generated testbench.cpp needs to know where kernel_name.cpp is.
@@ -720,7 +722,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
         syn.top={kernel_name}
         syn.file={kernel_code_path}
         tb.file={kernel_testbench_path}
-        tb.cflags=-fexceptions -I./include
+        tb.cflags=-std=c++17 -fexceptions -I./include 
         csim.code_analyzer=1
         csim.clean=true
         """ )
@@ -735,7 +737,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
                 sim_cmd,
                 capture_output=True,
                 check=False,
-                timeout=300,  # Timeout after 2 minutes
+                timeout=60,  # Timeout after 2 minutes
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 

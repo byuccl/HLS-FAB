@@ -73,10 +73,10 @@ def import_module_functions(kernel_name, function_names=None):
  
 def get_cpp_type_str(dtype_str):
     dtype_map = {
-        "int8": "int8_t", "uint8": "uint8_t",
-        "int16": "int16_t", "uint16": "uint16_t",
-        "int32": "int32_t", "uint32": "uint32_t",
-        "int64": "int64_t", "uint64": "uint64_t",
+        "int8": "ap_int<8>", "uint8": "ap_uint<8>",
+        "int16": "ap_int<16>", "uint16": "ap_uint<16>",
+        "int32": "ap_int<32>", "uint32": "ap_uint<32>",
+        "int64": "ap_int<64>", "uint64": "ap_uint<64>",
         "float16": "half_float_type",
         "float32": "float", "float64": "double",
         "bool": "bool",

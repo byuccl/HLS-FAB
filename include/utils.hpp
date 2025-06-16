@@ -13,11 +13,9 @@
 template<typename T>
 bool compare_numeric(T actual, T expected, T epsilon = std::numeric_limits<T>::epsilon() * 100) {
     // Check if T is a floating-point type
-    if (std::is_floating_point<T>::value) {
-        std::cout << "Comparing floating-point numbers: " << actual << " vs " << expected << std::endl;
-        std::cout << "Difference is " << std::abs(actual - expected) << std::endl;
-        T scale = std::max({static_cast<T>(1.0), std::fabs(actual), std::fabs(expected)});
-                std::cout << "Using epsilon: " << epsilon*scale << std::endl;
+    if constexpr (std::is_floating_point<T>::value) {
+        T scale = std::max(static_cast<T>(1.0),
+                   std::max(std::abs(actual), std::abs(expected)));
 
         return std::abs(actual - expected) < epsilon * scale;
     } else {
