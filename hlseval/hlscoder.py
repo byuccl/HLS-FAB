@@ -272,10 +272,13 @@ def call_llm_api(coder, tools=None):
         body["tools"] = tools  
     
     if coder.workflow == "byu":
-        body["model"] = coder.model, # The model is only needed for the byu API
+        body["model"] = coder.model # The model is only needed for the byu API
 
 
     print(f"API Request: {json.dumps(body, indent=2)}")  
+    body_json = json.dumps(body, indent=2)
+
+
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
       
     # Print the raw response for debugging  

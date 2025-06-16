@@ -291,8 +291,6 @@ def get_cpp_type(input_val, type_info=None):
     else:  
         return "void*"  # Default for unknown types  
 
-
-
 def generate_types(inputs):  
     """
     Generate comprehensive type information for a list of inputs/outputs,

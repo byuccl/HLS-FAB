@@ -433,7 +433,6 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
                 cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
                 cout_loop_vars = "<<".join([f" \"[\" << {lv} <<  \"]\"" for lv in loop_vars])  # For output formatting
-                print(cout_loop_vars)
                 testbench_code.append(f"{indent}{cpp_base_type} expected_val = {json_access_str}.at({loop_vars[-1]}).get<{cpp_base_type}>();")
                 testbench_code.append(f"{indent}if (!compare_numeric({var_name}_arr{cpp_access_str}, expected_val)) {{")
                 testbench_code.append(f"{indent}    std::cout << \"  FAIL: {array_dimension}D Array '{var_name}' at index\" << {cout_loop_vars} << \"- Expected: \" << expected_val << \", Actual: \" << {var_name}_arr{cpp_access_str} << std::endl;")
