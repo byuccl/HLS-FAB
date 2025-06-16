@@ -3,10 +3,10 @@ import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the dimensions of the matrix
-matrix1_height = 16  
+matrix1_height = 64  
 matrix1_width = 32 
 matrix2_height = 32  
-matrix2_width = 24
+matrix2_width = 128
 
 function_signature = """
 void matrix_multiply_int32(

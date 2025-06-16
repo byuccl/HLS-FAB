@@ -3,7 +3,7 @@ import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the number of values in the array
-num_values = 524288
+num_values = 16384
 
 function_signature = "void dot_product_float32(float *in_vector1, float *in_vector2, float *result)"
 
