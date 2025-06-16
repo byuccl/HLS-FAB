@@ -5,13 +5,13 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 16384
 
-function_signature = "void absolute_value_int8(int8_t *in_buffer, int8_t* out_buffer)"
+function_signature = "void absolute_value_int8(ap_int<8> *in_buffer, ap_int<8>* out_buffer)"
 
 description = f"""
 This HLS kernel implements a function to calculate absolute value of a vector of 8-bit integer numbers. 
-Parameters to the function include two int8_t pointers:
-    The first pointer points to the start of a {num_values}-element array of int8_t values to be used as input data. 
-    The second pointer also points to the start of a {num_values}-element array of int8_t values to be modified and viewed as the output to the function."
+Parameters to the function include two ap_int<8> pointers:
+    The first pointer points to the start of a {num_values}-element array of ap_int<8> values to be used as input data. 
+    The second pointer also points to the start of a {num_values}-element array of ap_int<8> values to be modified and viewed as the output to the function."
 """
 
 # A function to return the inputs and types to the function. 

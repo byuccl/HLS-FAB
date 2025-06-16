@@ -2,7 +2,7 @@ import numpy as np
 import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
-num_values = 65536
+num_values = 16384
 
 function_signature = "void affine_float32(float *in_vector, float in_scale, float in_bias, float *out_vector)"
 

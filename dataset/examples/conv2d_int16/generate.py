@@ -4,13 +4,13 @@ import torch
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Input and kernel dimensions    
-input_height = 28    
-input_width = 28    
+input_height = 16    
+input_width = 16    
 kernel_size = 3    
 stride = 1    
 
 # Channel and batch configuration    
-batch_size = 16    
+batch_size = 8    
 in_channels = 3    
 out_channels = 16  
 
@@ -19,16 +19,15 @@ output_height = (input_height - kernel_size) / stride + 1
 output_width = (input_width - kernel_size) / stride + 1 
 
 function_signature = """
-void conv2d_int16(  
-    int16_t input[BATCH_SIZE][IN_CHANNELS][INPUT_HEIGHT][INPUT_WIDTH],       // [BATCH_SIZE][IN_CHANNELS][INPUT_HEIGHT][INPUT_WIDTH]  
-    int16_t kernel[OUT_CHANNELS][IN_CHANNELS][KERNEL_SIZE][KERNEL_SIZE],      // [OUT_CHANNELS][IN_CHANNELS][KERNEL_SIZE][KERNEL_SIZE]  
-    int16_t output[BATCH_SIZE][OUT_CHANNELS][OUTPUT_HEIGHT][OUTPUT_WIDTH]       // [BATCH_SIZE][OUT_CHANNELS][OUTPUT_HEIGHT][OUTPUT_WIDTH]  
-)
+void conv2d_int16(ap_int<16> *input, ap_int<16> *kernel, ap_int<16> *output)
+// input,        [BATCH_SIZE][IN_CHANNELS][INPUT_HEIGHT][INPUT_WIDTH]  
+// kernel,       [OUT_CHANNELS][IN_CHANNELS][KERNEL_SIZE][KERNEL_SIZE]  
+// output        [BATCH_SIZE][OUT_CHANNELS][OUTPUT_HEIGHT][OUTPUT_WIDTH]  
 """
 
 description = f"""
 This HLS kernel implements a 2D convolution operation for neural networks. 
-Parameters to the function include three 4D int16_t arrays, all intended to be interpreted as 4-dimensional arrays:
+Parameters to the function include three ap_int<16> arrays, all intended to be interpreted as 4-dimensional arrays:
     The first parameter points to the start of the 4D input data array. The dimensions are [batch_size={batch_size}][in_channels={in_channels}][height={input_height}][width={input_width}].
     The second parameter points to the start of the the 4D kernel array. The dimensions are [out_channels={out_channels}][in_channels={in_channels}][kernel_size={kernel_size}][kernel_size={kernel_size}].
     The third parameter points to the start of the 4D ouput data array. The dimensions are [batch_size={batch_size}][in_channels={out_channels}][height={output_height}][width={output_width}].
@@ -49,26 +48,37 @@ def generate_inputs(seed=0):
         # Set a seed so the example inputs and outputs work correctly  
         np.random.seed(seed)  
 
-        input_matrix1 = np.random.randint(-128, 128, size=(batch_size, in_channels, input_height, input_width), dtype=np.int16)  
-        input_matrix2 = np.random.randint(-2, 2, size=(out_channels, in_channels, kernel_size, kernel_size), dtype=np.int16)  
-        output_matrix = np.zeros(shape=(np.int16(batch_size), np.int16(out_channels), np.int16(output_height), np.int16(output_width)), dtype=np.int16)  
+        input_matrix1 = np.random.randint(-128, 128, size=(batch_size, in_channels, input_height, input_width), dtype=np.int16).flatten()   
+        input_matrix2 = np.random.randint(-2, 2, size=(out_channels, in_channels, kernel_size, kernel_size), dtype=np.int16).flatten()  
+        output_matrix = np.zeros(shape=(np.int16(batch_size), np.int16(out_channels), np.int16(output_height), np.int16(output_width)), dtype=np.int16).flatten()  
     inputs = [input_matrix1, input_matrix2, output_matrix]  
 
     types = generate_types(inputs)    
     return {"inputs": inputs, "types": types}    
   
 # A function to generate a correct solution based on sample input matrices    
-def behavioral(input_matrix1, input_matrix2):    
-    # Convert numpy arrays to PyTorch tensors  
-    input_tensor = torch.tensor(input_matrix1, dtype=torch.float32)  
-    weight_tensor = torch.tensor(input_matrix2, dtype=torch.float32)  
+def behavioral(input_array_1d, weight_array_1d):  
+    # Reshape 1D input array to 4D tensor [batch_size, in_channels, input_height, input_width]  
+    input_tensor = torch.tensor(  
+        input_array_1d,   
+        dtype=torch.float32  
+    ).reshape(batch_size, in_channels, input_height, input_width)  
+      
+    # Reshape 1D weight array to 4D tensor [out_channels, in_channels, kernel_size, kernel_size]  
+    weight_tensor = torch.tensor(  
+        weight_array_1d,   
+        dtype=torch.float32  
+    ).reshape(out_channels, in_channels, kernel_size, kernel_size)  
       
     # Apply convolution using PyTorch's functional interface  
     output = torch.nn.functional.conv2d(input_tensor, weight_tensor, stride=stride)  
       
-    # Convert back to int16 numpy array  
-    return output.round().to(torch.int16).numpy()  
-
+    # Convert to int16 and flatten to 1D for output  
+    # Output shape should be [batch_size, out_channels, output_height, output_width]  
+    output_1d = output.round().to(torch.int16).flatten().numpy()  
+      
+    return output_1d  
+    
 examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
