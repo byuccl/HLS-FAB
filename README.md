@@ -19,33 +19,36 @@
 - This folder should contain each kernel you intend to run hlseval on. By clearing the existing `hsleval.json` file, running `generate_kernels.sh`, and then `generate_hlseval.py`, the `hlseval.json` file will contain a line for each test in this folder. From there you are ready to run hlseval
 ### hlseval
 - This is a package of separate helpful modules for the rest of the project.
+- **`csim.py`**
+  - This module contains functions to generate a C++ testbench file using the behavioral function from the kernel's `generate.py` script and run the kernel/testbench using the Vitis C Simulation tool. 
 - **`datset.py`**
   - This python module contains the class PromptConstructor which is used by each `generate.py` in order to create multishot prompts with examples for each kernel. 
 - **`hlscoder.py`**
-  - This python module contains the class HLSCoder which is the interface between the code and the LLM API calls. It is used for each completion as well as each test generation.
-- **`parse_synth.py`**
-  - This python module takes the reports and logs from the Vitis tools output and parses through them gathering all relevant data. The output is put into the `kernel_name_data.json` files.
-- **`run_cpp.py`**
+  - This python module contains the class HLSCoder which is the interface between the code and the LLM API calls. It is used for each completion as well as each test generation. This file also contains functions to interface with the RAG database and use it in code generation.
+- **`parser.py`**
+  - This python module takes the reports and logs from the Vitis tools output and parses through them gathering all relevant data. The output is put into the `<kernel_name>_data.json` files.
+- **`run_cpp.py`** *depreciated*
   - This python module has helper functions for `run_tests.py` in the `testing` directory. It takes the inputs and outputs information and runs it in C to test the correctness of the function. 
+- **`run_tests.py`** *depreciated*
+  - This python module is used after the LLMs have created their completions and is used to check the correctness of the code generated. It goes through every kernel and model that has been generated and then checks to see if the behavioral from `generate.py` and the function in the `<kernel_name>.cpp` have the same Outputs. The results that are generated are outputted into `test_results.json`.
 - **`utils.py`**
   - This python module holds many helper functions that are used by other scripts. 
+- **`vitis.py`**
+  - This python module contains a function to run Vitis C Synthesys using a subprocess.
 ### results
 #### solutions
 - This folder is not contained in the repository but all output from the project will go here. It will have subfolders named after each LLM Model you are running (i.e.`gpt-4o`). These will be divided by the number of attempts and then by kernel names. Each kernel folder will contain both the hls C code and the Vitis output. 
-- **`kernel_name.cpp`** 
+- **`<kernel_name>.cpp`** 
   - This is the outputted C++ file that the model generates. 
-- **`kernel_name_data.json`**
+- **`<kernel_name>_data.json`**
   - This json file will contain a dictionary of results from the synthesis report. It contains data like latency, as well as BRAM, LUT and FF utilization. It also contains any warnings or errors from the logs if there are any. 
-#### testing
-- **`run_tests.py`**
-  - This python script is used after the LLMs have created their completions and is used to check the correctness of the code generated. It goes through every kernel and model that has been generated and then checks to see if the behavioral from `generate.py` and the function in the `kernel_name.cpp` have the same Outputs. The results that are generated are outputted into `test_results.json`.
-- **`test_results.json`**
-  - This file contains the results of the `run_test.py` script.
 ### other files
 - **`dockerfile`**
-  - Quickly sets up a docker container with all python packages and requirements for HLSEval. The docker container does not contain Vitis tools. Any calls to the Vitis tools must be commented out to run in this way.
-- **`hls_completions.py`**
+  - Quickly sets up a docker container with all python packages and requirements for HLSEval. The docker container does not contain Vitis tools. Any calls to the Vitis tools must be commented out to run in this way. *This has not been updated for some time. It likely will not intsall all necessary python packages*
+- **`hls_completions.py`** *depreciated*
   - This file contains the `main` function. This function will go through every prompt in `dataset/hlseval.json` file and generate completions for each model and output them to the `results` folder. The function will then run HLS synthesis with the Vitis tools.
+  - **`hls_completions_loop.py`**
+  - This file contains the `main` function. This function will go through every prompt in `dataset/hlseval.json` file and generate completions for each model and output them to the `results` folder. The function will then run C Simulation and C Synthesis with the Vitis tools. These results will be used in the next iteration of code generation to create a feedback loop
 - **`requirements.txt`**
   - Contains a list of the required Python packages. This should facilitate setting up an environment without using the dockerfile.
 ## Instructions for Running Tests with HLSEval
@@ -58,24 +61,22 @@
   - The output should be `kernel.json` in the `kernels` folder.
 4. Generate the HLSEval: Run the script `generate_hlseval.py`.
   - The output should be `hlseval.jsonl`and `kernel_list.txt` inside the `dataset` directory.
-5. Generating completions: Run the `hls_completions.py` in the `hlseval` main directory.
+5. Generating completions: Run the `hls_completions_loop.py` in the `hlseval` main directory.
   - It is required to add some argmuments on the command line. Based on which API key you are using, there may be a different poll request URL.
     - Currently we only support two the public polling url and the AMD azure url. To specify either put byu for public or amd for AMD's workflow. 
   - There are other flags that can be added on the command line that add specific actions of the script. 
     * **Mode** The `--mode` flag gives you an option between `optimization`(default) and `correction` mode. Correction mode will only loop back if the first attempt does not compile in vitis tools. 
     * **Goals:** The `--goals` flag is used to specify which goals you would like to achieve with optimization mode. Simply write strings in double quotes stating what you would optimize. i.e. `"Reduce latency" "minimize warnings"`
-  - Example: ```python hls_completions.py amd --mode optimization --goals "Reduce BRAM Usage"```
-  - Don't forget to activate Vitis `source tools/Xilinx/Vitis/2024.2/settings64.sh`
+  - Example: ```python hls_completions_loop.py amd --mode optimization --goals "Reduce BRAM Usage"```
+  - Don't forget to activate Vitis e.g. `source tools/Xilinx/Vitis/2024.2/settings64.sh`
   - The output will be in a `solutions` folder in the `results` directory.
-6. Run the tests: The directory `results/testing` contains the script `run_tests.py` which will run all the tests.
-7. Analyze results: Look at the results from the scripts.
-  - The first place to look is the `results/testing` folder. The file `test_results.json` contains all the kernels expected and actual outputs and whether or not the programs compiled and were successful matches with the expected. 
-  - The second place to look for results is in the `solutions` directory. There are subfolders for each model and each model has different attempts. Each attempt number contains the kernels results with a file called `kernel_name_data.json`. This file contains the errors, warnings, and performance data. Each attempt will show if the model used the feedback and followed the guidelines you provided it. 
-8. Makefile Completions: There is a make file rule for replacing the individual steps 3-6.
-  - `make` from within the `hlseval` directory will run steps 3-6.
+6. Analyze results: Look at the results from the scripts.
+  - Results are stored in the `results/solutions/<model>/<kernel_name>` folder. A separate folder for each attempt will be present. The file `<kernel_name>.cpp` contains the generated HLS code, and the file `<kernel_name>_data.json` contains results from the C Simulation and C Synthesis. The original output logs should all have been saved as well. 
+7. Makefile Completions: There is a Makefile rule for replacing the individual steps 3-6.
+  - `make` from within the `hlseval` directory will run steps 3-5.
   - `make clean` will clean the unnecessary files for analysis.
 
-## Building and running with Docker
+## Building and running with Docker *depreciated*
 > Currently only the python environment has been containerized. To run hlseval with Vitis tools, instead of running the docker container, you will need to install Vitis on your computer and set up a Python virtual environment.
 ### Build the docker container using the dockerfile
 Run the command:\

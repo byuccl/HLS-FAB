@@ -23,7 +23,13 @@ def feedback_prompt(prev_code, feedback):
         {json.dumps(feedback, indent=2)}
 
         Please modify the code using the goals from the feedback as a guideline.
-        Prioritize fixing errors from either the testbench or the synthesis above all other goals.
+
+        Prioritize the goals to improve the code in the following order:
+        1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed" or "Function 'main' returns nonzero value")
+        2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
+        3. Optimal performance - Reduce the latency while trying to also keep resource usage low
+        
+        Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
         """
 
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
@@ -113,6 +119,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         sim_returncode = csim_output.returncode
     except hlseval.CsimTimeoutError as e:
         timeout_csim = True
+        sim_returncode = 1
         print("WARNING: Vitis timed out on Simulation")
     # Run Synthesis
     try:
@@ -166,7 +173,7 @@ def process_kernel(model, test, workflow, passes=3, mode="optimization", goals=N
         # ✅ Pass `goals` only if in optimization mode
         current_goals = goals if mode == "optimization" else None
         prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, mode, feedback, goals=current_goals)
-        print(feedback)
+        print(feedback) # TODO: Feedback has EVERY failing test case I think. Need to cut this down or it will fill the context window.
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
             print(f"{kernel_name} compiled successfully on attempt {attempt+1}.")
@@ -180,6 +187,8 @@ def process_kernel(model, test, workflow, passes=3, mode="optimization", goals=N
 
 
 if __name__ == "__main__":
+
+
     parser = argparse.ArgumentParser(description="Run HLS kernel processing with optional goals.")
 
     parser.add_argument(
