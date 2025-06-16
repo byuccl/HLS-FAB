@@ -1,3 +1,24 @@
+
+desired_test = "bit_depth_convert_opencv"
+desired_test_description = (
+    """
+The bit_depth_convert_opencv function converts the input image bit depth to the required bit depth in the output image.
+
+
+The input image will be 128x128 pixels
+The shift parameter allows for an optional scale factor to be applied
+Each pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer
+Each pixel of the output image is represented by a 3-channel, 16-bit, unsigned integer
+The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+Implementation details should match the OpenCV implementation unless otherwise specified
+
+void bit_depth_convert_opencv((uint8_t*)in_img.data, (int)shift, (uint8_t*)out_img_hls.data);
+    """
+)
+
+desired_test = "bilateral_filter_opencv"
+
+
 desired_test = "mat_mult_int16"
 desired_test_description = (
     """

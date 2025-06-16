@@ -22,37 +22,150 @@ C_TO_NUMPY_DTYPE = {
     "double": "float64",
 }
 
-def extract_canonical(src):
-    match = re.search(r'void\s+\w+\s*\(.*?\)\s*{(.*)}', src, re.DOTALL)
-    if match:
-        return match.group(1).strip() + "\n}"
-    else:
-        raise Exception("Couldn't parse canonical solution.")
-    
+# def extract_canonical(src):
+#     match = re.search(r'void\s+\w+\s*\(.*?\)\s*{(.*)}', src, re.DOTALL)
+#     if match:
+#         return match.group(1).strip() + "\n}"
+#     else:
+#         raise Exception("Couldn't parse canonical solution.")
+
+def parse_function_signature(signature):  
+    """  
+    Parse a C++ function signature to extract the function name and categorize parameters.  
+      
+    Args:  
+        signature (str): A C++ function signature string  
+          
+    Returns:  
+        dict: A dictionary containing:  
+            - 'name': The function name  
+            - 'buffers': List of parameter dictionaries that are pointers or arrays  
+            - 'rtps': List of parameter dictionaries that are regular types (non-pointers)  
+    """  
+    # Extract function name  
+    name_match = re.search(r'(?:\w+\s+)+(\w+)\s*\(', signature)  
+    if not name_match:  
+        raise ValueError("Could not extract function name from the signature")  
+      
+    function_name = name_match.group(1)  
+      
+    # Extract parameters section (everything between parentheses)  
+    params_match = re.search(r'\((.*?)\)', signature)  
+    if not params_match:  
+        raise ValueError("Could not extract parameters from the signature")  
+      
+    params_str = params_match.group(1).strip()  
+    if not params_str:  
+        return {'name': function_name, 'parameters': [], 'buffers': [], 'rtps': []}  
+      
+    # Split parameters by comma, handling potential commas in template arguments  
+    params = []  
+    current_param = ""  
+    bracket_level = 0  
+      
+    for char in params_str:  
+        if char == ',' and bracket_level == 0:  
+            params.append(current_param.strip())  
+            current_param = ""  
+        else:  
+            current_param += char  
+            if char == '<':  
+                bracket_level += 1  
+            elif char == '>':  
+                bracket_level -= 1  
+      
+    if current_param.strip():  
+        params.append(current_param.strip())  
+      
+    # Parse parameters  
+    all_params = []  
+    buffers = []  
+    rtps = []  
+      
+    for param in params:  
+        # Remove default value if any  
+        param_parts = param.split('=')[0].strip()  
+          
+        # Extract pointer/array info  
+        is_pointer = '*' in param_parts  
+        is_array = '[]' in param_parts  
+          
+        # Normalize spacing around pointers for easier parsing  
+        normalized_param = param_parts.replace('*', ' * ').replace('[', ' [').replace(']', '] ')  
+          
+        # Extract parameter name (last word before any array notation)  
+        words = re.sub(r'\s+', ' ', normalized_param).strip().split()  
+        param_name = ""  
+          
+        for i in range(len(words)-1, -1, -1):  
+            if words[i] != '*' and not words[i].startswith('['):  
+                param_name = words[i]  
+                break  
+          
+        if not param_name:  
+            continue  
+          
+        # Extract type (everything before the name, excluding pointer symbols)  
+        type_end_idx = normalized_param.rfind(param_name)  
+        if type_end_idx == -1:  
+            continue  
+              
+        param_type = normalized_param[:type_end_idx].replace('*', '').strip()  
+          
+        # Create parameter dictionary similar to CppHeaderParser format  
+        param_dict = {  
+            "name": param_name,  
+            "type": param_type,  
+            "pointer": is_pointer,  
+            "array": is_array,  
+            "reference": '&' in param_parts  
+        }  
+          
+        all_params.append(param_dict)  
+          
+        if is_pointer or is_array:  
+            buffers.append(param_dict)  
+          
+        if not is_pointer:  
+            rtps.append(param_dict)  
+      
+    return {  
+        'name': function_name,  
+        'parameters': all_params,  
+        'buffers': buffers,  
+        'rtps': rtps  
+    } 
     
 class PromptConstructor:
-    def __init__(self, source_path, description, behavioral, examples, tolerances=None): 
+    def __init__(self, function_signature, description, behavioral, examples, tolerances=None): 
         #type is a list of types for the input buffers, has 2 parts: the dimension and the io direction. If it has 0 as Dimension, it is an RTP
         # --- Parse source + function ---
-        with open(source_path, "r") as f:
-            source_code = f.read()
-        parsedcpp = CppHeader(source_code, argType='string')
+        # with open(source_path, "r") as f:
+        #     source_code = f.read()
+        # parsedcpp = CppHeader(function_signature, argType='string')
 
-        if len(parsedcpp.functions) > 1:
-            raise RuntimeError("There should be only 1 function in the source code.")
+        # if len(parsedcpp.functions) > 1:
+        #     raise RuntimeError("There should be only 1 function in the source code.")
 
-        func = parsedcpp.functions[0]
-        self.name = func['name']
+        # func = parsedcpp.functions[0]
+        # Parse the function signature  
+        result = parse_function_signature(function_signature)  
+          
+        # Correctly assign the values from the dictionary  
+        self.name = result['name']  
+        self.parameters = result['parameters']  
+        self.buffers = result['buffers']  
+        self.rtps = result['rtps']
         self.examples = examples
-        self.buffers = [p for p in func['parameters'] if self._is_buffer(p)]
-        self.rtps = [p for p in func['parameters'] if not p['pointer']]
-        self.call = self._construct_call()
+        # self.buffers = [p for p in func['parameters'] if self._is_buffer(p)]
+        # self.rtps = [p for p in func['parameters'] if not p['pointer']]
+        # self.call = self._construct_call()
 
         # --- Extract canonical solution and signature---
-        with open(source_path, "r") as f:
-            src = f.read()
-        canonical_solution = extract_canonical(src)
-        self.signature = self._construct_signature(src)
+        # with open(source_path, "r") as f:
+        #     src = f.read()
+        # canonical_solution = extract_canonical(src)
+        # self.signature = self._construct_signature(src)
 
         # --- Generate test_vectors for each example --- 
         test_vectors_list = []
@@ -164,20 +277,20 @@ class PromptConstructor:
 {examples}
 {dataflow}
 */
-{self.signature} {{
+{function_signature} {{
 """
         else:
             prompt = f"""/*
 {description}
 {dataflow}
 */
-{self.signature} {{
+{function_signature} {{
 """
 
         self.sample = {
             "kernel_name": self.name,
             "prompt": prompt,
-            "canonical_solution": canonical_solution, #FIXME: Find out what these are used for and if we need them
+            # "canonical_solution": canonical_solution, #FIXME: Find out what these are used for and if we need them
             # "program_code": program_code,
             # "test_vectors": test_vectors,
         }

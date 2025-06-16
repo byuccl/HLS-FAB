@@ -21,18 +21,18 @@ Run the `generate_kernels.sh` script.
 Run the script `generate_hlseval.py`.
   - The output should be `hlseval.jsonl`and `kernel_list.txt` inside the `dataset` directory.
 ### 5. Generating completions: 
-Run the `hls_completions.py` in the `hlseval` main directory.
+Run the `hls_completions_loop.py` in the `hlseval` main directory.
   - It is required to add some argmuments on the command line. Based on which API key you are using, there may be a different poll request URL.
     - Currently we only support two the public polling url and the AMD azure url. To specify either put byu for public or amd for AMD's workflow. 
   - There are other flags that can be added on the command line that add specific actions of the script. 
     * **Mode** The `--mode` flag gives you an option between `optimization`(default) and `correction` mode. Correction mode will only loop back if the first attempt does not compile in vitis tools. 
     * **Goals:** The `--goals` flag is used to specify which goals you would like to achieve with optimization mode. Simply write strings in double quotes stating what you would optimize. i.e. `"Reduce latency" "minimize warnings"`
-  - Example: ```python hls_completions.py amd --mode optimization --goals "Reduce BRAM Usage"```
-  - Don't forget to activate Vitis `source tools/Xilinx/Vitis/2024.2/settings64.sh`
+  - Example: ```python hls_completions_loop.py amd --mode optimization --goals "Reduce BRAM Usage"```
+  - Don't forget to activate Vitis e.g. `source tools/Xilinx/Vitis/2024.2/settings64.sh`
   - The output will be in a `solutions` folder in the `results` directory.
 ### 6. Analyze results: 
 Look at the results from the scripts.
-  - The dirctory which holds all the results is in the `results/solutions` directory. There are subfolders for each model and each model has different attempts. Each attempt number contains the kernels results with a file called `kernel_name_data.json`. This file contains the errors, warnings, and performance data. Each attempt will show if the model used the feedback and followed the guidelines you provided it. Furthermore, the file `test_results.json` contains all the kernels expected and actual outputs and whether or not the programs compiled and were successful matches with the expected. 
+  - The dirctory which holds all the results is in the `results/solutions` directory. There are subfolders for each model and each model has different attempts. Each attempt number contains the kernels results with a file called `<kernel_name>_data.json`. This file contains the errors, warnings, performance data, and testbench results. Each attempt will show if the model used the feedback and followed the guidelines you provided it. 
 ### 7. Makefile Completions: 
 There is a make file rule for replacing the individual steps 3-6.
   - `make` from within the `hlseval` directory will run steps 3-6.

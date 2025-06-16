@@ -18,6 +18,14 @@ out_channels = 16
 output_height = (input_height - kernel_size) / stride + 1      
 output_width = (input_width - kernel_size) / stride + 1 
 
+function_signature = """
+void conv2d_int16(  
+    int16_t input[BATCH_SIZE][IN_CHANNELS][INPUT_HEIGHT][INPUT_WIDTH],       // [BATCH_SIZE][IN_CHANNELS][INPUT_HEIGHT][INPUT_WIDTH]  
+    int16_t kernel[OUT_CHANNELS][IN_CHANNELS][KERNEL_SIZE][KERNEL_SIZE],      // [OUT_CHANNELS][IN_CHANNELS][KERNEL_SIZE][KERNEL_SIZE]  
+    int16_t output[BATCH_SIZE][OUT_CHANNELS][OUTPUT_HEIGHT][OUTPUT_WIDTH]       // [BATCH_SIZE][OUT_CHANNELS][OUTPUT_HEIGHT][OUTPUT_WIDTH]  
+)
+"""
+
 description = f"""
 This HLS kernel implements a 2D convolution operation for neural networks. 
 Parameters to the function include three 4D int16_t arrays, all intended to be interpreted as 4-dimensional arrays:
@@ -65,7 +73,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

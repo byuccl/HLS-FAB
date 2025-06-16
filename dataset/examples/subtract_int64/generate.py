@@ -5,6 +5,8 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 131072
 
+function_signature = "void subtract_int64(int64_t *in_buffer1, int64_t *in_buffer2, int64_t* out_buffer)"
+
 description = f"""
 This HLS kernel implements a function to perfom elementwise subtraction between two vectors of 64-bit integers. Each vector contains 128 elements.
 Parameters to the function include three int64 pointers:
@@ -42,7 +44,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples
