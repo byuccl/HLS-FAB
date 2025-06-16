@@ -500,7 +500,7 @@ def call_llm_api(coder, tools=None):
         body["tools"] = tools  
     
     if coder.workflow == "byu":
-        body["model"] = coder.model, # The model is only needed for the byu API
+        body["model"] = coder.model # The model is only needed for the byu API
 
 
     print(f"API Request: {json.dumps(body, indent=2)}")  

@@ -121,6 +121,8 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         timeout_csim = True
         sim_returncode = 1
         print("WARNING: Vitis timed out on Simulation")
+
+
     # Run Synthesis
     try:
         print("--- Running CSYNTH ---")

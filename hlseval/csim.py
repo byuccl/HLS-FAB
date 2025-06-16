@@ -234,6 +234,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     testbench_code.append("    int failed_tests = 0;")
     testbench_code.append("    int flat_idx = 0;")
     testbench_code.append("    float percent_error = 0.0;")
+    testbench_code.append("    uint32_t num_mismatches = 0;")
 
 
     # Loop through each test case
@@ -377,7 +378,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
         if in_out_status in ["out", "inout"]:
             # Get expected values from JSON
-            testbench_code.append(f"\n        uint32_t num_mismatches = 0;")
+            testbench_code.append(f"\n        num_mismatches = 0;")
             
             testbench_code.append(f"\n        // Get expected values for {var_name}")
             testbench_code.append(f"        auto {var_name}_expected_json = test_case.at(\"expected_outputs\").at(\"{var_name}\");")
