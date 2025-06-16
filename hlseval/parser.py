@@ -156,7 +156,7 @@ def parse_sim_report(file_path=None):
         elif "WARNING:" in line:
             feedback["warnings"].append(line.split("WARNING:")[1].strip())
         elif "FAIL:" in line:
-            feedback["expected_v_actual"].append(line.split("index")[1].strip())
+            feedback["expected_v_actual"].append(line.split("- ")[1].strip())
         elif "Percent Error:" in line:
             feedback["percent_error"] = line.split(":")[1].strip()
 

@@ -5,15 +5,14 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 131072
 
-function_signature = "void subtract_int64(int64_t *in_buffer1, int64_t *in_buffer2, int64_t* out_buffer)"
+function_signature = "void subtract_int64(ap_int<64> *in_buffer1, ap_int<64> *in_buffer2, ap_int<64>* out_buffer)"
 
 description = f"""
-This HLS kernel implements a function to perfom elementwise subtraction between two vectors of 64-bit integers. Each vector contains 128 elements.
-Parameters to the function include three int64 pointers:
-    The first and second parameters are pointers to the start of an array of {num_values} int64 values. These are the inputs.
-    The third parameter is a pointer to the start of an array of {num_values} int64 values. This is the output array.
+This HLS kernel implements a function to perfom elementwise subtraction between two vectors of 64-bit integers. Each vector contains {num_values} elements.
+Parameters to the function include three ap_int<64> pointers:
+    The first and second parameters are pointers to the start of an array of {num_values} ap_int<64> values. These are the inputs.
+    The third parameter is a pointer to the start of an array of {num_values} ap_int<64> values. This is the output array.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 

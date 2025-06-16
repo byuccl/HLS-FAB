@@ -35,7 +35,7 @@ def run_vitis_tools(filepath, kernel_name, mode="csynth"):
                     filepath,
                 ], 
                 # v++ -c --mode hls --config vitis_config.cfg --work_dir ./results/solutions/gpt-4o/...
-                timeout=200,
+                timeout=120,
                 capture_output=True, 
                 text=True
             )

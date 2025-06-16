@@ -27,6 +27,13 @@ except ImportError:
         print("Falling back to MockEmbedding")  
         HuggingFaceEmbedding = None  
 
+# Python Prompt
+# SYSTEM_PROMPT = """You are a part of a code generation system for python.
+# Your job is to write Python code for a single kernel that will be run on a standard CPU..
+# Produce only the python code for the requested kernel including any required headers and imports.
+# Make sure the Python code is complete and self contained in a single code block.
+# Produce only the kernel function, no main, no additional examples or code.
+# """
 
 _RAG_INDEX = None  
 _EMBED_MODEL = None 
@@ -493,7 +500,7 @@ def call_llm_api(coder, tools=None):
         body["tools"] = tools  
     
     if coder.workflow == "byu":
-        body["model"] = coder.model, # The model is only needed for the byu API
+        body["model"] = coder.model # The model is only needed for the byu API
 
 
     print(f"API Request: {json.dumps(body, indent=2)}")  
