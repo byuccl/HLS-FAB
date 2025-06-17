@@ -7,10 +7,8 @@ import requests
 import os
 import json  
 import inspect  
-
-
 from typing import Dict, Any, List  
-  
+from hlseval.splitter import MultiContentSplitter
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings  
 from llama_index.core import MockEmbedding  
 from llama_index.core import StorageContext, load_index_from_storage  

@@ -400,7 +400,7 @@ def generate_one_completion(prompt, url, workflow, model="gpt-4o", temperature=0
         top_p=top_p,
         url=url,
         attempts=attempts,
-        rag=False
+        rag=True
     )
     response = coder(prompt)
 
