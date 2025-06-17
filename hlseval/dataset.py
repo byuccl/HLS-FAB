@@ -10,6 +10,14 @@ import json
 C_TO_NUMPY_DTYPE = {
     "int": "int",
     "int8_t": "int8",
+    "ap_int<8>": "int8",
+    "ap_int<16>": "int16",
+    "ap_int<32>": "int32",
+    "ap_int<64>": "int64",
+    "ap_uint<8>": "uint8",
+    "ap_uint<16>": "uint16",
+    "ap_uint<32>": "uint32",
+    "ap_uint<64>": "uint64",
     "uint8_t": "uint8",
     "int16_t": "int16",
     "uint16_t": "uint16",
@@ -158,7 +166,6 @@ class PromptConstructor:
         self.rtps = result['rtps']
         self.examples = examples
         # self.buffers = [p for p in func['parameters'] if self._is_buffer(p)]
-        # self.rtps = [p for p in func['parameters'] if not p['pointer']]
         # self.call = self._construct_call()
 
         # --- Extract canonical solution and signature---
@@ -283,6 +290,7 @@ class PromptConstructor:
             prompt = f"""/*
 {description}
 {dataflow}
+Use the following function signature to implement the kernel:
 */
 {function_signature} {{
 """
