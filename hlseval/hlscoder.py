@@ -1,3 +1,4 @@
+import logging
 import openai
 import subprocess
 import tempfile
@@ -14,17 +15,17 @@ from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
 from llama_index.core import MockEmbedding  
 from llama_index.core import StorageContext, load_index_from_storage  
 
+logger = logging.getLogger("__main__")
+
+
 
 # Try to import HuggingFaceEmbedding from different possible locations  
 try:  
     from llama_index.embeddings.huggingface import HuggingFaceEmbedding  
-    print("Successfully imported HuggingFaceEmbedding from llama_index.embeddings.huggingface")  
 except ImportError:  
     try:  
         from llama_index_embeddings_huggingface import HuggingFaceEmbedding  
-        print("Successfully imported HuggingFaceEmbedding from llama_index_embeddings_huggingface")  
     except ImportError:  
-        print("Falling back to MockEmbedding")  
         HuggingFaceEmbedding = None  
 
 # Python Prompt
@@ -43,23 +44,23 @@ def get_or_create_rag_components():
     global _RAG_INDEX, _EMBED_MODEL  
       
     if _RAG_INDEX is None:  
-        print("Creating new RAG index...")  
+        logger.info("Creating new RAG index...")  
           
         # Check if we have a saved index  
         if os.path.exists("storage"):  
             try:  
-                print("Loading index from disk...")  
+                logger.debug("Loading index from disk...")  
                 # Set up the embedding model  
                 if HuggingFaceEmbedding is not None:    
                     try:    
                         _EMBED_MODEL = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")    
-                        print("Using HuggingFaceEmbedding")    
+                        logger.debug("Using HuggingFaceEmbedding")    
                     except Exception as e:    
-                        print(f"Error creating HuggingFaceEmbedding: {e}")    
-                        print("Falling back to MockEmbedding")    
+                        logger.warning(f"Error creating HuggingFaceEmbedding: {e}")    
+                        logger.warning("Falling back to MockEmbedding")    
                         _EMBED_MODEL = MockEmbedding(embed_dim=1536)    
                 else:    
-                    print("Using MockEmbedding")    
+                    logger.warning("Using MockEmbedding")    
                     _EMBED_MODEL = MockEmbedding(embed_dim=1536)  
                   
                 # Disable LLM in the global settings - we'll provide our own    
@@ -69,15 +70,15 @@ def get_or_create_rag_components():
                 # Load the saved index  
                 storage_context = StorageContext.from_defaults(persist_dir="storage")  
                 _RAG_INDEX = load_index_from_storage(storage_context)  
-                print("Successfully loaded index from disk")  
+                logger.debug("Successfully loaded index from disk")  
             except Exception as e:  
-                print(f"Error loading index from disk: {e}")  
-                print("Creating new index...")  
+                logger.warning(f"Error loading index from disk: {e}")  
+                logger.warning("Creating new index...")  
                 _RAG_INDEX, _EMBED_MODEL = setup_rag()  
                 # Save the index for future use  
                 _RAG_INDEX.storage_context.persist("storage")  
         else:  
-            print("No saved index found, creating new index...")  
+            logger.warning("No saved index found, creating new index...")  
             _RAG_INDEX, _EMBED_MODEL = setup_rag()  
             # Save the index for future use  
             _RAG_INDEX.storage_context.persist("storage")  
@@ -327,7 +328,7 @@ class HLSCoder:
         
         # Count tokens in current messages  
         total_tokens = self.get_messages_token_count(self.messages, self.model)  
-        print(f"Current context size: {total_tokens} tokens")  
+        logger.debug(f"Current context size: {total_tokens} tokens")  
         
         # If we're under the limit, no need to truncate  
         if total_tokens <= max_tokens:  
@@ -366,7 +367,7 @@ class HLSCoder:
         
         # Log the new token count  
         new_tokens = self.get_messages_token_count(self.messages, self.model)  
-        print(f"Reduced context size from {total_tokens} to {new_tokens} tokens")  
+        logger.debug(f"Reduced context size from {total_tokens} to {new_tokens} tokens")  
 
     def generate_code(self):  
         """Lightweight wrapper to generate a response using OpenAI API with strict context management."""  
@@ -404,13 +405,13 @@ class HLSCoder:
                         {"role": "user", "content": focused_prompt}  
                     ]  
             except Exception as e:  
-                print(f"Error during RAG processing: {e}")  
+                logger.error(f"Error during RAG processing: {e}")  
                 # Fall back to basic prompt if RAG fails  
         
         # Before calling the API, verify we're within limits  
         token_count = self.get_messages_token_count(self.messages)  
         if token_count > 7000:  # Safety margin  
-            print(f"WARNING: Context size {token_count} may exceed limits. Applying emergency reduction.")  
+            logger.warning(f"Context size {token_count} may exceed limits. Applying emergency reduction.")  
             # Emergency reduction - just keep system prompt and a simplified version of the last query  
             last_query = self.messages[-1]["content"]  
             if len(last_query) > 1500:  
@@ -426,13 +427,13 @@ class HLSCoder:
             api_response = call_llm_api(self)  
             response = api_response["choices"][0]["message"]["content"]  
             
-            print("\nFinal Response:")  
-            print(response)  
+            logger.debug("\nFinal Response:")  
+            logger.debug(response)  
             
             self.messages.append({"role": "assistant", "content": response})  
             return response  
         except Exception as e:  
-            print(f"Error calling LLM API: {e}")  
+            logger.error(f"Error calling LLM API: {e}")  
             # Return an error message that can be displayed to the user  
             error_response = f"Error generating code: {str(e)}"  
             self.messages.append({"role": "assistant", "content": error_response})  
@@ -503,17 +504,17 @@ def call_llm_api(coder, tools=None):
         body["model"] = coder.model # The model is only needed for the byu API
 
 
-    print(f"API Request: {json.dumps(body, indent=2)}")  
+    logger.debug(f"API Request: {json.dumps(body, indent=2)}")  
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
       
-    # Print the raw response for debugging  
-    print(f"API Response status: {response.status_code}")  
+    # Log the raw response for debugging  
+    logger.debug(f"API Response status: {response.status_code}")  
     try:  
         response_json = response.json()  
-        print(f"API Response: {json.dumps(response_json, indent=2)}")  
+        logger.debug(f"API Response: {json.dumps(response_json, indent=2)}")  
         return response_json  
     except json.JSONDecodeError:  
-        print(f"Raw response: {response.text}")  
+        logger.debug(f"Raw response: {response.text}")  
         raise ValueError(f"Failed to decode JSON from API response: {response.text}")  
 
 # Convert function to OpenAI tool format with correct JSON Schema types  
@@ -560,36 +561,36 @@ def format_node_content(node):
 # Initialize the RAG components with appropriate embedding  
 def setup_rag():  
     """Initialize RAG with a multi-content splitter for diverse document types."""  
-    print("Loading documents...")  
+    logger.debug("Loading documents...")  
     documents = SimpleDirectoryReader("./rag_data").load_data()  
       
-    print("Creating multi-content splitter...")  
+    logger.debug("Creating multi-content splitter...")  
     content_splitter = MultiContentSplitter()  
       
-    print("Creating embedding model...")  
+    logger.debug("Creating embedding model...")  
     if HuggingFaceEmbedding is not None:  
         try:  
             embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")  
-            print("Using HuggingFaceEmbedding")  
+            logger.debug("Using HuggingFaceEmbedding")  
         except Exception as e:  
-            print(f"Error creating HuggingFaceEmbedding: {e}")  
-            print("Falling back to MockEmbedding")  
+            logger.warning(f"Error creating HuggingFaceEmbedding: {e}")  
+            logger.warning("Falling back to MockEmbedding")  
             embed_model = MockEmbedding(embed_dim=1536)  
     else:  
-        print("Using MockEmbedding")  
+        logger.warning("Using MockEmbedding")  
         embed_model = MockEmbedding(embed_dim=1536)  
       
     # Configure settings  
     Settings.llm = None  
     Settings.embed_model = embed_model  
       
-    print("Splitting documents based on content type...")  
+    logger.debug("Splitting documents based on content type...")  
     # Split documents into nodes  
     nodes = content_splitter.split_documents(documents)  
       
-    print(f"Created {len(nodes)} nodes from {len(documents)} documents")  
+    logger.debug(f"Created {len(nodes)} nodes from {len(documents)} documents")  
       
-    print("Creating vector index...")  
+    logger.debug("Creating vector index...")  
     # Create index from nodes instead of documents  
     index = VectorStoreIndex(nodes)  
       
@@ -650,7 +651,7 @@ def rag_agent(coder, index):
         function_to_tool(search_wrapper)  
     ]  
       
-    print("\nStarting RAG agent interaction...")  
+    logger.info("\nStarting RAG agent interaction...")  
     response = call_llm_api(coder, tools=tools)  
       
     # Check if the response has the expected format  
@@ -666,12 +667,12 @@ def rag_agent(coder, index):
 
     # If the LLM wants to use a tool  
     if "tool_calls" in assistant_message:  
-        print("\nLLM decided to use tools")  
+        logger.info("\nLLM decided to use tools")  
         for tool_call in assistant_message["tool_calls"]:  
             function_name = tool_call["function"]["name"]  
             arguments = json.loads(tool_call["function"]["arguments"])  
               
-            print(f"Executing tool: {function_name} with arguments: {arguments}")  
+            logger.info(f"Executing tool: {function_name} with arguments: {arguments}")  
               
             # Execute the function   
             if function_name == "search_wrapper":  
@@ -679,7 +680,7 @@ def rag_agent(coder, index):
             else:  
                 result = f"Unknown function: {function_name}"  
                   
-            print(f"Tool result: {result}")  
+            logger.debug(f"Tool result: {result}")  
                   
             # Add the function response to messages  
             messages.append({  
@@ -689,7 +690,7 @@ def rag_agent(coder, index):
             })  
           
         # Get the final response  
-        print("\nGetting final response after tool calls...")  
+        logger.debug("\nGetting final response after tool calls...")  
         temp_coder = HLSCoder(  
             url=coder.url,  
             workflow=coder.workflow,  
@@ -709,5 +710,5 @@ def rag_agent(coder, index):
         return final_response["choices"][0]["message"]["content"]  
     else:  
         # LLM answered directly  
-        print("\nLLM answered directly without using tools")  
+        logger.info("\nLLM answered directly without using tools")  
         return assistant_message["content"]  

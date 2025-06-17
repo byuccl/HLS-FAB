@@ -3,9 +3,12 @@
 
 from CppHeaderParser import CppHeader
 # from ml_dtypes import bfloat16
+import logging
 import re
 import numpy as np
 import json
+
+logger = logging.getLogger("__main__")
 
 C_TO_NUMPY_DTYPE = {
     "int": "int",
@@ -243,7 +246,7 @@ class PromptConstructor:
                     raise ValueError(f"Unknown in_out value '{in_out}' at index {i}")
                 
             #Using the output indices, we can generate the outputs
-            # print(input_arrays)
+            # logger.debug(input_arrays)
             args = [*input_arrays]
 
             if rtp_values:
@@ -253,7 +256,7 @@ class PromptConstructor:
                 args.extend(in_out_arrays)
 
             outputs = behavioral(*args)
-            # print(outputs)
+            # logger.debug(outputs)
             if not isinstance(outputs, tuple):
                 outputs = (outputs,)
                 
@@ -265,7 +268,7 @@ class PromptConstructor:
                     buf_name: arr.tolist(),
                     "dtype": str(arr.dtype)
                 })
-            # print(test_vectors["outputs"])
+            # logger.debug(test_vectors["outputs"])
             test_vectors_list.append(test_vectors)
 
         # program_code = self._construct_wrapper()
@@ -275,7 +278,7 @@ class PromptConstructor:
         try:
             examples = self._construct_examples(behavioral, test_vectors_list=test_vectors_list, num_examples=len(test_vectors_list), slice_size=8)
         except:
-            print(f"Warning: {self.name} prompt won't have examples")
+            logger.warning(f"{self.name} prompt won't have examples")
             examples = None
         
         if examples:
@@ -307,7 +310,7 @@ Use the following function signature to implement the kernel:
             self.sample['tolerances'] = tolerances
 
     def write_json(self, filepath):
-        print(f"Writing JSON to {filepath}")
+        logger.info(f"Writing JSON to {filepath}")
         with open(filepath, "w") as f:
             json.dump(self.sample, f)
             
