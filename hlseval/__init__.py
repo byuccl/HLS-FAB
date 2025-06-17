@@ -6,7 +6,6 @@ from .utils import generate_one_completion
 from .hlscoder import HLSCoder
 from .run_cpp import run_cpp_with_inputs
 from .parser import gather_parsed_data
-from .run_tests import test_kernel, NumpyEncoder
 from .csim import create_testbench, run_csim, CsimTimeoutError
 from .vitis import run_vitis_tools, CsynthTimeoutError
 from .splitter import MultiContentSplitter

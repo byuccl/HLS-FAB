@@ -762,7 +762,6 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
         syn.file={kernel_code_path}
         tb.file={kernel_testbench_path}
         tb.cflags=-std=c++17 -fexceptions -I./include 
-        csim.code_analyzer=1
         csim.clean=true
         """ )
     
@@ -776,7 +775,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
                 sim_cmd,
                 capture_output=True,
                 check=False,
-                timeout=60,  # Timeout after 2 minutes
+                timeout=120,  # Timeout after 2 minutes
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 

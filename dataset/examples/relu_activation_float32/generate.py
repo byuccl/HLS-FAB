@@ -3,7 +3,7 @@ import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the number of values in the array
-num_values = 262144
+num_values = 8192
 
 function_signature = "void relu_activation_float32(float *in_vector, float *out_vector)"
 
@@ -13,7 +13,6 @@ Parameters to the function include two float32 pointers:
     The first pointer points to an array containing {num_values} float values. This is the input vector.
     The second pointer also points to an array containing {num_values} float values. This is the output vector.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 

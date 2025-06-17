@@ -145,20 +145,22 @@ def parse_sim_report(file_path=None):
         except FileNotFoundError:
             print(f"The file {file_path} does not exist.")
             return feedback
-    num_mismatches = 0
     for i, line in enumerate(lines):
         if "Compilation Status:" in line:
             feedback["status"] = line.split(":")[1].strip()
-        elif "PASS" in line:
-            feedback["match"] = "match"
+        elif "SOME TESTS FAILED!" in line:
+            feedback["match"] = "mismatch"
         elif "ERROR:" in line:
             feedback["errors"].append(line.split("ERROR:")[1].strip())
         elif "WARNING:" in line:
             feedback["warnings"].append(line.split("WARNING:")[1].strip())
         elif "FAIL:" in line:
             feedback["expected_v_actual"].append(line.split("- ")[1].strip())
+            feedback["match"] = "mismatch"
         elif "Percent Error:" in line:
             feedback["percent_error"] = line.split(":")[1].strip()
+        elif "ALL TESTS PASSED!" in line:
+            feedback["match"] = "match"
 
     
     return feedback

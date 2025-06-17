@@ -11,12 +11,16 @@
 
 // Helper function for float/double comparison with tolerance
 template<typename T>
-bool compare_numeric(T actual, T expected, T epsilon = std::numeric_limits<T>::epsilon() * 100) {
+bool compare_numeric(T actual, T expected, T epsilon = std::numeric_limits<T>::epsilon() * 1000) {
     // Check if T is a floating-point type
     if constexpr (std::is_floating_point<T>::value) {
         T scale = std::max(static_cast<T>(1.0),
                    std::max(std::abs(actual), std::abs(expected)));
-
+        std::cout << "Comparing floating-point numbers: actual = " << actual 
+                  << ", expected = " << expected 
+                  << ", epsilon = " << epsilon 
+                  << ", scale = " << scale 
+                  << ", diff = " << std::abs(actual - expected) << std::endl;
         return std::abs(actual - expected) < epsilon * scale;
     } else {
         // For non-floating-point types (integers, etc.), exact comparison

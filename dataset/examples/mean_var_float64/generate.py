@@ -3,7 +3,7 @@ import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the number of values in the array
-num_values = 32768
+num_values = 16384
 
 function_signature = "void mean_var_float64(double *in_buffer, double* out_mean, double* out_var)"
 
@@ -14,7 +14,6 @@ Parameters for this function include a float64 pointer:
     The second parameter is a pointer to a float64 value that will be the mean.
     The third parameter is a pointer to a float64 value that will be the variance. 
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 
