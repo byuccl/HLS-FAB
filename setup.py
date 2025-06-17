@@ -10,6 +10,7 @@ setup(
         "openai",
         "numpy",
         "requests",
-        "torch"
+        "torch",
+        "llama_index"
     ]
 )

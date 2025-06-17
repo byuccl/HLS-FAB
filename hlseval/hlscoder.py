@@ -6,6 +6,8 @@ import requests
 import os
 import json  
 import inspect  
+import tiktoken
+import hlseval 
 
 
 from typing import Dict, Any, List  
@@ -564,7 +566,7 @@ def setup_rag():
     documents = SimpleDirectoryReader("./rag_data").load_data()  
       
     print("Creating multi-content splitter...")  
-    content_splitter = MultiContentSplitter()  
+    content_splitter = hlseval.MultiContentSplitter()  
       
     print("Creating embedding model...")  
     if HuggingFaceEmbedding is not None:  
