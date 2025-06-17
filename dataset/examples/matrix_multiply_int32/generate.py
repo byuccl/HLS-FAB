@@ -3,10 +3,17 @@ import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the dimensions of the matrix
-matrix1_height = 16  
+matrix1_height = 64  
 matrix1_width = 32 
 matrix2_height = 32  
-matrix2_width = 24
+matrix2_width = 128
+
+function_signature = """
+void matrix_multiply_int32(
+    int32_t matrix1[MATRIX_1_HEIGHT][MATRIX_1_WIDTH], 
+    int32_t matrix2[MATRIX_2_HEIGHT][MATRIX_2_WIDTH], 
+    int32_t result[MATRIX_1_HEIGHT][MATRIX_2_WIDTH])
+"""
 
 description = f"""
 This HLS kernel implements a function to multiply two matrices (A * B). 
@@ -46,7 +53,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

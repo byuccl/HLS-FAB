@@ -7,6 +7,13 @@ matrix_height = 32
 matrix_width = 24    
 matrix_depth = 64
 
+function_signature = """
+void scale_matrix_3d_int8(ap_int<8> *input, ap_int<8> scale_factor, ap_int<8> *output)
+// input,        [MATRIX_HEIGHT][MATRIX_WIDTH][MATRIX_DEPTH] // 3D input matrix  
+// output        [MATRIX_HEIGHT][MATRIX_WIDTH][MATRIX_DEPTH] // 3D output matrix  
+
+"""
+
 description = f"""
 This HLS kernel implements a function scale a given three dimensional matrix of int8 values by a given value (also int8). The scaling is done by multiplying each element by the scale factor.
 Parameters to the function includes an int8 pointer and two int8 3D arrays:
@@ -45,7 +52,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

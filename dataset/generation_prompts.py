@@ -1,3 +1,4 @@
+
 desired_test = "bit_depth_convert_opencv"
 desired_test_description = (
     """
@@ -16,83 +17,20 @@ void bit_depth_convert_opencv((uint8_t*)in_img.data, (int)shift, (uint8_t*)out_i
 )
 
 desired_test = "bilateral_filter_opencv"
+
+
+desired_test = "mat_mult_int16"
 desired_test_description = (
     """
-In general, any smoothing filter smoothens the image which will affect the edges of the image. To preserve the edges while smoothing, a bilateral filter can be used. In an analogous way as the Gaussian filter, the bilateral filter also considers the neighboring pixels with weights assigned to each of them. These weights have two components, the first of which is the same weighing used by the Gaussian filter. The second component takes into account the difference in the intensity between the neighboring pixels and the evaluated one.
+Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
 
-The bilateral filter applied on an image is:  
-BF[I]_p = (1/W_p) ∑_(q∈S) G_σ_s(||p-q||)G_σ_r(||I_p-I_q||)I_q  
-  
-Where  
-W_p = ∑_(q∈S) G_σ_s(||p-q||)G_σ_r(||I_p-I_q||)  
-  
-and G_σ is a Gaussian filter with variance σ.  
-  
-The Gaussian filter is given by:  
-G_σ = e^(-(x^2+y^2)/(2σ^2))
+Matrix 1 of MxN size 16-bit integers
+Matrix 2 of NxK size 16-bit integers 
+Result matrix of MxK size 16-bit integers
 
-The input image will be 128x128 pixels
-Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
-Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
-The filter size is 3.
-The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
-Implementation details should match the OpenCV implementation unless otherwise specified
-
-void bilateral_filter_opencv((uint8_t*)in_img.data, sigma_color, sigma_space, (uint8_t*)out_img.data);
-    """
-)
-
-desired_test = "bad_pixel_correction_opencv"
-desired_test_description = (
-"""
-The Bad Pixel Correction function identifies and removes anomalous pixels in an image that significantly differ from their neighbors, often resulting from sensor defects, manufacturing faults, or temperature variations. It uses a specific cross-diagonal pattern to identify and correct these bad pixels.
-
-The algorithm applies a 5x5 cross-diagonal mask with the following pattern:
-1 0 1 0 1
-0 0 0 0 0
-1 0 0 0 1
-0 0 0 0 0
-1 0 1 0 1
-
-This mask is used to detect pixels that are either too bright (hot pixels) or too dark (dead pixels) compared to their neighbors. If a pixel's value is lower than its surrounding minimum or higher than its surrounding maximum, it will be adjusted accordingly.
-
-Key processing steps:
-
-Create minimum filtered version (erode) of the input image using the cross-diagonal mask
-Create maximum filtered version (dilate) of the input image using the same mask
-Calculate the difference between the input and these filtered images
-Apply thresholding to remove negative values
-Correct the output by subtracting hot pixel differences and adding dead pixel differences
-The input image will be 128x128 pixels
-Each pixel of the input image is represented by a 1-channel, 8-bit, unsigned integer
-Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
-The images will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
-Implementation details should match the OpenCV implementation unless otherwise specified
-
-void bad_pixel_correction_opencv((uint8_t*)img_in, (uint8_t*)img_out);
-"""
-)
-
-
-desired_test = "auto_white_balance_opencv"
-desired_test_description = (
-    """
-This algorithm scales the values of pixels based on a gray-world assumption which states that the average of all channels should result in a gray image. It adds a modification which thresholds pixels based on their saturation value and only uses pixels below the provided threshold in finding average pixel values. Saturation is calculated using the following for a 3-channel RGB image per pixel I and is in the range [0, 1]:
-
-Saturation(I) = (max(R,G,B)-min(R,G,B))/max(R,G,B)
-
-A threshold of 1 means that all pixels are used to white-balance, while a threshold of 0 means no pixels are used. Lower thresholds are useful in white-balancing saturated images.
-
-A simple white balance algorithm that works by independently stretching each of the input image channels to the specified range(maximum and minimum). Computes channel wise intensity histogram and ignores p% maximum and minimum values and finally normalize each channel with min and max. For increased robustness it ignores the top and bottom p% (4% is fixed) of pixel values.
-
-The input image will be 3840x2160 pixels
-Each pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer
-Each pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer
-The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' should be used to correctly break the array into a 2D image.
-Implementation details should match the OpenCV implementation unless otherwise specified
-
-void auto_white_balance_opencv((uint8_t*)in_img, (uint8_t*)out_img,
-                               (float)thresh, (float)inputMin, (float)inputMax, (float)outputMin, (float)outputMax);
+M = 64 
+N = 64
+K = 64
     """
 )
 

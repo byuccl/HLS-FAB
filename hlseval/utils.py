@@ -10,7 +10,10 @@ import os
 import sys
 import traceback  
 import importlib.util
+import logging
 from .hlscoder import HLSCoder
+
+logger = logging.getLogger("__main__")
 
 
 def import_module_functions(kernel_name, function_names=None):      
@@ -32,7 +35,7 @@ def import_module_functions(kernel_name, function_names=None):
     module_path = os.path.join(project_root, "dataset", "kernels", kernel_name, "generate.py")    
           
     if not os.path.exists(module_path):      
-        print(f"Warning: Could not find generate.py for kernel '{kernel_name}' at path: {module_path}")      
+        logger.warning(f"Could not find generate.py for kernel '{kernel_name}' at path: {module_path}")      
         return None      
           
     # Create a unique module name to avoid conflicts      
@@ -41,7 +44,7 @@ def import_module_functions(kernel_name, function_names=None):
     # Create spec from file path      
     spec = importlib.util.spec_from_file_location(module_name, module_path)      
     if spec is None:      
-        print(f"Error: Could not create module spec for {module_path}")      
+        logger.error(f"Could not create module spec for {module_path}")      
         return None      
           
     # Create module from spec      
@@ -54,8 +57,8 @@ def import_module_functions(kernel_name, function_names=None):
     try:      
         spec.loader.exec_module(module)      
     except Exception as e:      
-        print(f"Error loading module {module_path}: {e}")  
-        print("Detailed traceback:")  
+        logger.error(f"Error loading module {module_path}: {e}")  
+        logger.error("Detailed traceback:")  
         traceback.print_exc()  
         return None      
           
@@ -67,16 +70,16 @@ def import_module_functions(kernel_name, function_names=None):
         if hasattr(module, func_name):      
             functions[func_name] = getattr(module, func_name)      
         else:      
-            print(f"Warning: Module {module_path} does not have a {func_name} function")      
+            logger.warning(f"Module {module_path} does not have a {func_name} function")      
           
     return functions    
  
 def get_cpp_type_str(dtype_str):
     dtype_map = {
-        "int8": "int8_t", "uint8": "uint8_t",
-        "int16": "int16_t", "uint16": "uint16_t",
-        "int32": "int32_t", "uint32": "uint32_t",
-        "int64": "int64_t", "uint64": "uint64_t",
+        "int8": "ap_int<8>", "uint8": "ap_uint<8>",
+        "int16": "ap_int<16>", "uint16": "ap_uint<16>",
+        "int32": "ap_int<32>", "uint32": "ap_uint<32>",
+        "int64": "ap_int<64>", "uint64": "ap_uint<64>",
         "float16": "half_float_type",
         "float32": "float", "float64": "double",
         "bool": "bool",
@@ -110,7 +113,7 @@ def get_kernel_code(test: dict, solutions_path: str = None) -> str:
     with open(os.path.join(solutions_path, f"{test['kernel_name']}.json"), 'r') as sol_file:
         solution = json.load(sol_file)
         if not solution.get('code'):
-            print(f"No code available in {solutions_path} for {test['kernel_name']}")
+            logger.warning(f"No code available in {solutions_path} for {test['kernel_name']}")
             return None
 
         srccode = solution['code']
@@ -172,10 +175,10 @@ def trace_to_json(trace_file: str, mlir_file: str, output_name: str="trace.json"
         result = subprocess.check_output(command, stderr=subprocess.STDOUT, text=True)
         with open(output_name, 'w') as f:
             f.write(result)
-        print(f"Trace written to {output_name}")
+        logger.info(f"Trace written to {output_name}")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Trace failed\n{e.output}")
+        logger.error(f"Trace failed\n{e.output}")
         return e.output
 
 def get_cycles(trace_path):

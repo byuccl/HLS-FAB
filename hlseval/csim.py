@@ -1,3 +1,4 @@
+import logging
 import os
 import numpy as np
 import re  
@@ -6,6 +7,8 @@ import subprocess
 import traceback  
 import json
 from hlseval.utils import get_cpp_type_str, import_module_functions
+
+logger = logging.getLogger("__main__")
 
 
 class NumpyEncoder(json.JSONEncoder):  
@@ -122,7 +125,7 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
         f.write(func_declaration + "\n\n")
         f.write(f"#endif // {guard_macro}\n")
 
-    print(f"Header file generated at: {h_file_path}")
+    logger.info(f"Header file generated at: {h_file_path}")
 
     pass
 
@@ -149,7 +152,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     cpp_kernel_file_abs_path = os.path.join(model_dir, f"{kernel_name}.cpp")
 
     if not os.path.exists(cpp_kernel_file_abs_path):
-        print(f"C++ kernel file not found: {cpp_kernel_file_abs_path}")
+        logger.error(f"C++ kernel file not found: {cpp_kernel_file_abs_path}")
         return None, test_data_json_path, f"FAILED: C++ kernel file not found: {cpp_kernel_file_abs_path}"
 
     # Create the path for the testbench file
@@ -179,7 +182,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
         with open(cpp_kernel_file_abs_path, 'r', encoding='latin-1') as f:  
             kernel_code = f.read()  
     # Generating H File
-    print("--- Generating H File for CSIM ---")
+    logger.info("--- Generating H File for CSIM ---")
     # h_file_path = os.path.join(project_root, "results", "solutions", model_dir)
     generate_h_file(kernel_code, model_dir, kernel_name)
     
@@ -192,9 +195,11 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     testbench_code.append("#include <vector>")
     testbench_code.append("#include <string>")
     testbench_code.append("#include <cmath>") # For std::abs
+    testbench_code.append("#include <ap_int.h>") # For ap_int
     testbench_code.append("#include <limits>") # For numeric_limits epsilon
     testbench_code.append("#include \"nlohmann/json.hpp\"") # Assuming nlohmann/json.hpp is available in include path
     testbench_code.append("#include \"utils.hpp\"")    # Floating-point comparison helper function
+    testbench_code.append("#include \"nlohmann/apint_serializer.hpp\"")    # ap_int serializer
 
     # Include the actual kernel file using its absolute path (or a relative path if copied)
     # The generated testbench.cpp needs to know where kernel_name.cpp is.
@@ -234,6 +239,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     testbench_code.append("    int failed_tests = 0;")
     testbench_code.append("    int flat_idx = 0;")
     testbench_code.append("    float percent_error = 0.0;")
+    testbench_code.append("    uint32_t num_mismatches = 0;")
 
 
     # Loop through each test case
@@ -277,13 +283,28 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
             if in_out_status in ["in", "inout"]:
                 testbench_code.append(f"\n        // Initialize {var_name}_arr from JSON input")
                 testbench_code.append(f"        auto {var_name}_json_data = test_case.at(\"inputs\").at(\"{var_name}\");")
-                testbench_code.append(f"        if (!{var_name}_json_data.is_array() || {var_name}_json_data.size() < {total_elements}) {{")
-                testbench_code.append(f"            std::cerr << \"Error: {var_name} is not an array or too small.\" << std::endl;")
-                testbench_code.append(f"            return 1; // Or handle appropriately")
+                # testbench_code.append(f"        if (!{var_name}_json_data.is_array() || {var_name}_json_data.size() < {total_elements}) {{")
+                # testbench_code.append(f"            std::cerr << \"Error: {var_name} is not an array or too small.\" << std::endl;")
+                # testbench_code.append(f"            return 1; // Or handle appropriately")
+                # testbench_code.append("        }")
+                # testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{")
+                # testbench_code.append(f"            {var_name}_arr[i] = {var_name}_json_data.at(i).get<{cpp_base_type}>();")
+                # testbench_code.append("        }")
+
+
+                testbench_code.append(f"        uint32_t flat_idx_for_{var_name} = 0;")
+                testbench_code.append(f"        for (const auto& val : {var_name}_json_data.flatten()) {{")
+                testbench_code.append(f"            if (flat_idx_for_{var_name} >= {total_elements}) {{")
+                testbench_code.append(f"                std::cerr << \"Error: {var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;")
+                testbench_code.append(f"                return 1;")
+                testbench_code.append(f"            }}")
+                testbench_code.append(f"            {var_name}_arr[flat_idx_for_{var_name}++] = val.get<{cpp_base_type}>();")
                 testbench_code.append("        }")
-                testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{")
-                testbench_code.append(f"            {var_name}_arr[i] = {var_name}_json_data.at(i).get<{cpp_base_type}>();")
-                testbench_code.append("        }")
+                testbench_code.append(f"        if (flat_idx_for_{var_name} != {total_elements}) {{")
+                testbench_code.append(f"            std::cerr << \"Error: {var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;")
+                testbench_code.append(f"            return 1;")
+                testbench_code.append(f"        }}")            
+                
             elif in_out_status == "out":
                 # Initialize output buffers to 0 for clarity
                 testbench_code.append(f"\n        // Initialize output array {var_name}_arr to zeros")
@@ -293,67 +314,66 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
             # Add to kernel arguments (passing pointer to flattened array)
             kernel_call_args.append(var_name + "_arr")
-        
-        
 
-        # Handle 2D, 3D, 4D arrays (using fixed-size declarations for the testbench)
-        else:
-            # Construct the C++ array declaration string: e.g., "my_array[10][20]"
-            cpp_array_dims = '[' + ']['.join(map(str, shape)) + ']'
+
+        # # Handle 2D, 3D, 4D arrays (using fixed-size declarations for the testbench)
+        # else:
+        #     # Construct the C++ array declaration string: e.g., "my_array[10][20]"
+        #     cpp_array_dims = '[' + ']['.join(map(str, shape)) + ']'
             
-            testbench_code.append(f"\n        // Declare {array_dimension}D array {var_name}")
-            testbench_code.append(f"        {cpp_base_type} {var_name}_arr{cpp_array_dims};")
+        #     testbench_code.append(f"\n        // Declare {array_dimension}D array {var_name}")
+        #     testbench_code.append(f"        {cpp_base_type} {var_name}_arr{cpp_array_dims};")
 
-            # Initialize from JSON input
-            if in_out_status in ["in", "inout"]:
-                testbench_code.append(f"\n        // Initialize {var_name}_arr from JSON input (NESTED LOOPS)")
-                testbench_code.append(f"        auto {var_name}_json_data = test_case.at(\"inputs\").at(\"{var_name}\");")
+        #     # Initialize from JSON input
+        #     if in_out_status in ["in", "inout"]:
+        #         testbench_code.append(f"\n        // Initialize {var_name}_arr from JSON input (NESTED LOOPS)")
+        #         testbench_code.append(f"        auto {var_name}_json_data = test_case.at(\"inputs\").at(\"{var_name}\");")
                 
-                testbench_code.append(f"        if (!{var_name}_json_data.is_array() || {var_name}_json_data.size() < {shape[0]}) {{")
-                testbench_code.append(f"            std::cerr << \"Error: {var_name} is not a {array_dimension}D array (wrong number of outer elements).\" << std::endl;")
-                testbench_code.append(f"            return 1; // Or handle appropriately")
-                testbench_code.append("        }")          
+        #         testbench_code.append(f"        if (!{var_name}_json_data.is_array() || {var_name}_json_data.size() < {shape[0]}) {{")
+        #         testbench_code.append(f"            std::cerr << \"Error: {var_name} is not a {array_dimension}D array (wrong number of outer elements).\" << std::endl;")
+        #         testbench_code.append(f"            return 1; // Or handle appropriately")
+        #         testbench_code.append("        }")          
                 
-                json_access_str = f"{var_name}_json_data"      
-                # Generate nested loops for initialization
-                indent = "            "
-                loop_vars = [f"i{d}" for d in range(array_dimension)]
-                for d in range(array_dimension):
-                    testbench_code.append(f"{indent}for (int {loop_vars[d]} = 0; {loop_vars[d]} < {shape[d]}; ++{loop_vars[d]}) {{")
-                    indent += "    "
+        #         json_access_str = f"{var_name}_json_data"      
+        #         # Generate nested loops for initialization
+        #         indent = "            "
+        #         loop_vars = [f"i{d}" for d in range(array_dimension)]
+        #         for d in range(array_dimension):
+        #             testbench_code.append(f"{indent}for (int {loop_vars[d]} = 0; {loop_vars[d]} < {shape[d]}; ++{loop_vars[d]}) {{")
+        #             indent += "    "
                     
-                    if d < array_dimension - 1: # If not the innermost loop
-                        json_access_str += f".at({loop_vars[d]})"
-                        testbench_code.append(f"{indent}    auto current_level_json_{loop_vars[d]} = {json_access_str};")
-                        testbench_code.append(f"{indent}    if (!current_level_json_{loop_vars[d]}.is_array() || current_level_json_{loop_vars[d]}.size() < {shape[d+1]}) {{")
-                        testbench_code.append(f"{indent}        std::cerr << \"Error: {var_name} at level {d} ({loop_vars[d]}) is not an array or too small.\" << std::endl;")
-                        testbench_code.append(f"{indent}        return 1; // Or handle appropriately")
-                        testbench_code.append(f"{indent}    }}")
-                        json_access_str = f"current_level_json_{loop_vars[d]}" # Update for next level
+        #             if d < array_dimension - 1: # If not the innermost loop
+        #                 json_access_str += f".at({loop_vars[d]})"
+        #                 testbench_code.append(f"{indent}    auto current_level_json_{loop_vars[d]} = {json_access_str};")
+        #                 testbench_code.append(f"{indent}    if (!current_level_json_{loop_vars[d]}.is_array() || current_level_json_{loop_vars[d]}.size() < {shape[d+1]}) {{")
+        #                 testbench_code.append(f"{indent}        std::cerr << \"Error: {var_name} at level {d} ({loop_vars[d]}) is not an array or too small.\" << std::endl;")
+        #                 testbench_code.append(f"{indent}        return 1; // Or handle appropriately")
+        #                 testbench_code.append(f"{indent}    }}")
+        #                 json_access_str = f"current_level_json_{loop_vars[d]}" # Update for next level
                                     
-                # Assignment line
-                cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
-                testbench_code.append(f"{indent}{var_name}_arr{cpp_access_str} = {json_access_str}.at({loop_vars[-1]}).get<{cpp_base_type}>();") # Use last loop_var for access
+        #         # Assignment line
+        #         cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
+        #         testbench_code.append(f"{indent}{var_name}_arr{cpp_access_str} = {json_access_str}.at({loop_vars[-1]}).get<{cpp_base_type}>();") # Use last loop_var for access
                 
-                # Close loops
-                for d in range(array_dimension - 1, -1, -1):
-                    indent = indent[:-4]
-                    testbench_code.append(f"{indent}}}")
+        #         # Close loops
+        #         for d in range(array_dimension - 1, -1, -1):
+        #             indent = indent[:-4]
+        #             testbench_code.append(f"{indent}}}")
             
-            elif in_out_status == "out":
-                testbench_code.append(f"\n        // Initialize output {array_dimension}D array {var_name}_arr to zeros")
-                indent = "            "
-                loop_vars = [f"i{d}" for d in range(array_dimension)]
-                for d in range(array_dimension):
-                    testbench_code.append(f"{indent}for (int {loop_vars[d]} = 0; {loop_vars[d]} < {shape[d]}; ++{loop_vars[d]}) {{")
-                    indent += "    "
-                cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
-                testbench_code.append(f"{indent}{var_name}_arr{cpp_access_str} = 0; // Or appropriate default value")
-                for d in range(array_dimension - 1, -1, -1):
-                    indent = indent[:-4]
-                    testbench_code.append(f"{indent}}}")
+        #     elif in_out_status == "out":
+        #         testbench_code.append(f"\n        // Initialize output {array_dimension}D array {var_name}_arr to zeros")
+        #         indent = "            "
+        #         loop_vars = [f"i{d}" for d in range(array_dimension)]
+        #         for d in range(array_dimension):
+        #             testbench_code.append(f"{indent}for (int {loop_vars[d]} = 0; {loop_vars[d]} < {shape[d]}; ++{loop_vars[d]}) {{")
+        #             indent += "    "
+        #         cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
+        #         testbench_code.append(f"{indent}{var_name}_arr{cpp_access_str} = 0; // Or appropriate default value")
+        #         for d in range(array_dimension - 1, -1, -1):
+        #             indent = indent[:-4]
+        #             testbench_code.append(f"{indent}}}")
             
-            kernel_call_args.append(var_name + "_arr")
+        #     kernel_call_args.append(var_name + "_arr")
 
             
 
@@ -377,7 +397,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
         if in_out_status in ["out", "inout"]:
             # Get expected values from JSON
-            testbench_code.append(f"\n        uint32_t num_mismatches = 0;")
+            testbench_code.append(f"\n        num_mismatches = 0;")
             
             testbench_code.append(f"\n        // Get expected values for {var_name}")
             testbench_code.append(f"        auto {var_name}_expected_json = test_case.at(\"expected_outputs\").at(\"{var_name}\");")
@@ -402,60 +422,87 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                 testbench_code.append(f"        else {{ std::cout << \"  PASS: Scalar '{var_name}' matches.\" << std::endl; }}")
 
 
-            elif array_dimension == 1: # Array comparison (1D)
-                testbench_code.append(f"\n        // Compare array {var_name}")
-                testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{")
-                testbench_code.append(f"            {cpp_base_type} expected_val = {var_name}_expected_json.at(i).get<{cpp_base_type}>();")
-                testbench_code.append(f"            if (!compare_numeric({var_name}_arr[i], expected_val)) {{")                
+            elif array_dimension >= 1: # Unified array comparison (flattened)
+                testbench_code.append(f"\n        // Compare array {var_name} (flattened)")
+                testbench_code.append(f"        uint32_t flat_compare_idx = 0;")
+                testbench_code.append(f"        for (const auto& expected_val_json : {var_name}_expected_json.flatten()) {{")
+                testbench_code.append(f"            if (flat_compare_idx >= {total_elements}) {{")
+                testbench_code.append(f"                std::cerr << \"Error: expected_outputs.{var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;")
+                testbench_code.append(f"                return 1;")
+                testbench_code.append(f"            }}")
+                testbench_code.append(f"            {cpp_base_type} expected_val = expected_val_json.get<{cpp_base_type}>();")
+                testbench_code.append(f"            if (!compare_numeric({var_name}_arr[flat_compare_idx], expected_val)) {{")                
                 testbench_code.append(f"                if (num_mismatches < {mismatches_to_report}){{")
-                testbench_code.append(f"                    std::cout << \"  FAIL: Array '{var_name}' at flattened index [\" << i << \"] - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr[i] << std::endl;")
+                testbench_code.append(f"                    std::cout << \"  FAIL: Array '{var_name}' at flattened index [\" << flat_compare_idx << \"] - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr[flat_compare_idx] << std::endl;")
                 testbench_code.append("                 }")
                 testbench_code.append("                 num_mismatches++;")
                 testbench_code.append("                 test_case_passed = false;")
                 testbench_code.append("                 // break; // Uncomment to stop on first mismatch for this array")
                 testbench_code.append("             }")
+                testbench_code.append(f"            flat_compare_idx++;")
                 testbench_code.append("         }")
-                testbench_code.append(f"        if (test_case_passed) std::cout << \"  PASS: Array '{var_name}' matches.\" << std::endl;")
+                testbench_code.append(f"        if (flat_compare_idx != {total_elements}) {{")
+                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;")
+                testbench_code.append(f"            return 1;")
+                testbench_code.append(f"        }}")
+                testbench_code.append(f"        if (num_mismatches == 0) std::cout << \"  PASS: Array '{var_name}' matches.\" << std::endl;")
+
+
+            # elif array_dimension == 1: # Array comparison (1D)
+            #     testbench_code.append(f"\n        // Compare array {var_name}")
+            #     testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{")
+            #     testbench_code.append(f"            {cpp_base_type} expected_val = {var_name}_expected_json.at(i).get<{cpp_base_type}>();")
+            #     testbench_code.append(f"            if (!compare_numeric({var_name}_arr[i], expected_val)) {{")                
+            #     testbench_code.append(f"                if (num_mismatches < {mismatches_to_report}){{")
+            #     testbench_code.append(f"                    std::cout << \"  FAIL: Array '{var_name}' at flattened index [\" << i << \"] - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr[i] << std::endl;")
+            #     testbench_code.append("                 }")
+            #     testbench_code.append("                 num_mismatches++;")
+            #     testbench_code.append("                 test_case_passed = false;")
+            #     testbench_code.append("                 // break; // Uncomment to stop on first mismatch for this array")
+            #     testbench_code.append("             }")
+            #     testbench_code.append("         }")
+            #     testbench_code.append(f"        if (test_case_passed) std::cout << \"  PASS: Array '{var_name}' matches.\" << std::endl;")
                 
 
-            else: # 2D, 3D, 4D array comparison
-                testbench_code.append(f"\n        // Compare {array_dimension}D array {var_name}")
+            # else: # 2D, 3D, 4D array comparison
+            #     testbench_code.append(f"\n        // Compare {array_dimension}D array {var_name}")
 
-                indent = "        "
-                json_access_str = f"{var_name}_expected_json"
-                loop_vars = [f"j{d}" for d in range(array_dimension)] # Use j_ to avoid conflicts with i_ in other loops
+            #     indent = "        "
+            #     json_access_str = f"{var_name}_expected_json"
+            #     loop_vars = [f"j{d}" for d in range(array_dimension)] # Use j_ to avoid conflicts with i_ in other loops
                 
-                for d in range(array_dimension):
-                    indent += "    "
-                    testbench_code.append(f"{indent}for (int {loop_vars[d]} = 0; {loop_vars[d]} < {shape[d]}; ++{loop_vars[d]}) {{")
+            #     for d in range(array_dimension):
+            #         indent += "    "
+            #         testbench_code.append(f"{indent}for (int {loop_vars[d]} = 0; {loop_vars[d]} < {shape[d]}; ++{loop_vars[d]}) {{")
                     
-                    if d < array_dimension - 1: # If not the innermost loop
-                        json_access_str += f".at({loop_vars[d]})"
-                        testbench_code.append(f"{indent}    auto current_level_expected_json_{loop_vars[d]} = {json_access_str};")
-                        testbench_code.append(f"{indent}    if (!current_level_expected_json_{loop_vars[d]}.is_array() || current_level_expected_json_{loop_vars[d]}.size() < {shape[d+1]}) {{")
-                        testbench_code.append(f"{indent}        std::cerr << \"Error: expected_outputs.{var_name} at level {d} ({loop_vars[d]}) is not an array or too small.\" << std::endl;")
-                        testbench_code.append(f"{indent}        return 1; // Or handle appropriately")
-                        testbench_code.append(f"{indent}    }}")
-                        json_access_str = f"current_level_expected_json_{loop_vars[d]}" # Update for next level
+            #         if d < array_dimension - 1: # If not the innermost loop
+            #             json_access_str += f".at({loop_vars[d]})"
+            #             testbench_code.append(f"{indent}    auto current_level_expected_json_{loop_vars[d]} = {json_access_str};")
+            #             testbench_code.append(f"{indent}    if (!current_level_expected_json_{loop_vars[d]}.is_array() || current_level_expected_json_{loop_vars[d]}.size() < {shape[d+1]}) {{")
+            #             testbench_code.append(f"{indent}        std::cerr << \"Error: expected_outputs.{var_name} at level {d} ({loop_vars[d]}) is not an array or too small.\" << std::endl;")
+            #             testbench_code.append(f"{indent}        return 1; // Or handle appropriately")
+            #             testbench_code.append(f"{indent}    }}")
+            #             json_access_str = f"current_level_expected_json_{loop_vars[d]}" # Update for next level
 
-                cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
-                cout_loop_vars = "<<".join([f" \"[\" << {lv} <<  \"]\"" for lv in loop_vars])  # For output formatting
-                testbench_code.append(f"{indent}{cpp_base_type} expected_val = {json_access_str}.at({loop_vars[-1]}).get<{cpp_base_type}>();")
-                testbench_code.append(f"{indent}if (!compare_numeric({var_name}_arr{cpp_access_str}, expected_val)) {{")
-                testbench_code.append(f"{indent}    if (num_mismatches < {mismatches_to_report}){{")
-                testbench_code.append(f"{indent}        std::cout << \"  FAIL: {array_dimension}D Array '{var_name}' at index\" << {cout_loop_vars} << \"- Expected: \" << expected_val << \", Actual: \" << {var_name}_arr{cpp_access_str} << std::endl;")
-                testbench_code.append(f"{indent}    }}")
-                testbench_code.append(f"{indent}    test_case_passed = false;")
-                testbench_code.append(f"{indent}    num_mismatches++;")
+            #     cpp_access_str = ''.join([f"[{lv}]" for lv in loop_vars])
+            #     cout_loop_vars = "<<".join([f" \"[\" << {lv} <<  \"]\"" for lv in loop_vars])  # For output formatting
+            #     testbench_code.append(f"{indent}{cpp_base_type} expected_val = {json_access_str}.at({loop_vars[-1]}).get<{cpp_base_type}>();")
+            #     testbench_code.append(f"{indent}if (!compare_numeric({var_name}_arr{cpp_access_str}, expected_val)) {{")
+            #     testbench_code.append(f"{indent}    if (num_mismatches < {mismatches_to_report}){{")
+            #     testbench_code.append(f"{indent}        std::cout << \"  FAIL: {array_dimension}D Array '{var_name}' at index\" << {cout_loop_vars} << \"- Expected: \" << expected_val << \", Actual: \" << {var_name}_arr{cpp_access_str} << std::endl;")
+            #     testbench_code.append(f"{indent}    }}")
+            #     testbench_code.append(f"{indent}    test_case_passed = false;")
+            #     testbench_code.append(f"{indent}    num_mismatches++;")
 
-                testbench_code.append(f"{indent}    // goto end_comparison_for_{var_name}; // Consider using for early exit on mismatch")
-                testbench_code.append(f"{indent}}}")
+            #     testbench_code.append(f"{indent}    // goto end_comparison_for_{var_name}; // Consider using for early exit on mismatch")
+            #     testbench_code.append(f"{indent}}}")
+
                 
-                for d in range(array_dimension - 1, -1, -1):
-                    indent = indent[:-4]
-                    testbench_code.append(f"{indent}}}")
-                # testbench_code.append(f"        // end_comparison_for_{var_name}:;") # Label for goto
-                testbench_code.append(f"        if (test_case_passed) std::cout << \"  PASS: {array_dimension}D Array '{var_name}' matches.\" << std::endl;")
+            #     for d in range(array_dimension - 1, -1, -1):
+            #         indent = indent[:-4]
+            #         testbench_code.append(f"{indent}}}")
+            #     # testbench_code.append(f"        // end_comparison_for_{var_name}:;") # Label for goto
+            #     testbench_code.append(f"        if (test_case_passed) std::cout << \"  PASS: {array_dimension}D Array '{var_name}' matches.\" << std::endl;")
 
                 
 
@@ -503,13 +550,13 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     try:
         with open(testbench_cpp_file_path, "w") as f:
             f.write("\n".join(testbench_code))
-        print(f"Generated C++ testbench source file: {testbench_cpp_file_path}")
+        logger.info(f"Generated C++ testbench source file: {testbench_cpp_file_path}")
         return testbench_cpp_file_path, test_data_json_path, "SUCCESS"
     except FileExistsError as e:
-        print(f"C++ Testbench {testbench_cpp_file_path} already exists.")
+        logger.warning(f"C++ Testbench {testbench_cpp_file_path} already exists.")
         return testbench_cpp_file_path, test_data_json_path, f"SUCCESS: Testbench already exists: {e}"
     except Exception as e:
-        print(f"Error writing C++ testbench file: {e}")
+        logger.error(f"Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
 
 
@@ -521,13 +568,13 @@ def write_json_test_data(filename, test_cases_list):
         output_dir = os.path.dirname(filename)
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
-            print(f"Created directory: {output_dir}")
+            logger.info(f"Created directory: {output_dir}")
 
         with open(filename, 'w') as f:
             json.dump(test_cases_list, f, indent=4, cls=NumpyEncoder)
-        print(f"Successfully wrote test data to {filename}")
+        logger.info(f"Successfully wrote test data to {filename}")
     except Exception as e:
-        print(f"Error writing test data to {filename}: {e}")
+        logger.error(f"Error writing test data to {filename}: {e}")
         raise
 
 
@@ -560,13 +607,13 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
     all_results = {} # Changed to all_results to avoid confusion with single kernel results
 
     for name in kernel_names:
-        print(f"\n--- Processing kernel for JSON reference data: {name} ---")
+        logger.info(f"--- Processing kernel for JSON reference data: {name} ---")
         
         functions = import_module_functions(name, ["generate_inputs", "behavioral"])
         
         
         if not functions or "generate_inputs" not in functions:
-            print(f"Could not import generate_inputs for {name}, skipping...")
+            logger.warning(f"Could not import generate_inputs for {name}, skipping...")
             all_results[name] = {"status": "error", "message": "Could not import generate_inputs"}
             continue
 
@@ -580,7 +627,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             inputs_list = generation_result # Old format
             input_types = None # No type info
 
-        print(f"Generated raw inputs for {name}")
+        logger.info(f"Generated raw inputs for {name}")
 
         # Separate 'in' arguments for behavioral model call
         input_arg_values_for_behavioral = []
@@ -617,7 +664,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             try:
                 # Call behavioral with only the 'in' and 'inout' args, which are collected in order
                 behavioral_result_raw = behavioral_func(*input_arg_values_for_behavioral)
-                print(f"Behavioral model executed successfully for {name}")
+                logger.info(f"Behavioral model executed successfully for {name}")
 
                 # Map behavioral_result_raw to json_expected_outputs_dict
                 if isinstance(behavioral_result_raw, tuple):
@@ -639,11 +686,11 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
                     json_expected_outputs_dict[output_var_names_in_order[0]] = behavioral_result_raw
 
             except Exception as e:
-                print(f"Error running behavioral function for {name}: {e}")
+                logger.error(f"Error running behavioral function for {name}: {e}")
                 all_results[name] = {"status": "error", "message": f"Behavioral error: {e}"}
                 continue
         else:
-            print(f"No behavioral model found for {name}, skipping JSON generation.")
+            logger.error(f"No behavioral model found for {name}, skipping JSON generation.")
             all_results[name] = {"status": "error", "message": "No behavioral model"}
             continue
 
@@ -662,15 +709,15 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
         try:
             # write_json_test_data expects a list of test cases, even if it's just one
             write_json_test_data(json_output_filename, [current_test_case])
-            print(f"Generated JSON test data for {name} at: {json_output_filename}")
+            logger.info(f"Generated JSON test data for {name} at: {json_output_filename}")
         except Exception as e:
-            print(f"Failed to write JSON test data for {name}: {e}")
+            logger.error(f"Failed to write JSON test data for {name}: {e}")
             all_results[name] = {"status": "error", "message": f"JSON write error: {e}"}
             continue
 
 
         # --- NOW CALL THE NEW sim_cpp_with_inputs (Testbench File Generator) ---
-        print(f"\n--- Generating C++ testbench source file for {name} ---")
+        logger.info(f"--- Generating C++ testbench source file for {name} ---")
         testbench_cpp_path, json_filename_basename, generation_status = create_testbench(
             kernel_name=name,
             test_data_json_path=json_output_filename, # This is the full path to the source JSON
@@ -700,7 +747,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
     return all_results
 
 def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1"):
-    print("--- Preparing CSIM ---")
+    logger.info("--- Preparing CSIM ---")
     result = create_reference_data(kernel_name, model_dir, seed=45)
     
     project_dir = model_dir
@@ -718,7 +765,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
         syn.top={kernel_name}
         syn.file={kernel_code_path}
         tb.file={kernel_testbench_path}
-        tb.cflags=-fexceptions -I./include
+        tb.cflags=-std=c++17 -fexceptions -I./include 
         csim.code_analyzer=1
         csim.clean=true
         """ )
@@ -728,19 +775,19 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
     result_success = "success" in result[kernel_name]["status"]
     if result_success:
         try:
-            print("--- Running CSIM ---")
+            logger.info("--- Running CSIM ---")
             sim_result = subprocess.run(
                 sim_cmd,
                 capture_output=True,
                 check=False,
-                timeout=300,  # Timeout after 2 minutes
+                timeout=120,  # Timeout after 2 minutes
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
             return sim_result
 
         except subprocess.TimeoutExpired as e:
-            print(f"CSIM timed out: {e}")
+            logger.warning(f"CSIM timed out: {e}")
             # IMPORTANT: Access stdout and stderr from the exception object 'e'
             # Decode them just like you would from the result object
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
@@ -751,14 +798,14 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
 
 
         except subprocess.CalledProcessError as e: # Catch this specifically for non-zero exit codes
-            print(f"CSIM failed with exit code {e.returncode}")
+            logger.error(f"CSIM failed with exit code {e.returncode}")
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
             sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-            # print(sim_stdout)
+            # logger.debug(sim_stdout)
             return e
 
         except Exception as e:
-            print(f"An unexpected error occurred during CSIM: {e}")
+            logger.error(f"An unexpected error occurred during CSIM: {e}")
             return e
                 
 # --- Main execution block ---

@@ -2,7 +2,10 @@ import numpy as np
 import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
-num_values = 65536
+num_values = 16384
+
+function_signature = "void affine_float32(float *in_vector, float in_scale, float in_bias, float *out_vector)"
+
 description = f"""
 This HLS kernel implements a function to calculate the affine transform of a vector of 32-bit floating point type numbers. 
 Parameters to the function include 2 float32 pointers and 2 float32 variables:
@@ -46,7 +49,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

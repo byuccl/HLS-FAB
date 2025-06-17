@@ -3,7 +3,9 @@ import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the number of values in the array
-num_values = 524288
+num_values = 16384
+
+function_signature = "void dot_product_float32(float *in_vector1, float *in_vector2, float *result)"
 
 description = f"""
 This HLS kernel implements a function to calculate the dot product of two input vectors containing 64 values of the 32-bit floating point values."
@@ -43,7 +45,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

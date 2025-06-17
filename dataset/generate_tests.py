@@ -3,6 +3,9 @@ import pathlib
 from hlseval import HLSCoder, get_kernel_code
 import json
 import argparse
+import logging
+
+logger = logging.getLogger("__main__")
 
 SYSTEM_PROMPT = """
 You are a part of a benchmarking system for HLS (High Level Synthesis).
@@ -14,234 +17,233 @@ Additionally, each test within the benchmark will have a Python file with a desc
 Both these files should follow the patterns set out by the provided examples.
 Produce only the code requested, no main, no additional examples or code, and no wrappers of any kind.
 """
+if __name__ == "__main__":
 
-# Set up prompt
-desired_test = "bilateral_filter_opencv"
-desired_test_description = (
-    """
-In general, any smoothing filter smoothens the image which will affect the edges of the image. To preserve the edges while smoothing, a bilateral filter can be used. In an analogous way as the Gaussian filter, the bilateral filter also considers the neighboring pixels with weights assigned to each of them. These weights have two components, the first of which is the same weighing used by the Gaussian filter. The second component takes into account the difference in the intensity between the neighboring pixels and the evaluated one.
+    parser.add_argument("--log", dest='loglevel', help="desired loglevel", default="WARNING")
 
-The bilateral filter applied on an image is:  
-BF[I]_p = (1/W_p) ∑_(q∈S) G_σ_s(||p-q||)G_σ_r(||I_p-I_q||)I_q  
-  
-Where  
-W_p = ∑_(q∈S) G_σ_s(||p-q||)G_σ_r(||I_p-I_q||)  
-  
-and G_σ is a Gaussian filter with variance σ.  
-  
-The Gaussian filter is given by:  
-G_σ = e^(-(x^2+y^2)/(2σ^2))
+    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")  
+    parser.add_argument('workflow', choices=['amd', 'byu'],  
+                        help="Which workflow to follow for API calls ('amd' or 'byu')")  
+    args = parser.parse_args()  
+    workflow = args.workflow
+    if workflow == "byu":
+        url = byu_gpt_url
+    elif workflow == "amd":
+        url = amd_gpt_url
+    else:
+        logger.error("Invalid workflow selection")
 
-The input image will be 128x128 pixels
-Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
-Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
-The filter size is 3.
-The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
-Implementation details should match the OpenCV implementation unless otherwise specified
+    numeric_level = getattr(logging, args.loglevel.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError('Invalid log level: %s' % args.loglevel)
+    logging.basicConfig(level=numeric_level)
 
-void bilateral_filter_opencv((uint8_t*)in_img.data, sigma_color, sigma_space, (uint8_t*)out_img.data);
-    """
-)
+    # Set up prompt
+    desired_test = "mat_mult_int16"
+    desired_test_description = (
+        """
+    Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
 
+    Matrix 1 of MxN size 16-bit integers
+    Matrix 2 of NxK size 16-bit integers 
+    Result matrix of MxK size 16-bit integers
 
-# Open example files
-with open("dataset/examples/absolute_value_int8/canonical_scalar.cc", "r") as f:
-    abs_scalar = f.read()
-with open("dataset/examples/absolute_value_int8/generate.py", "r") as f:
-    abs_generate = f.read()
-
-with open("dataset/examples/affine_float32/canonical_scalar.cc", "r") as f:
-    affine_scalar = f.read()
-with open("dataset/examples/affine_float32/generate.py", "r") as f:
-    affine_generate = f.read()
-    
-with open("dataset/examples/conv2d_int16/canonical_scalar.cc", "r") as f:
-    conv2d_scalar = f.read()
-with open("dataset/examples/conv2d_int16/generate.py", "r") as f:
-    conv2d_generate = f.read()
-
-with open("dataset/examples/dot_product_float32/canonical_scalar.cc", "r") as f:
-    dot_scalar = f.read()
-with open("dataset/examples/dot_product_float32/generate.py", "r") as f:
-    dot_generate = f.read()
-
-with open("dataset/examples/matrix_multiply_int32/canonical_scalar.cc", "r") as f:
-    mat_mul_scalar = f.read()
-with open("dataset/examples/matrix_multiply_int32/generate.py", "r") as f:
-    mat_mul_generate = f.read()
-
-with open("dataset/examples/mean_var_float64/canonical_scalar.cc", "r") as f:
-    mean_var_scalar = f.read()
-with open("dataset/examples/mean_var_float64/generate.py", "r") as f:
-    mean_var_generate = f.read()
-
-with open("dataset/examples/relu_activation_float32/canonical_scalar.cc", "r") as f:
-    relu_scalar = f.read()
-with open("dataset/examples/relu_activation_float32/generate.py", "r") as f:
-    relu_generate = f.read()
-
-with open("dataset/examples/scale_matrix_3d_int8/canonical_scalar.cc", "r") as f:
-    scale_mat_scalar = f.read()
-with open("dataset/examples/scale_matrix_3d_int8/generate.py", "r") as f:
-    scale_mat_generate = f.read()
-
-with open("dataset/examples/subtract_int64/canonical_scalar.cc", "r") as f:
-    subtract_scalar = f.read()
-with open("dataset/examples/subtract_int64/generate.py", "r") as f:
-    subtract_generate = f.read()
-
-with open("dataset/examples/zero_mean_norm_float64/canonical_scalar.cc", "r") as f:
-    zero_mean_scalar = f.read()
-with open("dataset/examples/zero_mean_norm_float64/generate.py", "r") as f:
-    zero_mean_generate = f.read()
-
-# Generate 'canonical_scalar.cc'
-prompt = f"""
-I am generating a series of tests to assess the performance of HLS C++ code. Each test consists of files titled 'cononical_scalar.cc' and 'generate.py'.\n\n
-The canonical scalar function contains code to perform the necessary function in C++.\n
-The generate scipt contains two python functions: 'generate_inputs' and 'behavioral'. \n
-\t'generate_inputs' generates numpy arrays or scalar values for each parameter in the 'canonical_scalar.cc' file. Input arrays are randomly filled with values well within the minimums and maximums of the data type. This function also calls the external 'generate_types' function to tell the caller what type of data each parameter is.\n
-\t'behavioral' performs the operation described by the kernel in python. This function generally uses external libraries such as numpy or pytorch to ensure accuracy even with complex kernels.\n
-\tAdditionally, the generate script includes a description of the kernel, defines several values, and calls a 'PromptConstructor' class. This class pulls from values passed in to create a description of the prompt complete with examples and dataflow information.\n
-\n
-The following is an example of a 'canonical_scalar.cc' file for the 'absolute_value_int8' test:\n```\n{abs_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'absolute_value_int8' test:\n```\n{abs_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'affine_float32' test:\n```\n{affine_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'affine_float32' test:\n```\n{affine_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'conv2d_int16' test:\n```\n{conv2d_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'conv2d_int16' test:\n```\n{conv2d_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'dot_product_float32_int16' test:\n```\n{dot_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'dot_product_float32' test:\n```\n{dot_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'matrix_multiply_int32' test:\n```\n{mat_mul_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'matrix_multiply_int32' test:\n```\n{mat_mul_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'mean_var_float64' test:\n```\n{mean_var_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'mean_var_float64' test:\n```\n{mean_var_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'relu_activation_float32' test:\n```\n{relu_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'relu_activation_float32' test:\n```\n{relu_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'scale_matrix_3d_int8' test:\n```\n{scale_mat_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'scale_matrix_3d_int8' test:\n```\n{scale_mat_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'subtract_int64' test:\n```\n{subtract_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'subtract_int64' test:\n```\n{subtract_generate}\n```\n\n
-
-The following is an example of a 'canonical_scalar.cc' file for the 'zero_mean_norm_float64' test:\n```\n{zero_mean_scalar}\n```\n\n
-The following is an example of the matching 'generate.py' file for the same 'zero_mean_norm_float64' test:\n```\n{zero_mean_generate}\n```\n\n
-"""
-
-canonical_line = f"""
-Your task is to create a 'canonical_scalar.cc function for the following test:\n{desired_test}: {desired_test_description}'\n\n
-Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
-If there are constants then include them as #define preprocessors. 
-"""
-
-byu_gpt_url = "https://api.openai.com/v1/chat/completions"
-amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
-
-parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")  
-parser.add_argument('workflow', choices=['amd', 'byu'],  
-                    help="Which workflow to follow for API calls ('amd' or 'byu')")  
-args = parser.parse_args()  
-workflow = args.workflow
-if workflow == "byu":
-    url = byu_gpt_url
-elif workflow == "amd":
-    url = amd_gpt_url
-else:
-    print("Invalid workflow selection")
-    
-model = "gpt-4o"
-temperature = 0.0
-top_p = 1.0
-attempts = 1
-coder = HLSCoder(
-    model=model,
-    temperature=temperature,
-    workflow=workflow,
-    top_p=top_p,
-    url=url,
-    attempts=attempts,
-    system_prompt=SYSTEM_PROMPT
-)
-response = coder(prompt + canonical_line)
-
-result = {
-    "code": coder.extract_codeblock(response["response"]),
-    "stats": {
-        "token_usage": response["token_usage"],
-        "history": response["history"],
-    },
-}
-
-pathlib.Path(f"dataset/generated_tests/{desired_test}").mkdir(parents=True, exist_ok=True)
-
-
-# Write all json data to a file
-# try:
-#     with open(
-#         f"dataset/generated_tests/{desired_test}/canonical_scalar.json", "x"
-#     ) as file:
-#         json.dump(response, file, indent=4)
-# except FileExistsError:
-#     print(
-#         f"The file dataset/generated_tests/{desired_test}/canonical_scalar.json already exists. Skipping file."
-#     )
-
-# Write just the code to a file
-try:
-    with open(
-        f"dataset/generated_tests/{desired_test}/canonical_scalar.cc", "x"
-    ) as file:
-        file.write(response["response"])
-except FileExistsError:
-    print(
-        f"The file dataset/generated_tests/{desired_test}/canonical_scalar.cc already exists. Skipping file."
+    M = 64 
+    N = 64
+    K = 64
+        """
     )
 
-with open(f"dataset/generated_tests/{desired_test}/canonical_scalar.cc", "r") as f:
-    current_scalar = f.read()
-    
-    
-generate_line = f"""
-Your task is to create a 'generate.py script for the following test:\n{desired_test}: {desired_test_description}'\n\n
-The following is the 'canonical_scalar.cc' file for this test: \n```\n{current_scalar}\n```\n\n
-Use the same naming convention for variables using input_ for inputs and output_ for outputs and inout_ for combinations of the two.
-Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
-If there are constants then include them at the top of the file as variables. 
-"""
-response = coder(prompt + generate_line)
 
-result = {
-    "code": coder.extract_codeblock(response["response"]),
-    "stats": {
-        "token_usage": response["token_usage"],
-        "history": response["history"],
-    },
-}
-# Write all json data to a file
-# try:
-#     with open(
-#         f"dataset/generated_tests/{desired_test}/generate.json", "x"
-#     ) as file:
-#         json.dump(response, file, indent=4)
-# except FileExistsError:
-#     print(
-#         f"The file dataset/generated_tests/{desired_test}/generate.json already exists. Skipping file."
-#     )
 
-# Write just the code to a file
-try:
-    with open(
-        f"dataset/generated_tests/{desired_test}/generate.py", "x"
-    ) as file:
-        file.write(response["response"])
-except FileExistsError:
-    print(
-        f"The file dataset/generated_tests/{desired_test}/generate.py already exists. Skipping file."
+    # Open example files
+    with open("dataset/examples/absolute_value_int8/canonical_scalar.cc", "r") as f:
+        abs_scalar = f.read()
+    with open("dataset/examples/absolute_value_int8/generate.py", "r") as f:
+        abs_generate = f.read()
+
+    with open("dataset/examples/affine_float32/canonical_scalar.cc", "r") as f:
+        affine_scalar = f.read()
+    with open("dataset/examples/affine_float32/generate.py", "r") as f:
+        affine_generate = f.read()
+        
+    with open("dataset/examples/conv2d_int16/canonical_scalar.cc", "r") as f:
+        conv2d_scalar = f.read()
+    with open("dataset/examples/conv2d_int16/generate.py", "r") as f:
+        conv2d_generate = f.read()
+
+    with open("dataset/examples/dot_product_float32/canonical_scalar.cc", "r") as f:
+        dot_scalar = f.read()
+    with open("dataset/examples/dot_product_float32/generate.py", "r") as f:
+        dot_generate = f.read()
+
+    with open("dataset/examples/matrix_multiply_int32/canonical_scalar.cc", "r") as f:
+        mat_mul_scalar = f.read()
+    with open("dataset/examples/matrix_multiply_int32/generate.py", "r") as f:
+        mat_mul_generate = f.read()
+
+    with open("dataset/examples/mean_var_float64/canonical_scalar.cc", "r") as f:
+        mean_var_scalar = f.read()
+    with open("dataset/examples/mean_var_float64/generate.py", "r") as f:
+        mean_var_generate = f.read()
+
+    with open("dataset/examples/relu_activation_float32/canonical_scalar.cc", "r") as f:
+        relu_scalar = f.read()
+    with open("dataset/examples/relu_activation_float32/generate.py", "r") as f:
+        relu_generate = f.read()
+
+    with open("dataset/examples/scale_matrix_3d_int8/canonical_scalar.cc", "r") as f:
+        scale_mat_scalar = f.read()
+    with open("dataset/examples/scale_matrix_3d_int8/generate.py", "r") as f:
+        scale_mat_generate = f.read()
+
+    with open("dataset/examples/subtract_int64/canonical_scalar.cc", "r") as f:
+        subtract_scalar = f.read()
+    with open("dataset/examples/subtract_int64/generate.py", "r") as f:
+        subtract_generate = f.read()
+
+    with open("dataset/examples/zero_mean_norm_float64/canonical_scalar.cc", "r") as f:
+        zero_mean_scalar = f.read()
+    with open("dataset/examples/zero_mean_norm_float64/generate.py", "r") as f:
+        zero_mean_generate = f.read()
+
+    # Generate 'canonical_scalar.cc'
+    prompt = f"""
+    I am generating a series of tests to assess the performance of HLS C++ code. Each test consists of files titled 'cononical_scalar.cc' and 'generate.py'.\n\n
+    The canonical scalar function contains code to perform the necessary function in C++.\n
+    The generate scipt contains two python functions: 'generate_inputs' and 'behavioral'. \n
+    \t'generate_inputs' generates numpy arrays or scalar values for each parameter in the 'canonical_scalar.cc' file. Input arrays are randomly filled with values well within the minimums and maximums of the data type. This function also calls the external 'generate_types' function to tell the caller what type of data each parameter is.\n
+    \t'behavioral' performs the operation described by the kernel in python. This function generally uses external libraries such as numpy or pytorch to ensure accuracy even with complex kernels.\n
+    \tAdditionally, the generate script includes a description of the kernel, defines several values, and calls a 'PromptConstructor' class. This class pulls from values passed in to create a description of the prompt complete with examples and dataflow information.\n
+    \n
+    The following is an example of a 'canonical_scalar.cc' file for the 'absolute_value_int8' test:\n```\n{abs_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'absolute_value_int8' test:\n```\n{abs_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'affine_float32' test:\n```\n{affine_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'affine_float32' test:\n```\n{affine_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'conv2d_int16' test:\n```\n{conv2d_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'conv2d_int16' test:\n```\n{conv2d_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'dot_product_float32_int16' test:\n```\n{dot_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'dot_product_float32' test:\n```\n{dot_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'matrix_multiply_int32' test:\n```\n{mat_mul_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'matrix_multiply_int32' test:\n```\n{mat_mul_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'mean_var_float64' test:\n```\n{mean_var_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'mean_var_float64' test:\n```\n{mean_var_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'relu_activation_float32' test:\n```\n{relu_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'relu_activation_float32' test:\n```\n{relu_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'scale_matrix_3d_int8' test:\n```\n{scale_mat_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'scale_matrix_3d_int8' test:\n```\n{scale_mat_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'subtract_int64' test:\n```\n{subtract_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'subtract_int64' test:\n```\n{subtract_generate}\n```\n\n
+
+    The following is an example of a 'canonical_scalar.cc' file for the 'zero_mean_norm_float64' test:\n```\n{zero_mean_scalar}\n```\n\n
+    The following is an example of the matching 'generate.py' file for the same 'zero_mean_norm_float64' test:\n```\n{zero_mean_generate}\n```\n\n
+    """
+
+    canonical_line = f"""
+    Your task is to create a 'canonical_scalar.cc function for the following test:\n{desired_test}: {desired_test_description}'\n\n
+    Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
+    If there are constants then include them as #define preprocessors. 
+    """
+
+    byu_gpt_url = "https://api.openai.com/v1/chat/completions"
+    amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
+
+   
+        
+    model = "gpt-4o"
+    temperature = 0.0
+    top_p = 1.0
+    attempts = 1
+    coder = HLSCoder(
+        model=model,
+        temperature=temperature,
+        workflow=workflow,
+        top_p=top_p,
+        url=url,
+        attempts=attempts,
+        system_prompt=SYSTEM_PROMPT
     )
+    response = coder(prompt + canonical_line)
+
+    result = {
+        "code": coder.extract_codeblock(response["response"]),
+        "stats": {
+            "token_usage": response["token_usage"],
+            "history": response["history"],
+        },
+    }
+
+    pathlib.Path(f"dataset/generated_tests/{desired_test}").mkdir(parents=True, exist_ok=True)
+
+
+    # Write all json data to a file
+    # try:
+    #     with open(
+    #         f"dataset/generated_tests/{desired_test}/canonical_scalar.json", "x"
+    #     ) as file:
+    #         json.dump(response, file, indent=4)
+    # except FileExistsError:
+    #     logger.info(
+    #         f"The file dataset/generated_tests/{desired_test}/canonical_scalar.json already exists. Skipping file."
+    #     )
+
+    # Write just the code to a file
+    try:
+        with open(
+            f"dataset/generated_tests/{desired_test}/canonical_scalar.cc", "x"
+        ) as file:
+            file.write(response["response"])
+    except FileExistsError:
+        logger.info(
+            f"The file dataset/generated_tests/{desired_test}/canonical_scalar.cc already exists. Skipping file."
+        )
+
+    with open(f"dataset/generated_tests/{desired_test}/canonical_scalar.cc", "r") as f:
+        current_scalar = f.read()
+        
+        
+    generate_line = f"""
+    Your task is to create a 'generate.py script for the following test:\n{desired_test}: {desired_test_description}'\n\n
+    The following is the 'canonical_scalar.cc' file for this test: \n```\n{current_scalar}\n```\n\n
+    Use the same naming convention for variables using input_ for inputs and output_ for outputs and inout_ for combinations of the two.
+    Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
+    If there are constants then include them at the top of the file as variables. 
+    """
+    response = coder(prompt + generate_line)
+
+    result = {
+        "code": coder.extract_codeblock(response["response"]),
+        "stats": {
+            "token_usage": response["token_usage"],
+            "history": response["history"],
+        },
+    }
+    # Write all json data to a file
+    # try:
+    #     with open(
+    #         f"dataset/generated_tests/{desired_test}/generate.json", "x"
+    #     ) as file:
+    #         json.dump(response, file, indent=4)
+    # except FileExistsError:
+    #     logger.info(
+    #         f"The file dataset/generated_tests/{desired_test}/generate.json already exists. Skipping file."
+    #     )
+
+    # Write just the code to a file
+    try:
+        with open(
+            f"dataset/generated_tests/{desired_test}/generate.py", "x"
+        ) as file:
+            file.write(response["response"])
+    except FileExistsError:
+        logger.info(
+            f"The file dataset/generated_tests/{desired_test}/generate.py already exists. Skipping file."
+        )
