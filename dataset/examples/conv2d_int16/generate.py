@@ -50,7 +50,7 @@ def generate_inputs(seed=0):
 
         input_matrix1 = np.random.randint(-128, 128, size=(batch_size, in_channels, input_height, input_width), dtype=np.int16).flatten()   
         input_matrix2 = np.random.randint(-2, 2, size=(out_channels, in_channels, kernel_size, kernel_size), dtype=np.int16).flatten()  
-        output_matrix = np.zeros(shape=(np.int16(batch_size), np.int16(out_channels), np.int16(output_height), np.int16(output_width)), dtype=np.int16).flatten()  
+        output_matrix = np.zeros(shape=(np.int16(batch_size), np.int16(out_channels), np.int16(output_height), np.int16(output_width)), dtype=np.int16).flatten() 
     inputs = [input_matrix1, input_matrix2, output_matrix]  
 
     types = generate_types(inputs)    
