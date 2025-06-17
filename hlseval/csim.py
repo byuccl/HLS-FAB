@@ -496,6 +496,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
             #     testbench_code.append(f"{indent}    // goto end_comparison_for_{var_name}; // Consider using for early exit on mismatch")
             #     testbench_code.append(f"{indent}}}")
+
                 
             #     for d in range(array_dimension - 1, -1, -1):
             #         indent = indent[:-4]
