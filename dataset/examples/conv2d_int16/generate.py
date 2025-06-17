@@ -33,7 +33,6 @@ Parameters to the function include three ap_int<16> arrays, all intended to be i
     The third parameter points to the start of the 4D ouput data array. The dimensions are [batch_size={batch_size}][in_channels={out_channels}][height={output_height}][width={output_width}].
 The stride is fixed to be {stride}. All values are 16-bit integers."    
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 

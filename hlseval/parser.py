@@ -22,9 +22,10 @@ models = {
 #     tests = [json.loads(line) for line in f]
     
 # Function to collect all the synthesis data and warnings/errors to be used in the feedback
-def gather_feedback(synthesis_output, data=None, goals=None):
+def gather_feedback(synthesis_output=None, data=None, goals=None):
     """Function to gather feedback from synthesis output. Holds Errors and Warnings and Performance data."""
-    
+    if synthesis_output is None:
+        synthesis_output = ""
     errors = re.findall(r"ERROR: \[.*?\] (.*)", synthesis_output)
     warnings = re.findall(r"WARNING: \[.*?\] (.*)", synthesis_output)
     
@@ -145,7 +146,30 @@ def parse_sim_report(file_path=None):
         except FileNotFoundError:
             print(f"The file {file_path} does not exist.")
             return feedback
+        
+    
+    # Regex patterns for different types of errors/warnings
+    # Matches: file_path:line:col: (error|warning): message
+    compiler_msg_pattern = re.compile(r'^(.*?):(\d+):(\d+):\s+(error|warning):\s+(.*)$')
+
     for i, line in enumerate(lines):
+        compiler_match = compiler_msg_pattern.match(line)
+        if compiler_match:
+            file_path, line_num, col_num, msg_type, message = compiler_match.groups()
+            err_details = {
+                'file': file_path.strip(),
+                'line': int(line_num),
+                'column': int(col_num),
+                'message': message.strip()
+            }
+            if msg_type == "error":
+                feedback["errors"].append(err_details)
+                feedback["status"] = "failed" # If there's a compilation error, it's failed
+            else: # msg_type == "warning"
+                feedback["warnings"].append(err_details)
+            continue # Move to the next line, as this line is handled
+
+
         if "Compilation Status:" in line:
             feedback["status"] = line.split(":")[1].strip()
         elif "SOME TESTS FAILED!" in line:
@@ -161,6 +185,7 @@ def parse_sim_report(file_path=None):
             feedback["percent_error"] = line.split(":")[1].strip()
         elif "ALL TESTS PASSED!" in line:
             feedback["match"] = "match"
+            feedback["status"] = "passed"
 
     
     return feedback
@@ -200,6 +225,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
         print(
             f"The file {solutions_path}{saved_log_file} does not exist."
         )
+        old_log = None
     # Check if the synthesis was successful then add the data to json
     try:
         with open(in_report_file, 'r') as file:

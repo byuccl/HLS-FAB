@@ -13,7 +13,6 @@ Parameters to the function include three float32 pointers:
     The first and second pointers point to arrays containing {num_values} float values. These are the imput vectors.
     The third pointer points to a single float value to be used as the output.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 

@@ -14,7 +14,6 @@ Parameters to the function include 2 float32 pointers and 2 float32 variables:
     The third parameter is a bias factor of type float32.
     The fourth parameter is a pointer that points to the start of a {num_values}-element array of float32 values to be used as the output data.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 

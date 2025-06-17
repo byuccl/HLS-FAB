@@ -12,7 +12,7 @@ class MultiContentSplitter:
         self.code_splitter = CodeSplitter(  
             language="cpp",  
             chunk_lines=40,         # Split code into chunks of ~40 lines  
-            chunk_overlap_lines=5,  # With 5 lines of overlap  
+            chunk_lines_overlap=5,  # With 5 lines of overlap  
             max_chars=1500          # Maximum characters per chunk  
         )  
           
