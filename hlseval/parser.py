@@ -2,6 +2,9 @@ import re
 import json
 from datetime import datetime
 import pathlib
+import logging
+
+logger = logging.getLogger("__main__")
 
 file_path_begin = "./results/solutions/"
 in_file_path_mid = "/hls/syn/report/"
@@ -144,7 +147,7 @@ def parse_sim_report(file_path=None):
             with open(file_path, 'r') as f:
                 lines = f.readlines()
         except FileNotFoundError:
-            print(f"The file {file_path} does not exist.")
+            logger.error(f"The file {file_path} does not exist.")
             return feedback
         
     
@@ -222,7 +225,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
                 log.write(old_log)
                 log.write("\n\n")
     except FileNotFoundError:
-        print(
+        logger.error(
             f"The file {solutions_path}{saved_log_file} does not exist."
         )
         old_log = None
@@ -241,7 +244,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
     except FileNotFoundError:
         synth_feedback = gather_feedback(old_log, goals=goals)
 
-        print(
+        logger.error(
             f"The file {in_report_file} does not exist."
         )
     
@@ -261,7 +264,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
         sim_feedback = parse_sim_report()
         # with open(out_data_path, 'w') as of:
         #     json.dump(feedback, of, indent=4)
-        print(
+        logger.error(
             f"The file {old_sim_log_file} does not exist."
         )
     

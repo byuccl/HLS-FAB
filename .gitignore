@@ -19,4 +19,5 @@ temp.cc
 **/canonical_scalar.json
 /results/saved_results
 rag_data/*
+storage/**
 results/tests_wo_rag/*
