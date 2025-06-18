@@ -130,12 +130,16 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
             vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
             synth_returncode = synth_output.returncode
         except hlseval.CsynthTimeoutError as e:
-            logger.warning("Vitis timed out")
+            logger.warning(" Vitis timed out")
             vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+            logger.debug(vitis_feedback)
+            logger.debug("vitis Feedback before Adding new Errors")
             vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
             vitis_feedback['synth_feedback']['goals'].extend([
                 "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
                 "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
+            logger.debug(vitis_feedback)
+            logger.debug("vitis Feedback before Adding new Errors")
             synth_returncode = 1
     else:
         vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
@@ -144,6 +148,11 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         synth_returncode = 1   
     
     logger.info("--- Vitis Run Completed ---")
+
+    out_data_path = f"{solutions_path}/{kernel_name}_data.json"
+    hlseval.save_feedback_data(out_data_path, vitis_feedback)
+    
+
     returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
     return returncode, vitis_feedback
 

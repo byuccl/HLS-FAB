@@ -293,7 +293,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
 
 
                 testbench_code.append(f"        uint32_t flat_idx_for_{var_name} = 0;")
-                testbench_code.append(f"        for (const auto& val : {var_name}_json_data.flatten()) {{")
+                testbench_code.append(f"        for (const auto& val : {var_name}_json_data) {{")
                 testbench_code.append(f"            if (flat_idx_for_{var_name} >= {total_elements}) {{")
                 testbench_code.append(f"                std::cerr << \"Error: {var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;")
                 testbench_code.append(f"                return 1;")
@@ -303,7 +303,14 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
                 testbench_code.append(f"        if (flat_idx_for_{var_name} != {total_elements}) {{")
                 testbench_code.append(f"            std::cerr << \"Error: {var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;")
                 testbench_code.append(f"            return 1;")
-                testbench_code.append(f"        }}")            
+                testbench_code.append(f"        }}") 
+
+                testbench_code.append(f"        // In testbench, after loading {var_name}_arr")
+                testbench_code.append(f"        std::cout << \"{var_name} (first 10 elements): \";")
+                testbench_code.append(f"        for (int i = 0; i < 10; ++i) {{")
+                testbench_code.append(f"            std::cout << {var_name}_arr[i] << \" \";")
+                testbench_code.append(f"        }}")
+                testbench_code.append(f"        std::cout << std::endl;")      
                 
             elif in_out_status == "out":
                 # Initialize output buffers to 0 for clarity
@@ -405,7 +412,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
             # Check for the outer-most dimension
             if array_dimension > 0: # Only check for arrays
                 testbench_code.append(f"        if (!{var_name}_expected_json.is_array() || {var_name}_expected_json.size() < {shape[0]}) {{")
-                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements).\" << std::endl;")
+                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements expected: {shape[0]} has: \" << {var_name}_expected_json.size() << \").\" << std::endl;")
                 testbench_code.append(f"            return 1; // Or handle appropriately")
                 testbench_code.append("        }")
                 
@@ -425,7 +432,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
             elif array_dimension >= 1: # Unified array comparison (flattened)
                 testbench_code.append(f"\n        // Compare array {var_name} (flattened)")
                 testbench_code.append(f"        uint32_t flat_compare_idx = 0;")
-                testbench_code.append(f"        for (const auto& expected_val_json : {var_name}_expected_json.flatten()) {{")
+                testbench_code.append(f"        for (const auto& expected_val_json : {var_name}_expected_json) {{")
                 testbench_code.append(f"            if (flat_compare_idx >= {total_elements}) {{")
                 testbench_code.append(f"                std::cerr << \"Error: expected_outputs.{var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;")
                 testbench_code.append(f"                return 1;")
@@ -770,6 +777,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
         """ )
     
     sim_cmd = ["vitis-run", "--mode", "hls", "--csim", "--config", "vitis_config_csim.cfg", "--work_dir", project_dir]
+    # vitis-run --mode hls --csim --config vitis_config_csim.cfg --work_dir ./results/solutions/gpt-4o/conv2d_int16/attempts_1
     # Run the vitis_hls and capture the output
     result_success = "success" in result[kernel_name]["status"]
     if result_success:
@@ -810,8 +818,8 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
 # --- Main execution block ---
 if __name__ == "__main__":
     # Ensure this path exists or is creatable
-    target_model_dir = "./results/solutions/gpt-4o/mat_mult_int16/attempts_1"
+    target_model_dir = "./results/solutions/gpt-4o/conv2d_int16/attempts_1"
 
-    run_csim("mat_mult_int16", target_model_dir)
+    run_csim("conv2d_int16", target_model_dir)
     # After running this, inspect the generated JSON file
     # Example: cat results/solutions/gpt-4o/axpy_int32/attempts_6/axpy_int32_test_data.json

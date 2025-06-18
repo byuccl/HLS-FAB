@@ -36,18 +36,19 @@ def generate_inputs(seed=0):
         # Set a seed so the example inputs and outputs work correctly  
         np.random.seed(seed)  
 
-        input_matrix = np.random.randint(-20, 20, size=(matrix_height, matrix_width, matrix_depth), dtype=np.int8)  
+        input_matrix = np.random.randint(-20, 20, size=(matrix_height, matrix_width, matrix_depth), dtype=np.int8).flatten()
         input_scale_factor = np.random.randint(-5, 5, dtype=np.int8)  
-        output_matrix = np.zeros(shape=(matrix_height, matrix_width, matrix_depth), dtype=np.int8)  
+        output_matrix = np.zeros(shape=(matrix_height, matrix_width, matrix_depth), dtype=np.int8).flatten() 
     inputs = [input_matrix, input_scale_factor, output_matrix]  
 
     types = generate_types(inputs)    
     return {"inputs": inputs, "types": types}    
    
 # A function to generate a correct solution based on sample input vectors
-def behavioral(input_matrix, input_scale_factor):    
-    return input_scale_factor * input_matrix
-  
+def behavioral(input_matrix, input_scale_factor): 
+    input_matrix = input_matrix.reshape((matrix_height, matrix_width, matrix_depth))   
+    return (input_scale_factor * input_matrix).flatten()
+
 examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.

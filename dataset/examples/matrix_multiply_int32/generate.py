@@ -39,9 +39,9 @@ def generate_inputs(seed=0):
         # Set a seed so the example inputs and outputs work correctly
         np.random.seed(seed)
         
-        input_matrix1 = np.random.randint(-32767, 32767, size=(matrix1_height, matrix1_width), dtype=np.int32)
-        input_matrix2 = np.random.randint(-32767, 32767, size=(matrix2_height, matrix2_width), dtype=np.int32)
-        output_matrix = np.zeros(shape=(matrix1_height, matrix2_width), dtype=np.int32)
+        input_matrix1 = np.random.randint(-32767, 32767, size=(matrix1_height, matrix1_width), dtype=np.int32).flatten()
+        input_matrix2 = np.random.randint(-32767, 32767, size=(matrix2_height, matrix2_width), dtype=np.int32).flatten()
+        output_matrix = np.zeros(shape=(matrix1_height, matrix2_width), dtype=np.int32).flatten()
     inputs = [input_matrix1, input_matrix2, output_matrix]
 
     types = generate_types(inputs)  
@@ -49,7 +49,9 @@ def generate_inputs(seed=0):
 
 # A function to generate a correct solution based on sample input matrices  
 def behavioral(input_matrix1, input_matrix2):  
-    return np.matmul(input_matrix1, input_matrix2)  
+    input_matrix1 = input_matrix1.reshape((matrix1_height, matrix1_width))  
+    input_matrix2 = input_matrix2.reshape((matrix2_height, matrix2_width))
+    return np.matmul(input_matrix1, input_matrix2).flatten()  
 
 examples = generate_examples(generate_inputs)
 

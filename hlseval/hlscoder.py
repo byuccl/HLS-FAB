@@ -507,7 +507,6 @@ def call_llm_api(coder, tools=None):
 
 
     logger.debug(f"API Request: {json.dumps(body, indent=2)}")  
-    print(f"API Request: {json.dumps(body, indent=2)}")  
 
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
       
