@@ -7,6 +7,10 @@ import requests
 import os
 import json  
 import inspect  
+import tiktoken
+import hlseval 
+
+
 from typing import Dict, Any, List  
 from hlseval.splitter import MultiContentSplitter
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings  
@@ -91,7 +95,7 @@ The goal is to create HLS code that runs correctly, taking as little time and us
 Make this code so that it is Deterministic when synthesized.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
 Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>). As such, that header almost always needs to be added.
-Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly.
+Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
 
@@ -564,7 +568,7 @@ def setup_rag():
     documents = SimpleDirectoryReader("./rag_data").load_data()  
       
     logger.debug("HLS CODER: Creating multi-content splitter...")  
-    content_splitter = MultiContentSplitter()  
+    content_splitter = hlseval.MultiContentSplitter()  
       
     logger.debug("HLS CODER: Creating embedding model...")  
     if HuggingFaceEmbedding is not None:  

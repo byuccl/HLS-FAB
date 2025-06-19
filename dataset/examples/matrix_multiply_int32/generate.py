@@ -9,20 +9,22 @@ matrix2_height = 32
 matrix2_width = 128
 
 function_signature = """
-void matrix_multiply_int32(
-    int32_t matrix1[MATRIX_1_HEIGHT][MATRIX_1_WIDTH], 
-    int32_t matrix2[MATRIX_2_HEIGHT][MATRIX_2_WIDTH], 
-    int32_t result[MATRIX_1_HEIGHT][MATRIX_2_WIDTH])
+void matrix_multiply_int32(ap_int<32> *matrix1, ap_int<32> *matrix2, ap_int<32> *result)
+//matrix1,      [MATRIX_1_HEIGHT][MATRIX_1_WIDTH]
+//matrix2,      [MATRIX_2_HEIGHT][MATRIX_2_WIDTH]
+//result,      [MATRIX_1_HEIGHT][MATRIX_2_WIDTH]
 """
 
 description = f"""
 This HLS kernel implements a function to multiply two matrices (A * B). 
-Parameters to the function include three int32_t 2D arrays, all intended to be interpreted as 2-dimensional arrays:
+Parameters to the function include three ap_int<32> 2D arrays, all intended to be interpreted as 2-dimensional arrays:
     The first parameter points to the start of the first 2D input data array. The dimensions are {matrix1_height} x {matrix1_width}. 
     The second parameter points to the start of the second 2D input data array. The dimensions are {matrix2_height} x {matrix2_width}.
     The third parameter points to the start of the 2D output data array. The dimensions are {matrix1_height} x {matrix2_width}.
 """  
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
+
+
+
 
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 
@@ -37,9 +39,9 @@ def generate_inputs(seed=0):
         # Set a seed so the example inputs and outputs work correctly
         np.random.seed(seed)
         
-        input_matrix1 = np.random.randint(-32767, 32767, size=(matrix1_height, matrix1_width), dtype=np.int32)
-        input_matrix2 = np.random.randint(-32767, 32767, size=(matrix2_height, matrix2_width), dtype=np.int32)
-        output_matrix = np.zeros(shape=(matrix1_height, matrix2_width), dtype=np.int32)
+        input_matrix1 = np.random.randint(-32767, 32767, size=(matrix1_height, matrix1_width), dtype=np.int32).flatten()
+        input_matrix2 = np.random.randint(-32767, 32767, size=(matrix2_height, matrix2_width), dtype=np.int32).flatten()
+        output_matrix = np.zeros(shape=(matrix1_height, matrix2_width), dtype=np.int32).flatten()
     inputs = [input_matrix1, input_matrix2, output_matrix]
 
     types = generate_types(inputs)  
@@ -47,7 +49,9 @@ def generate_inputs(seed=0):
 
 # A function to generate a correct solution based on sample input matrices  
 def behavioral(input_matrix1, input_matrix2):  
-    return np.matmul(input_matrix1, input_matrix2)  
+    input_matrix1 = input_matrix1.reshape((matrix1_height, matrix1_width))  
+    input_matrix2 = input_matrix2.reshape((matrix2_height, matrix2_width))
+    return np.matmul(input_matrix1, input_matrix2).flatten()  
 
 examples = generate_examples(generate_inputs)
 

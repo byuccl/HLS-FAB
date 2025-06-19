@@ -25,9 +25,10 @@ models = {
 #     tests = [json.loads(line) for line in f]
     
 # Function to collect all the synthesis data and warnings/errors to be used in the feedback
-def gather_feedback(synthesis_output, data=None, goals=None):
+def gather_feedback(synthesis_output=None, data=None, goals=None):
     """Function to gather feedback from synthesis output. Holds Errors and Warnings and Performance data."""
-    
+    if synthesis_output is None:
+        synthesis_output = ""
     errors = re.findall(r"ERROR: \[.*?\] (.*)", synthesis_output)
     warnings = re.findall(r"WARNING: \[.*?\] (.*)", synthesis_output)
     
@@ -148,20 +149,46 @@ def parse_sim_report(file_path=None):
         except FileNotFoundError:
             logger.error(f"The file {file_path} does not exist.")
             return feedback
-    num_mismatches = 0
+        
+    
+    # Regex patterns for different types of errors/warnings
+    # Matches: file_path:line:col: (error|warning): message
+    compiler_msg_pattern = re.compile(r'^(.*?):(\d+):(\d+):\s+(error|warning):\s+(.*)$')
+
     for i, line in enumerate(lines):
+        compiler_match = compiler_msg_pattern.match(line)
+        if compiler_match:
+            file_path, line_num, col_num, msg_type, message = compiler_match.groups()
+            err_details = {
+                'file': file_path.strip(),
+                'line': int(line_num),
+                'column': int(col_num),
+                'message': message.strip()
+            }
+            if msg_type == "error":
+                feedback["errors"].append(err_details)
+                feedback["status"] = "failed" # If there's a compilation error, it's failed
+            else: # msg_type == "warning"
+                feedback["warnings"].append(err_details)
+            continue # Move to the next line, as this line is handled
+
+
         if "Compilation Status:" in line:
             feedback["status"] = line.split(":")[1].strip()
-        elif "PASS" in line:
-            feedback["match"] = "match"
+        elif "SOME TESTS FAILED!" in line:
+            feedback["match"] = "mismatch"
         elif "ERROR:" in line:
             feedback["errors"].append(line.split("ERROR:")[1].strip())
         elif "WARNING:" in line:
             feedback["warnings"].append(line.split("WARNING:")[1].strip())
         elif "FAIL:" in line:
             feedback["expected_v_actual"].append(line.split("- ")[1].strip())
+            feedback["match"] = "mismatch"
         elif "Percent Error:" in line:
             feedback["percent_error"] = line.split(":")[1].strip()
+        elif "ALL TESTS PASSED!" in line:
+            feedback["match"] = "match"
+            feedback["status"] = "passed"
 
     
     return feedback
@@ -179,7 +206,6 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
     
     in_report_file = f"{solutions_path}{in_file_path_mid}{kernel_name}{rpt_file_end}"
-    out_data_path = f"{solutions_path}/{kernel_name}_data.json"
     log_file_dir = f"{solutions_path}{log_folder_path}"
     pathlib.Path(log_file_dir).mkdir(parents=True, exist_ok=True)
     old_sim_log_file = f"{solutions_path}/logs/hls_run_csim.log"
@@ -201,6 +227,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
         logger.error(
             f"The file {solutions_path}{saved_log_file} does not exist."
         )
+        old_log = None
     # Check if the synthesis was successful then add the data to json
     try:
         with open(in_report_file, 'r') as file:
@@ -243,11 +270,25 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
     
     final_feedback["csim_feedback"] = sim_feedback
     final_feedback["synth_feedback"] = synth_feedback    
-    with open(out_data_path, 'w') as of:
-        json.dump(final_feedback, of, indent=4)
         
     return final_feedback
 
+
+
+def save_feedback_data(out_data_path, feedback = None):
+    """Function to save the feedback data to a json file."""
+    if feedback is None:
+        logger.error("No feedback data provided to save.")
+        return
+    
+    try:
+        with open(out_data_path, 'w') as of:
+            json.dump(feedback, of, indent=4)
+        logger.info(f"Feedback data saved to {out_data_path}")
+    except Exception as e:
+        logger.error(f"Failed to save feedback data: {e}")
+
+    
 # # Example usage
 # if __name__ == "__main__":
 #     parse_synth_reports()

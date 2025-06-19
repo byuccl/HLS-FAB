@@ -8,7 +8,6 @@ import pathlib
 import subprocess
 import argparse
 from datetime import datetime
-from hlseval import test_kernel
 import hlseval
 
 logger = logging.getLogger("__main__")
@@ -123,26 +122,37 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         sim_returncode = 1
         logger.warning("Vitis timed out on Simulation")
 
-
-    # Run Synthesis
-    try:
-        logger.info("--- Running CSYNTH ---")
-        synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
+    if csim_output.returncode == 0:
+    # Run Synthesis only if CSIM was successful
+        try:
+            logger.info("--- Running CSYNTH ---")
+            synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
+            vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+            synth_returncode = synth_output.returncode
+        except hlseval.CsynthTimeoutError as e:
+            logger.warning(" Vitis timed out")
+            vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+            logger.debug(vitis_feedback)
+            logger.debug("vitis Feedback before Adding new Errors")
+            vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
+            vitis_feedback['synth_feedback']['goals'].extend([
+                "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
+                "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
+            logger.debug(vitis_feedback)
+            logger.debug("vitis Feedback before Adding new Errors")
+            synth_returncode = 1
+    else:
         vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
-        synth_returncode = synth_output.returncode
-    except hlseval.CsynthTimeoutError as e:
-        logger.warning("Vitis timed out")
-        vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
-        vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
-        vitis_feedback['synth_feedback']['goals'].extend([
-            "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
-            "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
-        synth_returncode = 1
-        
+        vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
+        vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
+        synth_returncode = 1   
     
-    if timeout_csim:
-        vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim took too long."])
     logger.info("--- Vitis Run Completed ---")
+
+    out_data_path = f"{solutions_path}/{kernel_name}_data.json"
+    hlseval.save_feedback_data(out_data_path, vitis_feedback)
+    
+
     returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
     return returncode, vitis_feedback
 

@@ -8,7 +8,7 @@ cd rag_data
 wget https://www.xilinx.com/support/documents/sw_manuals/xilinx2022_2/ug1399-vitis-hls.pdf
 
 # Clone the Vitis_Libraries repository
-git clone git@github.com:Xilinx/Vitis_Libraries.git
+git clone https://github.com/Xilinx/Vitis_Libraries.git
 # Copy the vision/imgproc HLS kernels to the database
 cp Vitis_Libraries/vision/L1/include/imgproc/* .
 # Copy the vision/video HLS kernels to the database
