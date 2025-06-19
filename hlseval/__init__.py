@@ -1,6 +1,6 @@
-__all__ = ["datset", "utils"]
+__all__ = ["prompt_constructor", "utils"]
 
-from .dataset import PromptConstructor
+from .prompt_constructor import PromptConstructor
 from .utils import get_kernel_code,  get_cpp_type, generate_types, generate_examples, import_module_functions, get_cpp_type_str
 from .utils import generate_one_completion
 from .hlscoder import HLSCoder
