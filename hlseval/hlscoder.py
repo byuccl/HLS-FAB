@@ -42,23 +42,23 @@ def get_or_create_rag_components():
     global _RAG_INDEX, _EMBED_MODEL  
       
     if _RAG_INDEX is None:  
-        logger.info("Creating new RAG index...")  
+        logger.info("HLS CODER: Creating new RAG index...")  
           
         # Check if we have a saved index  
         if os.path.exists("storage"):  
             try:  
-                logger.debug("Loading index from disk...")  
+                logger.debug("HLS CODER: Loading index from disk...")  
                 # Set up the embedding model  
                 if HuggingFaceEmbedding is not None:    
                     try:    
                         _EMBED_MODEL = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")    
-                        logger.debug("Using HuggingFaceEmbedding")    
+                        logger.debug("HLS CODER: Using HuggingFaceEmbedding")    
                     except Exception as e:    
-                        logger.warning(f"Error creating HuggingFaceEmbedding: {e}")    
-                        logger.warning("Falling back to MockEmbedding")    
+                        logger.warning(f"HLS CODER: Problem creating HuggingFaceEmbedding: {e}")    
+                        logger.warning("HLS CODER: Falling back to MockEmbedding")    
                         _EMBED_MODEL = MockEmbedding(embed_dim=1536)    
                 else:    
-                    logger.warning("Using MockEmbedding")    
+                    logger.warning("HLS CODER: Using MockEmbedding")    
                     _EMBED_MODEL = MockEmbedding(embed_dim=1536)  
                   
                 # Disable LLM in the global settings - we'll provide our own    
@@ -68,15 +68,15 @@ def get_or_create_rag_components():
                 # Load the saved index  
                 storage_context = StorageContext.from_defaults(persist_dir="storage")  
                 _RAG_INDEX = load_index_from_storage(storage_context)  
-                logger.debug("Successfully loaded index from disk")  
+                logger.debug("HLS CODER: Successfully loaded index from disk")  
             except Exception as e:  
-                logger.warning(f"Error loading index from disk: {e}")  
-                logger.warning("Creating new index...")  
+                logger.warning(f"HLS CODER: Problem loading index from disk: {e}")  
+                logger.warning("HLS CODER: Creating new index...")  
                 _RAG_INDEX, _EMBED_MODEL = setup_rag()  
                 # Save the index for future use  
                 _RAG_INDEX.storage_context.persist("storage")  
         else:  
-            logger.warning("No saved index found, creating new index...")  
+            logger.warning("HLS CODER: No saved index found, creating new index...")  
             _RAG_INDEX, _EMBED_MODEL = setup_rag()  
             # Save the index for future use  
             _RAG_INDEX.storage_context.persist("storage")  
@@ -326,7 +326,7 @@ class HLSCoder:
         
         # Count tokens in current messages  
         total_tokens = self.get_messages_token_count(self.messages, self.model)  
-        logger.debug(f"Current context size: {total_tokens} tokens")  
+        logger.debug(f"HLS CODER: Current context size: {total_tokens} tokens")  
         
         # If we're under the limit, no need to truncate  
         if total_tokens <= max_tokens:  
@@ -365,7 +365,7 @@ class HLSCoder:
         
         # Log the new token count  
         new_tokens = self.get_messages_token_count(self.messages, self.model)  
-        logger.debug(f"Reduced context size from {total_tokens} to {new_tokens} tokens")  
+        logger.debug(f"HLS CODER: Reduced context size from {total_tokens} to {new_tokens} tokens")  
 
     def generate_code(self):  
         """Lightweight wrapper to generate a response using OpenAI API with strict context management."""  
@@ -403,13 +403,13 @@ class HLSCoder:
                         {"role": "user", "content": focused_prompt}  
                     ]  
             except Exception as e:  
-                logger.error(f"Error during RAG processing: {e}")  
+                logger.error(f"HLS CODER: Error during RAG processing: {e}")  
                 # Fall back to basic prompt if RAG fails  
         
         # Before calling the API, verify we're within limits  
         token_count = self.get_messages_token_count(self.messages)  
         if token_count > 7000:  # Safety margin  
-            logger.warning(f"Context size {token_count} may exceed limits. Applying emergency reduction.")  
+            logger.warning(f"HLS CODER: Context size {token_count} may exceed limits. Applying emergency reduction.")  
             # Emergency reduction - just keep system prompt and a simplified version of the last query  
             last_query = self.messages[-1]["content"]  
             if len(last_query) > 1500:  
@@ -425,13 +425,13 @@ class HLSCoder:
             api_response = call_llm_api(self)  
             response = api_response["choices"][0]["message"]["content"]  
             
-            logger.debug("\nFinal Response:")  
-            logger.debug(response)  
+            logger.debug("HLS CODER: Final Response:")  
+            logger.debug("HLS CODER: " + response)  
             
             self.messages.append({"role": "assistant", "content": response})  
             return response  
         except Exception as e:  
-            logger.error(f"Error calling LLM API: {e}")  
+            logger.error(f"HLS CODER: Error calling LLM API: {e}")  
             # Return an error message that can be displayed to the user  
             error_response = f"Error generating code: {str(e)}"  
             self.messages.append({"role": "assistant", "content": error_response})  
@@ -502,19 +502,18 @@ def call_llm_api(coder, tools=None):
         body["model"] = coder.model # The model is only needed for the byu API
 
 
-    logger.debug(f"API Request: {json.dumps(body, indent=2)}")  
-    print(f"API Request: {json.dumps(body, indent=2)}")  
+    logger.debug(f"HLS CODER: API Request: {json.dumps(body, indent=2)}")  
 
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
       
     # Log the raw response for debugging  
-    logger.debug(f"API Response status: {response.status_code}")  
+    logger.debug(f"HLS CODER: API Response status: {response.status_code}")  
     try:  
         response_json = response.json()  
-        logger.debug(f"API Response: {json.dumps(response_json, indent=2)}")  
+        logger.debug(f"HLS CODER: API Response: {json.dumps(response_json, indent=2)}")  
         return response_json  
     except json.JSONDecodeError:  
-        logger.debug(f"Raw response: {response.text}")  
+        logger.debug(f"HLS CODER: Raw response: {response.text}")  
         raise ValueError(f"Failed to decode JSON from API response: {response.text}")  
 
 # Convert function to OpenAI tool format with correct JSON Schema types  
@@ -561,36 +560,36 @@ def format_node_content(node):
 # Initialize the RAG components with appropriate embedding  
 def setup_rag():  
     """Initialize RAG with a multi-content splitter for diverse document types."""  
-    logger.debug("Loading documents...")  
+    logger.debug("HLS CODER: Loading documents...")  
     documents = SimpleDirectoryReader("./rag_data").load_data()  
       
-    logger.debug("Creating multi-content splitter...")  
+    logger.debug("HLS CODER: Creating multi-content splitter...")  
     content_splitter = MultiContentSplitter()  
       
-    logger.debug("Creating embedding model...")  
+    logger.debug("HLS CODER: Creating embedding model...")  
     if HuggingFaceEmbedding is not None:  
         try:  
             embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")  
-            logger.debug("Using HuggingFaceEmbedding")  
+            logger.debug("HLS CODER: Using HuggingFaceEmbedding")  
         except Exception as e:  
-            logger.warning(f"Error creating HuggingFaceEmbedding: {e}")  
-            logger.warning("Falling back to MockEmbedding")  
+            logger.warning(f"HLS CODER: Error creating HuggingFaceEmbedding: {e}")  
+            logger.warning("HLS CODER: Falling back to MockEmbedding")  
             embed_model = MockEmbedding(embed_dim=1536)  
     else:  
-        logger.warning("Using MockEmbedding")  
+        logger.warning("HLS CODER: Using MockEmbedding")  
         embed_model = MockEmbedding(embed_dim=1536)  
       
     # Configure settings  
     Settings.llm = None  
     Settings.embed_model = embed_model  
       
-    logger.debug("Splitting documents based on content type...")  
+    logger.debug("HLS CODER: Splitting documents based on content type...")  
     # Split documents into nodes  
     nodes = content_splitter.split_documents(documents)  
       
-    logger.debug(f"Created {len(nodes)} nodes from {len(documents)} documents")  
+    logger.debug(f"HLS CODER: Created {len(nodes)} nodes from {len(documents)} documents")  
       
-    logger.debug("Creating vector index...")  
+    logger.debug("HLS CODER: Creating vector index...")  
     # Create index from nodes instead of documents  
     index = VectorStoreIndex(nodes)  
       
@@ -651,7 +650,7 @@ def rag_agent(coder, index):
         function_to_tool(search_wrapper)  
     ]  
       
-    logger.info("\nStarting RAG agent interaction...")  
+    logger.info("HLS CODER: Starting RAG agent interaction...")  
     response = call_llm_api(coder, tools=tools)  
       
     # Check if the response has the expected format  
@@ -667,12 +666,12 @@ def rag_agent(coder, index):
 
     # If the LLM wants to use a tool  
     if "tool_calls" in assistant_message:  
-        logger.info("\nLLM decided to use tools")  
+        logger.info("HLS CODER: LLM decided to use tools")  
         for tool_call in assistant_message["tool_calls"]:  
             function_name = tool_call["function"]["name"]  
             arguments = json.loads(tool_call["function"]["arguments"])  
               
-            logger.info(f"Executing tool: {function_name} with arguments: {arguments}")  
+            logger.info(f"HLS CODER: Executing tool: {function_name} with arguments: {arguments}")  
               
             # Execute the function   
             if function_name == "search_wrapper":  
@@ -680,7 +679,7 @@ def rag_agent(coder, index):
             else:  
                 result = f"Unknown function: {function_name}"  
                   
-            logger.debug(f"Tool result: {result}")  
+            logger.debug(f"HLS CODER: Tool result: {result}")  
                   
             # Add the function response to messages  
             messages.append({  
@@ -690,7 +689,7 @@ def rag_agent(coder, index):
             })  
           
         # Get the final response  
-        logger.debug("\nGetting final response after tool calls...")  
+        logger.debug(" HLS CODER: Getting final response after tool calls...")  
         temp_coder = HLSCoder(  
             url=coder.url,  
             workflow=coder.workflow,  
@@ -710,5 +709,5 @@ def rag_agent(coder, index):
         return final_response["choices"][0]["message"]["content"]  
     else:  
         # LLM answered directly  
-        logger.info("\nLLM answered directly without using tools")  
+        logger.info("HLS CODER: LLM answered directly without using tools")  
         return assistant_message["content"]  
