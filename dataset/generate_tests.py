@@ -79,25 +79,24 @@ if __name__ == "__main__":
     with open("dataset/examples/zero_mean_norm_float64/generate.py", "r") as f:
         zero_mean_generate = f.read()
 
-    # Generate 'canonical_scalar.cc'
+    # Generate 'generate.py' scripts
     prompt = f"""
-    I am generating a series of tests to assess the performance of HLS C++ code. Each test consists of files titled 'cononical_scalar.cc' and 'generate.py'.\n\n
-    The canonical scalar function contains code to perform the necessary function in C++.\n
-    The generate scipt contains two python functions: 'generate_inputs' and 'behavioral'. \n
-    \t'generate_inputs' generates numpy arrays or scalar values for each parameter in the 'canonical_scalar.cc' file. Input arrays are randomly filled with values well within the minimums and maximums of the data type. This function also calls the external 'generate_types' function to tell the caller what type of data each parameter is.\n
+    I am generating a series of tests to assess the performance of HLS C++ code. Each test consists of a file titled 'generate.py'.\n\n
+    The 'generate.py' scipt contains two python functions: 'generate_inputs' and 'behavioral'. \n
+    \t'generate_inputs' generates numpy arrays or scalar values for each parameter in the function signature. Input arrays are randomly filled with values well within the minimums and maximums of the data type. This function also calls the external 'generate_types' function to tell the caller what type of data each parameter is.\n
     \t'behavioral' performs the operation described by the kernel in python. This function generally uses external libraries such as numpy or pytorch to ensure accuracy even with complex kernels.\n
     \tAdditionally, the generate script includes a description of the kernel, defines several values, and calls a 'PromptConstructor' class. This class pulls from values passed in to create a description of the prompt complete with examples and dataflow information.\n
     \n
-    The following is an example of the matching 'generate.py' file for the same 'absolute_value_int8' test:\n```\n{abs_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'affine_float32' test:\n```\n{affine_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'conv2d_int16' test:\n```\n{conv2d_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'dot_product_float32' test:\n```\n{dot_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'matrix_multiply_int32' test:\n```\n{mat_mul_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'mean_var_float64' test:\n```\n{mean_var_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'relu_activation_float32' test:\n```\n{relu_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'scale_matrix_3d_int8' test:\n```\n{scale_mat_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'subtract_int64' test:\n```\n{subtract_generate}\n```\n\n
-    The following is an example of the matching 'generate.py' file for the same 'zero_mean_norm_float64' test:\n```\n{zero_mean_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'absolute_value_int8' test:\n```\n{abs_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'affine_float32' test:\n```\n{affine_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'conv2d_int16' test:\n```\n{conv2d_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'dot_product_float32' test:\n```\n{dot_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'matrix_multiply_int32' test:\n```\n{mat_mul_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'mean_var_float64' test:\n```\n{mean_var_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'relu_activation_float32' test:\n```\n{relu_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'scale_matrix_3d_int8' test:\n```\n{scale_mat_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'subtract_int64' test:\n```\n{subtract_generate}\n```\n\n
+    The following is an example of the 'generate.py' file for the 'zero_mean_norm_float64' test:\n```\n{zero_mean_generate}\n```\n\n
     """
 
    
