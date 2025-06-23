@@ -160,6 +160,7 @@ class HLSCoder:
         response based on the prompt, if self.attempts > 1 it will check if the generated output compiles and
         retry self.attempts number of times.
         """
+        self.prompt = prompt
         self.messages.append({"role": "user", "content": prompt})
 
         if self.attempts == 1:
@@ -236,6 +237,222 @@ class HLSCoder:
                 "role": "system",   
                 "content": f"Note: {start_idx} earlier messages have been removed to stay within context limits."  
             })  
+
+    def get_hls_optimization_examples(self, prompt):  
+        """Retrieves HLS optimization examples relevant to the kernel being generated.  
+        
+        Args:  
+            prompt: Combined string containing both kernel description and function signature  
+        """  
+        if not self.index:  
+            return ""  
+        
+        # Extract function signature if present  
+        function_signature = None  
+        signature_match = re.search(r'(template\s+<[^>]+>\s+)?(void|int|float|double|bool|auto|ap_\w+<[^>]+>)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^\)]*\)', prompt)  
+        if signature_match:  
+            function_signature = signature_match.group(0)  
+        
+        # Create an optimization-focused query  
+        optimization_query = f"HLS optimization techniques for {prompt}"  
+        
+        # Retrieve potentially relevant documents  
+        retriever = self.index.as_retriever(similarity_top_k=5)  
+        nodes = retriever.retrieve(optimization_query)  
+        
+        if not nodes:  
+            return "No optimization examples found."  
+        
+        # Identify kernel characteristics to match with appropriate optimizations  
+        kernel_characteristics = {  
+            "data_parallel": any(term in prompt.lower() for term in   
+                            ["parallel", "throughput", "vectorize", "vectorization", "pipeline"]),  
+            "memory_intensive": any(term in prompt.lower() for term in   
+                                ["memory", "bandwidth", "throughput", "data transfer", "array", "buffer"]),  
+            "compute_intensive": any(term in prompt.lower() for term in   
+                                ["compute", "calculation", "arithmetic", "latency", "performance"]),  
+            "control_flow": any(term in prompt.lower() for term in   
+                            ["branch", "condition", "if", "else", "decision", "select"]),  
+            "loop_dominated": any(term in prompt.lower() for term in   
+                            ["loop", "iterate", "iteration", "for", "while", "nested"])  
+        }  
+        
+        # If we couldn't detect characteristics from the prompt, infer from signature  
+        if function_signature and not any(kernel_characteristics.values()):  
+            if "[]" in function_signature or "*" in function_signature:  
+                kernel_characteristics["memory_intensive"] = True  
+            if "int" in function_signature or "float" in function_signature:  
+                kernel_characteristics["compute_intensive"] = True  
+        
+        # If still no characteristics detected, assume general optimization is needed  
+        if not any(kernel_characteristics.values()):  
+            kernel_characteristics["data_parallel"] = True  
+            kernel_characteristics["compute_intensive"] = True  
+        
+        # Optimization patterns to look for - all are considered relevant by default  
+        optimization_patterns = {  
+            "pipeline": (r'#pragma\s+HLS\s+pipeline.*?(?:\n[^#;{]*?[;{}]|$)', True),  
+            "unroll": (r'#pragma\s+HLS\s+unroll.*?(?:\n[^#;{]*?[;{}]|$)', True),  
+            "array_partition": (r'#pragma\s+HLS\s+array_partition.*?(?:\n[^#;]*?;|$)', True),  
+            "interface": (r'#pragma\s+HLS\s+interface.*?(?:\n[^#;]*?;|$)', True),  
+            "dataflow": (r'#pragma\s+HLS\s+dataflow.*?(?:\n[^#;{]*?[;{}]|$)', True),  
+            "inline": (r'#pragma\s+HLS\s+inline.*?(?:\n[^#;{]*?[;{}]|$)', True),  
+            "latency": (r'#pragma\s+HLS\s+latency.*?(?:\n[^#;{]*?[;{}]|$)', True),  
+            "loop_merge": (r'#pragma\s+HLS\s+loop_merge.*?(?:\n[^#;{]*?[;{}]|$)', True),  
+            "loop_flatten": (r'#pragma\s+HLS\s+loop_flatten.*?(?:\n[^#;{]*?[;{}]|$)', True)  
+        }  
+        
+        # Collect optimization examples  
+        optimization_examples = []  
+        found_patterns = set()  
+        
+        for node in nodes:  
+            content = node.get_content()  
+            example_name = node.metadata.get('file_name', 'example')  
+            
+            # Try to find complete optimized functions first (highest value examples)  
+            complete_functions = []  
+            
+            # Function pattern with pragmas inside  
+            function_matches = re.finditer(r'(template\s+<[^>]+>\s+)?(void|int|float|double|bool|auto|ap_\w+<[^>]+>)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^{]*\{[^}]*#pragma\s+HLS[^}]*\}', content, re.DOTALL)  
+            
+            for match in function_matches:  
+                func = match.group(0)  
+                # Only include if it has pragmas and is reasonably sized  
+                if "#pragma HLS" in func and len(func) < 1200 and len(func) > 50:  
+                    # If function signature was extracted, prioritize functions with similar signatures  
+                    if function_signature and similarity_score(function_signature, match.group(0)) > 0.5:  
+                        complete_functions.append(func)  
+                        # Extract all optimization patterns used in this function  
+                        for pattern_name, (pattern, _) in optimization_patterns.items():  
+                            if re.search(pattern, func, re.DOTALL):  
+                                found_patterns.add(pattern_name)  
+                    # Otherwise add any optimized function  
+                    elif not function_signature:  
+                        complete_functions.append(func)  
+                        for pattern_name, (pattern, _) in optimization_patterns.items():  
+                            if re.search(pattern, func, re.DOTALL):  
+                                found_patterns.add(pattern_name)  
+            
+            # If we found complete optimized functions, add them with priority  
+            if complete_functions:  
+                for func in complete_functions[:1]:  # Limit to 1 complete function per document  
+                    snippet = f"From {example_name}:\n// Complete optimized function example:\n{func}"  
+                    optimization_examples.append((3.0, snippet))  # Higher priority for complete examples  
+                
+            # Extract individual optimization patterns with context  
+            examples_from_this_node = []  
+            
+            # For each optimization pattern  
+            for pattern_name, (pattern, _) in optimization_patterns.items():  
+                # Skip if we already found this pattern in a better example  
+                if pattern_name in found_patterns:  
+                    continue  
+                    
+                matches = re.finditer(pattern, content, re.DOTALL)  
+                for match in matches:  
+                    # Get the pragma and its context  
+                    pragma_block = match.group(0)  
+                    
+                    # Avoid duplicates or trivial examples  
+                    if pragma_block in examples_from_this_node or len(pragma_block) < 20:  
+                        continue  
+                        
+                    # Get more context around the pragma  
+                    start_pos = max(0, match.start() - 150)  
+                    end_pos = min(len(content), match.end() + 250)  
+                    
+                    # Try to find complete line boundaries  
+                    context_start = content.rfind('\n', start_pos, match.start())  
+                    context_start = start_pos if context_start == -1 else context_start  
+                    context_end = content.find('\n', match.end(), end_pos)  
+                    context_end = end_pos if context_end == -1 else context_end  
+                    
+                    # Extract the context with the pragma  
+                    context = content[context_start:context_end].strip()  
+                    
+                    # Only add if it's a reasonable size and likely useful  
+                    if 40 < len(context) < 600:    
+                        examples_from_this_node.append(context)  
+                        # Priority based on kernel characteristics  
+                        priority = 1.0  
+                        if pattern_name == "pipeline" and kernel_characteristics["data_parallel"]:  
+                            priority = 2.0  
+                        elif pattern_name == "array_partition" and kernel_characteristics["memory_intensive"]:  
+                            priority = 2.0  
+                        elif pattern_name == "unroll" and kernel_characteristics["compute_intensive"]:  
+                            priority = 2.0  
+                        
+                        optimization_examples.append((priority, f"From {example_name}:\n// {pattern_name.replace('_', ' ')} optimization example:\n{context}"))  
+                        found_patterns.add(pattern_name)  
+                        break  # One good example per pattern type  
+        
+        # Sort optimization examples by priority score  
+        optimization_examples.sort(key=lambda x: x[0], reverse=True)  
+        
+        # Deduplicate and take top examples  
+        unique_examples = []  
+        example_fingerprints = set()  
+        
+        for _, example in optimization_examples:  
+            # Create a fingerprint based on the pragmas and significant code in the example  
+            fingerprint = re.sub(r'\s+', ' ', re.sub(r'//.*?$', '', example, flags=re.MULTILINE))  
+            fingerprint = re.findall(r'#pragma\s+HLS\s+\w+|[{};]', fingerprint)  
+            fingerprint = ' '.join(fingerprint)  
+            
+            if fingerprint not in example_fingerprints and fingerprint:  
+                unique_examples.append(example)  
+                example_fingerprints.add(fingerprint)  
+                if len(unique_examples) >= 3:  # Limit to 3 examples  
+                    break  
+        
+        # Create a summary of recommended optimizations based on kernel characteristics  
+        summary = "RECOMMENDED HLS OPTIMIZATIONS:\n"  
+        
+        if kernel_characteristics["data_parallel"]:  
+            summary += "- Consider #pragma HLS pipeline for pipelined execution of loops for higher throughput\n"  
+        if kernel_characteristics["memory_intensive"]:  
+            summary += "- Consider #pragma HLS array_partition to parallelize memory accesses\n"  
+            summary += "- Consider #pragma HLS interface for optimizing memory transfers\n"  
+        if kernel_characteristics["loop_dominated"]:  
+            summary += "- Consider #pragma HLS unroll for parallel execution of loop iterations\n"  
+        if kernel_characteristics["compute_intensive"]:  
+            summary += "- Consider loop pipelining and function inlining for compute-intensive sections\n"  
+        if kernel_characteristics["data_parallel"] and kernel_characteristics["memory_intensive"]:  
+            summary += "- Consider #pragma HLS dataflow for task-level pipelining between functions\n"  
+        summary += "Almost all optimizations increase the time and resources required to synthesize. Be careful not to optimize so far that timeout errors occur."
+        
+        # Return the optimization guidance  
+        if unique_examples:  
+            return summary + "\n\nOPTIMIZATION EXAMPLES:\n\n" + "\n\n".join(unique_examples)  
+        else:  
+            # Fallback with general HLS optimization advice  
+            general_advice = """  
+GENERAL HLS OPTIMIZATION PATTERNS:  
+
+1. Loop Pipelining:  
+```cpp  
+#pragma HLS pipeline II=1  
+for (int i = 0; i < N; i++) {  
+    // Loop body  
+}  
+```
+
+2 Array Partitioning:
+```cpp
+#pragma HLS array_partition variable=array dim=1 complete  
+```
+
+3. Function Inlining:
+```cpp
+#pragma HLS inline  
+void my_function(...) {  
+    // Function body  
+}  
+```
+"""
+        return summary + "\n\nNo specific examples found in the knowledge base, but here are general patterns to consider:\n" + general_advice
+
 
     def get_focused_rag_examples(self, query):  
         """Get highly condensed code examples from RAG to fit in context window."""  
@@ -374,7 +591,7 @@ class HLSCoder:
     def generate_code(self):  
         """Lightweight wrapper to generate a response using OpenAI API with strict context management."""  
         # First try aggressive context window management  
-        self.manage_context_window(max_tokens=6000)  # Adjust based on your model's limits  
+        self.manage_context_window(max_tokens=60000)  # Adjust based on your model's limits  
         
         if self.rag:  
             try:  
@@ -391,7 +608,7 @@ class HLSCoder:
                         essential_prompt = function_sig.group(0) + "\n" + current_prompt[-500:]  
                 
                 # Get very focused examples  
-                focused_examples = self.get_focused_rag_examples(essential_prompt)  
+                focused_examples = self.get_hls_optimization_examples(self.prompt)  
                 
                 # Create a minimal prompt with just the core requirements  
                 focused_prompt = f"TASK: {current_prompt}\n\nRELEVANT EXAMPLES:\n{focused_examples}"  
@@ -406,6 +623,7 @@ class HLSCoder:
                         {"role": "system", "content": self.system_prompt},  
                         {"role": "user", "content": focused_prompt}  
                     ]  
+                logger.debug(self.messages)
             except Exception as e:  
                 logger.error(f"Error during RAG processing: {e}")  
                 # Fall back to basic prompt if RAG fails  
@@ -461,6 +679,56 @@ class HLSCoder:
         # Flatten the list and filter out empty matches
         code_blocks = [block for match in code_blocks for block in match if block]
         return code_blocks[0].strip() if code_blocks else None
+
+
+def similarity_score(signature1, signature2):  
+    """Calculate a basic similarity score between function signatures.  
+      
+    Args:  
+        signature1: First function signature string  
+        signature2: Second function signature string  
+          
+    Returns:  
+        float: Similarity score between 0.0 and 1.0  
+    """  
+    # Extract function names and parameter types for comparison  
+    def extract_signature_parts(sig):  
+        # Extract function name  
+        name_match = re.search(r'\b(\w+)\s*\(', sig)  
+        name = name_match.group(1) if name_match else ""  
+          
+        # Extract parameter types (ignoring parameter names)  
+        param_types = re.findall(r'(\w+(?:<[^>]+>)?)\s+\w+', sig)  
+          
+        # Extract return type  
+        return_match = re.search(r'^(?:template\s+<[^>]+>\s+)?(\w+(?:<[^>]+>)?)\s+\w+\s*\(', sig)  
+        return_type = return_match.group(1) if return_match else ""  
+          
+        return name, param_types, return_type  
+      
+    name1, params1, return1 = extract_signature_parts(signature1)  
+    name2, params2, return2 = extract_signature_parts(signature2)  
+      
+    # Calculate similarity based on different components:  
+      
+    # 1. Name similarity (30% weight)  
+    name_sim = 0.3 if name1 and name1 == name2 else 0  
+      
+    # 2. Parameter type similarity (50% weight)  
+    param_sim = 0  
+    if params1 and params2:  
+        # Count common parameter types  
+        common_params = set(params1).intersection(set(params2))  
+        # Calculate Jaccard similarity for parameters  
+        param_sim = 0.5 * (len(common_params) / max(len(params1), len(params2)))  
+      
+    # 3. Return type similarity (20% weight)  
+    return_sim = 0.2 if return1 and return1 == return2 else 0  
+      
+    # Overall similarity score  
+    total_sim = name_sim + param_sim + return_sim  
+      
+    return total_sim  
 
 
 
