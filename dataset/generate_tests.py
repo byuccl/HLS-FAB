@@ -2,7 +2,7 @@ from openai import OpenAI
 import pathlib
 from hlseval import HLSCoder, get_kernel_code
 import json
-import argparse 
+import argparse
 import logging
 
 logger = logging.getLogger("__main__")
@@ -18,13 +18,14 @@ Both these files should follow the patterns set out by the provided examples.
 Produce only the code requested, no main, no additional examples or code, and no wrappers of any kind.
 """
 if __name__ == "__main__":
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")
 
     parser.add_argument("--log", dest='loglevel', help="desired loglevel", default="WARNING")
 
     byu_gpt_url = "https://api.openai.com/v1/chat/completions"
     amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
 
-    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")  
     parser.add_argument('workflow', choices=['amd', 'byu'],  
                         help="Which workflow to follow for API calls ('amd' or 'byu')")  
     args = parser.parse_args()  
@@ -42,20 +43,28 @@ if __name__ == "__main__":
     logging.basicConfig(level=numeric_level)
 
     # Set up prompt
-    desired_test = "mat_mult_int16"
+
+    desired_test = "accumulate_squared_opencv"
     desired_test_description = (
         """
-    Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
+    The accumulate square function adds the square of an image (src1) to the accumulator image (src2) and generates the accumulated result (dst).
 
-    Matrix 1 of MxN size 16-bit integers
-    Matrix 2 of NxK size 16-bit integers 
-    Result matrix of MxK size 16-bit integers
+    dst[i] = src1[i]^2 + src2[i]
 
-    M = 64 
-    N = 64
-    K = 64
+    dst[i] is the i-th element of the output array.
+    src1[i] is the i-th element of the first input array.
+    src2[i] is the i-th element of the second input array.
+
+
+    The input image will be 128x128 pixels
+    Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
+    Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer
+    The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
+    Implementation details should match the OpenCV Reduce implementation unless otherwise specified
+
+    void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data);
         """
-    )
+    )      
 
     # Open example files
     with open("dataset/examples/absolute_value_int8/generate.py", "r") as f:
@@ -124,6 +133,7 @@ if __name__ == "__main__":
     Use the same naming convention for variables using input_ for inputs and output_ for outputs and inout_ for combinations of the two.
     Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
     If there are constants then include them at the top of the file as variables. 
+    Please ensure that the behavioral function performs a correct implementation of the kernel in Python, using numpy or pytorch as needed.
     """
     response = coder(prompt + generate_line)
 

@@ -10,7 +10,9 @@ import argparse
 from datetime import datetime
 import hlseval
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("COMPLETIONS")
+timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+# logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.INFO)
 
 def feedback_prompt(prev_code, feedback):
     return f"""
@@ -50,7 +52,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
 
 
     if attempt == 0:
-        logger.debug(f"\tGenerating base completion for {kernel_name} (Attempt {attempt+1})")
+        logger.debug(f"Generating base completion for {kernel_name} (Attempt {attempt+1})")
         context_string = "Reference vectorized code:\n"
         prompt_with_context = test["prompt"] + "\n" + context_string
         url = (model_parameters[model])[f"{workflow}_url"]
@@ -113,7 +115,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         
     # Run CSIM    
     try:
-        logger.info("--- Starting Vitis Run ---")
+        logger.info("Starting Vitis Run")
         csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
         timeout_csim = False
         sim_returncode = csim_output.returncode
@@ -125,12 +127,12 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
     if csim_output.returncode == 0:
     # Run Synthesis only if CSIM was successful
         try:
-            logger.info("--- Running CSYNTH ---")
+            logger.info("Running CSYNTH")
             synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
             vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
             synth_returncode = synth_output.returncode
         except hlseval.CsynthTimeoutError as e:
-            logger.warning(" Vitis timed out")
+            logger.warning("Vitis timed out")
             vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
             logger.debug(vitis_feedback)
             logger.debug("vitis Feedback before Adding new Errors")
@@ -139,7 +141,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
                 "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
                 "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
             logger.debug(vitis_feedback)
-            logger.debug("vitis Feedback before Adding new Errors")
+            logger.debug("Vitis Feedback before Adding new Errors")
             synth_returncode = 1
     else:
         vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
@@ -147,7 +149,7 @@ def run_kernel_attempt(model, test, attempt, workflow, mode, prev_feedback=None,
         vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
         synth_returncode = 1   
     
-    logger.info("--- Vitis Run Completed ---")
+    logger.info("Vitis Run Completed")
 
     out_data_path = f"{solutions_path}/{kernel_name}_data.json"
     hlseval.save_feedback_data(out_data_path, vitis_feedback)
@@ -238,7 +240,7 @@ if __name__ == "__main__":
     # Add any models you want completions run for to this list
     # models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
     models = ["gpt-4o"]
-    passes = 6
+    passes = 3
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
     

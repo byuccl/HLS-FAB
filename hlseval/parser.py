@@ -4,7 +4,7 @@ from datetime import datetime
 import pathlib
 import logging
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("PARSER")
 
 file_path_begin = "./results/solutions/"
 in_file_path_mid = "/hls/syn/report/"
@@ -63,6 +63,9 @@ def gather_feedback(synthesis_output=None, data=None, goals=None):
     }
     if goals is not None:
         feedback["goals"].extend(goals)
+
+    if feedback["latency"]["max"] == 0:
+        feedback["errors"].append("The maximum latency is 0, which may indicate an issue with the synthesis process.")
     return feedback
 
 # Function to parse through the HLS report and extract the relevant data

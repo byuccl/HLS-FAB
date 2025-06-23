@@ -116,7 +116,7 @@ Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned i
 The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
 Implementation details should match the OpenCV Reduce implementation unless otherwise specified
 
-void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data);
+void accumulate_squared_opencv(ap_uint<8>*)in_gray.data, (ap_uint<8>*)in_gray1.data, (ap_uint<16>*)dst_hls.data);
     """
 )
 
@@ -124,7 +124,7 @@ void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (
 desired_test = "axpy_int32_res"
 desired_test_description = (
     """
-The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) with the the same type.
 The output is the sum of these vectors in vector (Y_res)
 
 Y_res = alpha*X + Y
@@ -136,7 +136,7 @@ The input vectors will be 4096 values long
 desired_test = "axpy_int32"
 desired_test_description = (
     """
-The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) with the the same type.
 The output is the sum of these vectors in vector (Y)
 
 Y = alpha*X + Y

@@ -5,41 +5,43 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 4096
 
+function_signature = "void axpy_int32(ap_int<32> alpha, ap_int<32> *in_vector_x, ap_int<32> *inout_vector_y)"
+
 description = f"""
-This HLS kernel implements the AXPY operation on two input vectors of 32-bit integers. 
-The operation is defined as Y = alpha * X + Y, where X and Y are vectors and alpha is a scalar.
-Parameters to the function include two int32_t pointers and one int32_t scalar:
-    The first pointer points to an array containing {num_values} int32 values. This is the input vector X.
-    The second parameter is an int32 scalar value, alpha.
-    The third pointer points to an array containing {num_values} int32 values. This is the input/output vector Y.
+This HLS kernel implements the AXPY operation, which scales a vector X by a scalar alpha and adds it to a vector Y. 
+Parameters to the function include one ap_int<32> scalar and two ap_int<32> pointers:
+    The first parameter is a scalar value of type ap_int<32> representing alpha.
+    The second parameter is a pointer to the start of an array of {num_values} ap_int<32> values. This is the input vector X.
+    The third parameter is a pointer to the start of an array of {num_values} ap_int<32> values. This is the input/output vector Y.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 
         data = np.load('data.npz')  
-        input_x_vector = data["input_x_vector"]
         input_alpha = data["input_alpha"]
-        inout_y_vector = data["inout_y_vector"]
+        input_vector_x = data["input_vector_x"]
+        inout_vector_y = data["inout_vector_y"]
     else:
         # Set a seed so the example inputs and outputs work correctly
         np.random.seed(seed)
 
-        input_x_vector = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
-        input_alpha = np.random.randint(-10, 10, dtype=np.int32)
-        inout_y_vector = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
-    inputs = [input_x_vector, input_alpha, inout_y_vector]
+        input_alpha = np.random.randint(-100, 100, dtype=np.int32)
+        input_vector_x = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
+        inout_vector_y = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
+    inputs = [input_alpha, input_vector_x, inout_vector_y]
 
     types = generate_types(inputs)  
     return {"inputs": inputs, "types": types}  
 
-def behavioral(input_x_vector, input_alpha, inout_y_vector):
-    return input_alpha * input_x_vector + inout_y_vector
+# A function to generate a correct solution based on sample input vectors
+def behavioral(alpha, input_vector_x, inout_vector_y):
+    return alpha * input_vector_x + inout_vector_y
 
 examples = generate_examples(generate_inputs)
 
+# Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples
