@@ -7,12 +7,12 @@ generate_tests:
 	python3 dataset/generate_tests.py $(WORKFLOW) $(if $(LOG),--log $(LOG),)  
 dataset:  
 	@echo "Building kernels dataset..."  
-	make -C dataset/ all  
-run_completions:  
-	python hls_completions.py $(WORKFLOW)  
-run_completions_loop:   
+	make -C dataset/ all   
+run_vitis_completions:   
 	@echo "\n\nRunning HLS completions..."  
-	python hls_completions_loop.py $(WORKFLOW) --goals "reduce latency" "minimize warnings" $(if $(LOG),--log $(LOG),)  
+	python hls_completions_loop.py $(WORKFLOW) --hls_flow vitis --goals "reduce latency" "minimize warnings" $(if $(LOG),--log $(LOG),)  
+run_dynarapid_completions:
+	python hls_completions_loop.py $(WORKFLOW) --hls_flow dynarapid --goals "reduce latency" "minimize warnings" $(if $(LOG),--log $(LOG),)  
 test:   
 	@echo "\n\nRunning tests..."  
 	python3 results/testing/run_tests.py  
