@@ -12,7 +12,7 @@ import hlseval
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
 
 def feedback_prompt(prev_code, feedback):
     return f"""
@@ -240,7 +240,7 @@ if __name__ == "__main__":
     # Add any models you want completions run for to this list
     # models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
     models = ["gpt-4o"]
-    passes = 3
+    passes = 4
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
     
