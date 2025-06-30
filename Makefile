@@ -1,7 +1,7 @@
 .PHONY: all dataset run_completions test parse clean  
 all:   
 	make dataset   
-	make run_completions_loop  
+	make run_vitis_completions
 generate_tests:  
 	@echo "Generating tests..."  
 	python3 dataset/generate_tests.py $(WORKFLOW) $(if $(LOG),--log $(LOG),)  

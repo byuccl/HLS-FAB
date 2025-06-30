@@ -196,7 +196,7 @@ def parse_sim_report(file_path=None):
     
     return feedback
 
-def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
+def gather_parsed_data(kernel_name, model="gpt4o", hls_flow="vitis", attempt=1, goals=None):
     f""" 
         Send in the  kernel name and the model and attempt and it will search the solutions for the specific
         file where to parse data from.
@@ -205,7 +205,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
         Send the goals as ["new goal", "another new goal"]
     """
     #Create all the files needed if not already created
-    solutions_path = f"{file_path_begin}{model}/{kernel_name}/attempts_{attempt}"
+    solutions_path = f"{file_path_begin}{hls_flow}/{model}/{kernel_name}/attempts_{attempt}"
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
     
     in_report_file = f"{solutions_path}{in_file_path_mid}{kernel_name}{rpt_file_end}"

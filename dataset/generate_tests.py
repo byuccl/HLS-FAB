@@ -44,27 +44,16 @@ if __name__ == "__main__":
 
     # Set up prompt
 
-    desired_test = "accumulate_squared_opencv"
+    desired_test = "iir_filter_float32"
     desired_test_description = (
         """
-    The accumulate square function adds the square of an image (src1) to the accumulator image (src2) and generates the accumulated result (dst).
+    The iir filter function applies a iir filter to the input vector (X) of type float32. The output is the filtered vector (Y) of the same type.
+    The a and b coefficients are also of type float32.
 
-    dst[i] = src1[i]^2 + src2[i]
-
-    dst[i] is the i-th element of the output array.
-    src1[i] is the i-th element of the first input array.
-    src2[i] is the i-th element of the second input array.
-
-
-    The input image will be 128x128 pixels
-    Each pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer
-    Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer
-    The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
-    Implementation details should match the OpenCV Reduce implementation unless otherwise specified
-
-    void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data);
+    The input vector will be 1024 values long.
+    The filter order will be 4.
         """
-    )      
+    )
 
     # Open example files
     with open("dataset/examples/absolute_value_int8/generate.py", "r") as f:
@@ -116,6 +105,7 @@ if __name__ == "__main__":
     attempts = 1
     coder = HLSCoder(
         model=model,
+        hls_flow="vitis",
         temperature=temperature,
         workflow=workflow,
         top_p=top_p,

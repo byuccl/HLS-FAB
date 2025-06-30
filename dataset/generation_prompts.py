@@ -1,3 +1,15 @@
+desired_test = "iir_filter_float32"
+desired_test_description = (
+    """
+The iir filter function applies a iir filter to the input vector (X) of type float32. The output is the filtered vector (Y) of the same type.
+The a and b coefficients are also of type float32.
+
+Y[n] = b0*X[n] + b1*X[n-1] + b2*X[n-2] - a1*Y[n-1] - a2*Y[n-2]
+
+The input vector will be 1024 values long.
+The filter order will be 4.
+    """
+)
 
 desired_test = "bit_depth_convert_opencv"
 desired_test_description = (
