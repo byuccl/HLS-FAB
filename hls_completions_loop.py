@@ -9,6 +9,7 @@ import subprocess
 import argparse
 from datetime import datetime
 import hlseval
+from hlseval import run_dynarapid
 
 logger = logging.getLogger("__main__")
 
@@ -204,8 +205,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
-        returncode = 0
-        feedback = ""
+        returncode, feedback = run_dynarapid(kernel_name, solutions_path)
     return returncode, feedback
 
 
@@ -297,7 +297,7 @@ if __name__ == "__main__":
     # Add any models you want completions run for to this list
     # models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
     models = ["gpt-4o"]
-    passes = 6
+    passes = 1
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
     

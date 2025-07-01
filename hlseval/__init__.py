@@ -8,4 +8,5 @@ from .parser import gather_parsed_data, save_feedback_data
 from .csim import create_testbench, run_csim, CsimTimeoutError
 from .vitis import run_vitis_tools, CsynthTimeoutError
 from .splitter import MultiContentSplitter
+from .dynarapid import run_dynarapid
 
