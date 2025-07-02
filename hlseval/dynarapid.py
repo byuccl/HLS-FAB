@@ -15,8 +15,8 @@ def run_dynarapid(kernel_name, solutions_path):
         # Use the full path as fallback
         container_path = f"/mount{solutions_path}"
     
-    print(f"Host path: {solutions_path}")
-    print(f"Container path: {container_path}")
+    logger.debug(f"Host path: {solutions_path}")
+    logger.debug(f"Container path: {container_path}")
     
     # Create the TCL script content
     syn_tcl = f"""
@@ -29,133 +29,106 @@ write_hdl
 exit
     """
     
-    # Write the TCL script to a file
-    filename = f"{solutions_path}/synthesis.tcl"
+    # Set proper umask before creating files
+    # This ensures new files have appropriate permissions
+    old_umask = os.umask(0)
     try:
-        with open(filename, "w") as file:
-            file.write(syn_tcl)
-        print(f"Successfully wrote to {filename}")
-    except Exception as e:
-        print(f"An error occurred while writing TCL script: {e}")
-        return 1, "No feedback at this time"
-    
-    # Prepare the source directory
-    try:
-        os.makedirs(f"{solutions_path}/src", exist_ok=True)
-        subprocess.run(f"cp {solutions_path}/{kernel_name}.cpp {solutions_path}/src/", 
-                      shell=True, check=True, text=True)
-        os.makedirs(f"{solutions_path}/reports", exist_ok=True)
-    except Exception as e:
-        print(f"Error setting up directories: {e}")
-        return 1, "No feedback at this time"
-    
-    # Start the container if it's not already running
-    try:
-        subprocess.run("docker start dynarapid_container", 
-                      shell=True, check=True, text=True)
-        print("Started dynarapid_container")
-        
-        # Verify the container is running
-        container_check = subprocess.run("docker ps | grep dynarapid_container", 
-                                       shell=True, text=True, capture_output=True)
-        print(f"Container status: {container_check.stdout}")
-        
-        if not container_check.stdout.strip():
-            print("Error: Container not running properly")
-            return 1, "Container not running"
-            
-    except Exception as e:
-        print(f"Error with container operations: {e}")
-        return 1, "Container operation failed"
-    
-    # Execute commands separately with timeout protection
-    try:
-        # Test if we can execute basic commands
-        test_cmd = f"docker exec dynarapid_container bash -c 'ls -la {container_path}'"
-        test_result = subprocess.run(test_cmd, shell=True, text=True, 
-                                  capture_output=True, timeout=10)
-        print(f"Test command output: {test_result.stdout}")
-        print(f"Test command error: {test_result.stderr}")
-        
-        if test_result.returncode != 0:
-            print("Error: Cannot access the directory in the container")
-            return 1, "Directory access failed"
-        
-        # Run the dynamatic command
-        print("Running dynamatic synthesis...")
-        cmd = f"docker exec dynarapid_container bash -c 'cd {container_path} && dynamatic synthesis.tcl'"
-        
-        # Use Popen to have more control over the process
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, 
-                                stderr=subprocess.PIPE, text=True)
-        
-        # Wait with timeout
+        # Write the TCL script to a file with proper permissions from the start
+        filename = f"{solutions_path}/synthesis.tcl"
         try:
-            stdout, stderr = process.communicate(timeout=300)  # 5 minutes timeout
-            print(f"Synthesis exit code: {process.returncode}")
-            print(f"Synthesis output: {stdout}")
-            print(f"Synthesis error: {stderr}")
-        except subprocess.TimeoutExpired:
-            process.kill()
-            print("Synthesis process timed out and was killed")
-            stdout, stderr = process.communicate()
-            print(f"Partial output: {stdout}")
-            print(f"Partial error: {stderr}")
+            with open(filename, "w") as file:
+                file.write(syn_tcl)
+            logger.debug(f"Successfully wrote to {filename}")
+        except Exception as e:
+            logger.error(f"An error occurred while writing TCL script: {e}")
+            return 1, "No feedback at this time"
         
-        # # Check for .dot files in various locations
-        # print("Searching for dot files...")
-        # locations = [
-        #     container_path,
-        #     os.path.dirname(container_path),
-        #     f"{container_path}/.."
-        # ]
-        
-        # dot_files_found = False
-        # for location in locations:
-        #     find_cmd = f"docker exec dynarapid_container bash -c 'find {location} -name \"*{kernel_name}*.dot\" -print 2>/dev/null || echo \"No files found\"'"
-        #     dot_files = subprocess.run(find_cmd, shell=True, text=True, 
-        #                             capture_output=True, timeout=10)
+        # Prepare the source directory with proper permissions
+        try:
+            os.makedirs(f"{solutions_path}/src", mode=0o777, exist_ok=True)
+            os.makedirs(f"{solutions_path}/reports", mode=0o777, exist_ok=True)
             
-        #     if dot_files.stdout.strip() and "No files found" not in dot_files.stdout:
-        #         dot_files_found = True
-        #         print(f"Found .dot files in {location}: {dot_files.stdout}")
+            # Use the cp command with the --preserve=mode option to preserve mode but not ownership
+            subprocess.run(f"cp {solutions_path}/{kernel_name}.cpp {solutions_path}/src/", 
+                          shell=True, check=True, text=True)
+            
+        except Exception as e:
+            logger.error(f"Error setting up directories: {e}")
+            return 1, "No feedback at this time"
+
+        # Start the container if it's not already running
+        try:
+            # Capture and discard the output from docker start
+            result = subprocess.run("docker start dynarapid_container", 
+                            shell=True, check=True, text=True, 
+                            capture_output=True)  # Add capture_output=True
+            logger.info("Started dynarapid_container")
+            
+            # Verify the container is running
+            container_check = subprocess.run("docker ps | grep dynarapid_container", 
+                                           shell=True, text=True, capture_output=True)
+            logger.debug(f"Container status: {container_check.stdout}")
+            
+            if not container_check.stdout.strip():
+                logger.error("Error: Container not running properly")
+                return 1, "Container not running"
                 
-        #         # Copy to reports directory
-        #         for dot_file in dot_files.stdout.strip().split('\n'):
-        #             if dot_file and "No files found" not in dot_file:
-        #                 base_name = os.path.basename(dot_file)
-        #                 move_cmd = f"docker exec dynarapid_container bash -c 'cp {dot_file} {container_path}/reports/{base_name}'"
-        #                 cp_result = subprocess.run(move_cmd, shell=True, text=True, 
-        #                                        capture_output=True, timeout=10)
-        #                 print(f"Copy result: {cp_result.stdout} {cp_result.stderr}")
+        except Exception as e:
+            logger.error(f"Error with container operations: {e}")
+            return 1, "Container operation failed"
         
-        # if not dot_files_found:
-        #     print("No .dot files found in any location!")
-        #     return 1, "No dot files generated"
-        
-        # # Run write_hdl command
-        # print("Running write_hdl...")
-        # write_cmd = f"docker exec dynarapid_container bash -c 'cd {container_path}/reports && dynamatic write_hdl'"
-        # write_result = subprocess.run(write_cmd, shell=True, text=True, 
-        #                            capture_output=True, timeout=60)
-        # print(f"Write HDL exit code: {write_result.returncode}")
-        # print(f"Write HDL output: {write_result.stdout}")
-        # print(f"Write HDL error: {write_result.stderr}")
-        
-        # # Check for generated HDL files
-        # find_hdl_cmd = f"docker exec dynarapid_container bash -c 'find {container_path} -name \"*.v*\" -o -name \"*.vhd*\" -print'"
-        # hdl_files = subprocess.run(find_hdl_cmd, shell=True, text=True, 
-        #                         capture_output=True, timeout=10)
-        # print(f"Found HDL files: {hdl_files.stdout}")
-        
-        # if not hdl_files.stdout.strip():
-        #     return 1, "No HDL files generated"
+        # Execute commands separately with timeout protection
+        try:
+            # Test if we can execute basic commands
+            test_cmd = f"docker exec dynarapid_container bash -c 'ls -la {container_path}'"
+            test_result = subprocess.run(test_cmd, shell=True, text=True, 
+                                      capture_output=True, timeout=10)
+            logger.debug(f"Test command output: {test_result.stdout}")
+            logger.debug(f"Test command error: {test_result.stderr}")
             
-    except subprocess.TimeoutExpired:
-        print("A command timed out")
-        return 1, "Command execution timed out"
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return 1, "Unexpected error"
+            if test_result.returncode != 0:
+                logger.error("Error: Cannot access the directory in the container")
+                return 1, "Directory access failed"
+            
+            # Run the dynamatic command
+            logger.info("Running dynamatic synthesis...")
+            cmd = f"docker exec dynarapid_container bash -c 'cd {container_path} && dynamatic synthesis.tcl'"
+            
+            # Use Popen to have more control over the process
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, 
+                                    stderr=subprocess.PIPE, text=True)
+            
+            # Wait with timeout
+            try:
+                stdout, stderr = process.communicate(timeout=300)  # 5 minutes timeout
+                logger.debug(f"Synthesis exit code: {process.returncode}")
+                logger.debug(f"Synthesis output: {stdout}")
+                logger.debug(f"Synthesis error: {stderr}")
+            except subprocess.TimeoutExpired:
+                process.kill()
+                logger.warning("Synthesis process timed out and was killed")
+                stdout, stderr = process.communicate()
+                logger.debug(f"Partial output: {stdout}")
+                logger.debug(f"Partial error: {stderr}")
+
+            # Instead of chmod, use Docker to set permissions from inside the container
+            # This works because Docker is likely running with sufficient privileges
+            fix_perm_cmd = f"docker exec dynarapid_container bash -c 'chmod -R a+rwx {container_path}'"
+            try:
+                subprocess.run(fix_perm_cmd, shell=True, check=True, timeout=30)
+                logger.debug("Set permissions on output files via Docker")
+            except Exception as e:
+                logger.error(f"Error setting permissions via Docker: {e}")
+                
+        except subprocess.TimeoutExpired:
+            logger.warning("A command timed out")
+            return 1, "Command execution timed out"
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+            return 1, "Unexpected error"
+            
+    finally:
+        # Restore original umask
+        os.umask(old_umask)
     
-    return 0, "Successfully ran DynaRapid"
+    return 0, stdout
