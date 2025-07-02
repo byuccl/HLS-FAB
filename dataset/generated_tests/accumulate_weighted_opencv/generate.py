@@ -7,15 +7,17 @@ height = 128
 width = 128
 num_values = height * width
 
+
+function_signature = """void accumulate_weighted_opencv(ap_uint<8> *src1, ap_uint<8> *src2, uint16_t *dst, float alpha)"""
+
 description = f"""
 This HLS kernel implements a function to compute the weighted sum of two input images and store the result in an output image. 
-Parameters to the function include two uint8_t pointers, one uint16_t pointer, and a float:
-    The first pointer points to the start of a {num_values}-element array of uint8_t values representing the first input image.
-    The second pointer points to the start of a {num_values}-element array of uint8_t values representing the second input image.
+Parameters to the function include two ap_uint<8> pointers, one uint16_t pointer, and a float:
+    The first pointer points to the start of a {num_values}-element array of ap_uint<8> values representing the first input image.
+    The second pointer points to the start of a {num_values}-element array of ap_uint<8> values representing the second input image.
     The third pointer points to the start of a {num_values}-element array of uint16_t values representing the output image.
     The fourth parameter is a float representing the weight alpha.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 
@@ -43,7 +45,7 @@ def behavioral(input_image1, input_image2, alpha):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

@@ -5,14 +5,14 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the dimensions of the matrix
 matrix_size = 128
 
+function_signature = """void reduce_avg_uint8(ap_uint<8> *input_matrix, ap_uint<8> *output_vector)"""
 description = f"""
 This HLS kernel implements a function to reduce a matrix to a vector by calculating the mean of each column. 
-Parameters to the function include a uint8_t 2D array and a uint8_t 1D array:
+Parameters to the function include a ap_uint<8> 2D array and a ap_uint<8> 1D array:
     The first parameter points to the start of the 2D input data array. The dimensions are {matrix_size} x {matrix_size}. 
     The second parameter points to the start of the 1D output data array. The length is {matrix_size}.
 """
 
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 
@@ -36,7 +36,7 @@ def behavioral(input_matrix):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

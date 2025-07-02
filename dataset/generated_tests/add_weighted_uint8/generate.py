@@ -6,9 +6,11 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 image_height = 128
 image_width = 128
 
+function_signature = """void add_weighted_uint8(ap_uint<8> *src1, ap_uint<8> *src2, float alpha, float beta, float gamma, ap_uint<8> *dst)"""
+
 description = f"""
 This HLS kernel implements a function to calculate a weighted sum of two input 128x128 images and generates the result in a destination image.
-Parameters to the function include two uint8_t 2D arrays and three float variables:
+Parameters to the function include two ap_uint<8> 2D arrays and three float variables:
     The first parameter points to the start of the first 2D input image array. The dimensions are {image_height} x {image_width}.
     The second parameter points to the start of the second 2D input image array. The dimensions are {image_height} x {image_width}.
     The third parameter is a float value representing the weight alpha for the first image.
@@ -16,7 +18,7 @@ Parameters to the function include two uint8_t 2D arrays and three float variabl
     The fifth parameter is a float value representing the constant gamma to be added.
     The sixth parameter points to the start of the 2D output image array. The dimensions are {image_height} x {image_width}.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
+
 
 def generate_inputs(seed=0):
     if seed == -1:
@@ -50,7 +52,7 @@ def behavioral(input_image1, input_image2, alpha, beta, gamma):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

@@ -7,14 +7,14 @@ height = 128
 width = 128
 num_values = height * width
 
-function_signature = "void accumulate_opencv(ap_int<8> *src1, ap_int<8> *src2, ap_int<16> *dst)"
+function_signature = "void accumulate_opencv(ap_uint<8> *src1, ap_uint<8> *src2, ap_uint<16> *dst)"
 
 description = f"""
 This HLS kernel implements a function to accumulate two images. 
-Parameters to the function include two ap_int<8> pointers and one ap_int<16> pointer:
-    The first pointer points to the start of a {num_values}-element array of ap_int<8> values representing the first input image.
-    The second pointer points to the start of a {num_values}-element array of ap_int<8> values representing the second input image.
-    The third pointer points to the start of a {num_values}-element array of ap_int<16> values representing the output accumulated image.
+Parameters to the function include two ap_uint<8> pointers and one ap_uint<16> pointer:
+    The first pointer points to the start of a {num_values}-element array of ap_uint<8> values representing the first input image.
+    The second pointer points to the start of a {num_values}-element array of ap_uint<8> values representing the second input image.
+    The third pointer points to the start of a {num_values}-element array of ap_uint<16> values representing the output accumulated image.
 """
 
 

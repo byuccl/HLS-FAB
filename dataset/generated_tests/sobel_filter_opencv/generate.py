@@ -7,15 +7,16 @@ import cv2
 rows = 128
 cols = 128
 
+function_signature = """void sobel_filter_opencv(ap_uint<8> *input_image, ap_uint<8> *output_image_x, ap_uint<8> *output_image_y)"""
+
 description = f"""
 This HLS kernel implements a Sobel filter to compute the gradients of an input image in both x and y directions. 
 The input image is 128x128 pixels, and each pixel is represented by an 8-bit unsigned integer.
-Parameters to the function include three uint8_t pointers:
+Parameters to the function include three ap_uint<8> pointers:
     The first pointer points to the start of a {rows * cols}-element array representing the input image.
     The second and third pointers point to the start of {rows * cols}-element arrays representing the output gradient images in the x and y directions, respectively.
 The border pixels are set to a constant 0.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 
@@ -46,7 +47,7 @@ def behavioral(input_image):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

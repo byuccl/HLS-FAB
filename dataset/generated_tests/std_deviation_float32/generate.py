@@ -3,7 +3,9 @@ import os
 from hlseval import PromptConstructor, generate_types, generate_examples
 
 # Set the number of values in the array
-num_values = 131072
+num_values = 2048
+
+function_signature = """void std_deviation_float32(float *input_vector, float *output_std_dev)"""
 
 description = f"""
 This HLS kernel implements a function to calculate the standard deviation of an input vector containing 128 values of 32-bit floating-point numbers.
@@ -11,7 +13,6 @@ Parameters to the function include two float32 pointers:
     The first pointer points to an array containing {num_values} float values. This is the input vector.
     The second pointer points to a single float value to be used as the output for the standard deviation.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 # A function to return the inputs and types to the function.
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file.
@@ -40,7 +41,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

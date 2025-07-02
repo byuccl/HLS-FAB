@@ -6,6 +6,8 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 signal_size = 1024
 filter_taps = 64
 
+function_signature = """void fir_filter_float32(float *input_signal, float *filter_coefficients, float *output_signal)"""
+
 description = f"""
 This HLS kernel implements a finite impulse response (FIR) filter on a 32-bit floating-point signal.
 Parameters to the function include three float32 pointers:
@@ -13,7 +15,6 @@ Parameters to the function include three float32 pointers:
     The second pointer points to an array containing {filter_taps} float values. These are the filter coefficients.
     The third pointer points to an array containing {signal_size} float values. This is the output signal.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 
@@ -49,7 +50,7 @@ examples = generate_examples(generate_inputs)
 
 # Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

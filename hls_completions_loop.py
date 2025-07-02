@@ -17,7 +17,7 @@ logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encodi
 VITIS_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
 Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
 The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
-Make this code so that it is Deterministic when synthesized.
+Do not use size as a function argument, instead use a constant defined at the top of the file or function.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
 Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>). As such, that header almost always needs to be added.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
@@ -186,8 +186,8 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
                 vitis_feedback['synth_feedback']['goals'].extend([
-                    "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
-                    "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
+                    "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining."
+                ])
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 synth_returncode = 1

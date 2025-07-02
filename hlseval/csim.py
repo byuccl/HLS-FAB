@@ -311,7 +311,8 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
         dtype_str = var_info["dtype"]
         cpp_base_type = get_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
-
+        total_elements = var_info.get('total_elements', 1) # Total elements for flattening
+        
         if in_out_status in ["out", "inout"]:
             # Get expected values from JSON
             testbench_code.append(f"\n        num_mismatches = 0;")

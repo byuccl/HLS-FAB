@@ -5,6 +5,7 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 4096
 
+function_signature = """void axpy_int32_res(int32_t alpha, int32_t *x_vector, int32_t *y_vector, int32_t *y_res)"""
 description = f"""
 This HLS kernel implements the AXPY operation on vectors of 32-bit integers. 
 Parameters to the function include one int32 scalar and three int32 pointers:
@@ -13,7 +14,6 @@ Parameters to the function include one int32 scalar and three int32 pointers:
     The third parameter points to an array containing {num_values} int32 values. This is the input vector Y.
     The fourth parameter points to an array containing {num_values} int32 values. This is the output vector Y_res, which stores the result of the operation.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 
@@ -41,7 +41,7 @@ def behavioral(alpha, x_vector, y_vector):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

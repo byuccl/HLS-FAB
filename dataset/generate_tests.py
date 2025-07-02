@@ -42,18 +42,18 @@ if __name__ == "__main__":
         raise ValueError('Invalid log level: %s' % args.loglevel)
     logging.basicConfig(level=numeric_level)
 
-    # Set up prompt
 
-    desired_test = "iir_filter_float32"
+    desired_test = "argmin_float64"
     desired_test_description = (
-        """
-    The iir filter function applies a iir filter to the input vector (X) of type float32. The output is the filtered vector (Y) of the same type.
-    The a and b coefficients are also of type float32.
-
-    The input vector will be 1024 values long.
-    The filter order will be 4.
-        """
+        """The argmin function finds the index of the minimum value in an input vector (X) of type float64 and generates the output index (Y) of the same type
+        
+        Y = argmin(X)
+                                
+        Y is the index of the minimum value in the input vector X.
+                                
+        The input vector will be 4096 values long."""
     )
+
 
     # Open example files
     with open("dataset/examples/absolute_value_int8/generate.py", "r") as f:
@@ -114,9 +114,16 @@ if __name__ == "__main__":
         system_prompt=SYSTEM_PROMPT
     )
 
+    # try:
+    #     with open("dataset/generation_prompts.json", "r") as f:
+    #             generation_prompts = json.load(f)
+    # except FileNotFoundError:
+    #     logger.error("generation_prompts.json file not found. Please ensure it exists in the current directory.")
+    #     exit(1)
+
+
+
     pathlib.Path(f"dataset/generated_tests/{desired_test}").mkdir(parents=True, exist_ok=True)
-
-
     generate_line = f"""
     Your task is to create a 'generate.py script for the following test:\n{desired_test}: {desired_test_description}'\n\n
     Use the same naming convention for variables using input_ for inputs and output_ for outputs and inout_ for combinations of the two.
@@ -124,7 +131,9 @@ if __name__ == "__main__":
     If there are constants then include them at the top of the file as variables. 
     Please ensure that the behavioral function performs a correct implementation of the kernel in Python, using numpy or pytorch as needed.
     """
+    logger.debug(f"Generating code for {desired_test} with prompt: {prompt + generate_line}")
     response = coder(prompt + generate_line)
+    logger.debug(f"Response for {desired_test}: {response}")
 
     result = {
         "code": coder.extract_codeblock(response["response"]),

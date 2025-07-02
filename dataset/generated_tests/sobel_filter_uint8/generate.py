@@ -6,15 +6,16 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 image_height = 128
 image_width = 128
 
+function_signature = """void sobel_filter_uint8(ap_uint<8> *input_image, ap_int<16> *output_image_x, ap_int<16> *output_image_y)"""
+
 description = f"""
 This HLS kernel implements a Sobel filter to compute the gradients of a 128x128 input image in both x and y directions by convolving the kernel with the input image.
-Parameters to the function include one uint8_t 2D array and two int16_t 2D arrays:
+Parameters to the function include one ap_uint<8> 2D array and two ap_int<16> 2D arrays:
     The first parameter points to the start of the 2D input image array. The dimensions are {image_height} x {image_width}.
     The second parameter points to the start of the 2D output image array for the x-direction gradients. The dimensions are {image_height} x {image_width}.
     The third parameter points to the start of the 2D output image array for the y-direction gradients. The dimensions are {image_height} x {image_width}.
 """
 
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 
@@ -54,7 +55,7 @@ def behavioral(input_image):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

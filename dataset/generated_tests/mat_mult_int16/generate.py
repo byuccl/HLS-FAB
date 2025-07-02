@@ -7,14 +7,14 @@ M = 64
 N = 64
 K = 64
 
+function_signature = """void mat_mult_int16(ap_int<16> *input_matrix1, ap_int<16> *input_matrix2, ap_int<16> *output_matrix)"""
 description = f"""
 This HLS kernel implements a function to multiply two matrices of 16-bit integers.
-Parameters to the function include three int16_t 2D arrays, all intended to be interpreted as 2-dimensional arrays:
+Parameters to the function include three ap_int<16> 2D arrays, all intended to be interpreted as 2-dimensional arrays:
     The first parameter points to the start of the first 2D input data array. The dimensions are {M} x {N}.
     The second parameter points to the start of the second 2D input data array. The dimensions are {N} x {K}.
     The third parameter points to the start of the 2D output data array. The dimensions are {M} x {K}.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1:
@@ -40,7 +40,7 @@ def behavioral(input_matrix1, input_matrix2):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

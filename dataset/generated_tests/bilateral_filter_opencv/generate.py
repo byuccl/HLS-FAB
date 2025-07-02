@@ -7,15 +7,15 @@ height = 128
 width = 128
 filter_size = 3
 
+function_signature = """void bilateral_filter_opencv(ap_uint<8> *input_image, double sigma_color, double sigma_space, ap_uint<8> *output_image)"""
 description = f"""
 This HLS kernel implements a bilateral filter on a 128x128 image. The bilateral filter smoothens the image while preserving edges by considering both spatial and intensity differences.
-Parameters to the function include two uint8_t pointers and two double values:
-    The first pointer points to the start of a {height * width}-element array of uint8_t values representing the input image.
+Parameters to the function include two ap_uint<8> pointers and two double values:
+    The first pointer points to the start of a {height * width}-element array of ap_uint<8> values representing the input image.
     The second parameter is a double value representing the sigma for color.
     The third parameter is a double value representing the sigma for space.
-    The fourth pointer points to the start of a {height * width}-element array of uint8_t values representing the output image.
+    The fourth pointer points to the start of a {height * width}-element array of ap_uint<8> values representing the output image.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1:
@@ -69,7 +69,7 @@ def behavioral(input_image, sigma_color, sigma_space):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples
