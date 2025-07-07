@@ -110,7 +110,7 @@ exit
                 logger.debug(f"Synthesis exit code: {process.returncode}")
                 logger.debug(f"Synthesis output: {stdout}")
                 logger.debug(f"Synthesis error: {stderr}")
-                logger.debug(f"CSIM elapsed time: {csim_end-csim_begin}")
+                logger.debug(f"Dynamatid elapsed time: {dynamatic_end-dynamatic_begin}")
 
             except subprocess.TimeoutExpired:
                 process.kill()
