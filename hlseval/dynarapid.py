@@ -2,6 +2,7 @@ import os
 import subprocess
 import logging
 import time
+from datetime import datetime
 
 logger = logging.getLogger("__main__")
 
@@ -92,18 +93,25 @@ exit
             
             # Run the dynamatic command
             logger.info("Running dynamatic synthesis...")
+
             cmd = f"docker exec dynarapid_container bash -c 'cd {container_path} && dynamatic synthesis.tcl'"
             
             # Use Popen to have more control over the process
+            dynamatic_begin = datetime.now()
             process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, 
                                     stderr=subprocess.PIPE, text=True)
+
+
             
             # Wait with timeout
             try:
                 stdout, stderr = process.communicate(timeout=300)  # 5 minutes timeout
+                dynamatic_end = datetime.now()
                 logger.debug(f"Synthesis exit code: {process.returncode}")
                 logger.debug(f"Synthesis output: {stdout}")
                 logger.debug(f"Synthesis error: {stderr}")
+                logger.debug(f"CSIM elapsed time: {csim_end-csim_begin}")
+
             except subprocess.TimeoutExpired:
                 process.kill()
                 logger.warning("Synthesis process timed out and was killed")
