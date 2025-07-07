@@ -104,7 +104,7 @@ def generate_examples(generate_function):
     examples = [example1, example2]
     return examples
 
-def get_kernel_code(test: dict, solutions_path: str = None) -> str:
+def get_kernel_code(hls_flow, test: dict, solutions_path: str = None) -> str:
     """Fetch the kernel code from the provided solution path, if none provided default 
     to canonical solution."""
     if not solutions_path:
@@ -117,13 +117,13 @@ def get_kernel_code(test: dict, solutions_path: str = None) -> str:
             return None
 
         srccode = solution['code']
-        
-        # if gpt decides to be too helpful and adds a main()... remove it
-        srccode = re.sub(r'int\s+main\s*\([^)]*\)\s*{[^{}]*({[^{}]*}[^{}]*)*}', '', srccode, flags=re.DOTALL)
-        
-        # cppheaderparser will complain if we don't remove trailing comments
-        srccode = srccode.split('// extern "C"')[0]
-        
+        if hls_flow == "vitis":
+            # if gpt decides to be too helpful and adds a main()... remove it
+            srccode = re.sub(r'int\s+main\s*\([^)]*\)\s*{[^{}]*({[^{}]*}[^{}]*)*}', '', srccode, flags=re.DOTALL)
+            
+            # cppheaderparser will complain if we don't remove trailing comments
+            srccode = srccode.split('// extern "C"')[0]
+            
         return srccode
 
 def extract_buffers(test):
@@ -389,16 +389,18 @@ def generate_types(inputs):
 
     return types_info
 
-def generate_one_completion(prompt, url, workflow, model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1):
+def generate_one_completion(prompt, url, workflow, hls_flow, system_prompt, model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1, rag=True):
     
     coder = HLSCoder(
         model=model,
         workflow=workflow,
+        hls_flow=hls_flow,
+        system_prompt=system_prompt,
         temperature=temperature,
         top_p=top_p,
         url=url,
         attempts=attempts,
-        rag=True
+        rag=rag
     )
     response = coder(prompt)
 

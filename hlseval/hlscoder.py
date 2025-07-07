@@ -87,28 +87,6 @@ def get_or_create_rag_components():
       
     return _RAG_INDEX, _EMBED_MODEL  
 
-
-# HLS C++ prompt
-SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
-Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
-The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
-Make this code so that it is Deterministic when synthesized.
-Produce only the C++ code for the requested kernel including any required headers and imports. 
-Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>). As such, that header almost always needs to be added.
-Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
-Make sure the C++ code is complete and self contained in a single code block.
-Produce only the kernel function, no main, no additional examples or code.
-
-IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
-
-In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
-1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
-2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
-3. Optimal performance - Reduce the latency while trying to also keep resource usage low
-
-Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
-"""
-
 api_key = os.environ["API_KEY"] # reads for the environment variable 'API_KEY'
 
 # The openAI has a different header format than the AMD API.
@@ -125,7 +103,7 @@ amd_headers = {
 class HLSCoder:
     """A basic agent that talks via OpenAI APIs"""
     def __init__(  
-    self, url, workflow, model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1, system_prompt=SYSTEM_PROMPT, rag=False  
+    self, url, workflow, hls_flow, system_prompt, model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1, rag=False  
     ):  
         self.system_prompt=system_prompt  
         self.messages = [{"role": "system", "content": self.system_prompt}]  
@@ -134,6 +112,7 @@ class HLSCoder:
         self.top_p = top_p  
         self.attempts = attempts  
         self.workflow = workflow  
+        self.hls_flow = hls_flow
         self.token_usage = {  
             "completion_tokens": 0,  
             "prompt_tokens": 0,  
@@ -454,71 +433,6 @@ void my_function(...) {
         return summary + "\n\nNo specific examples found in the knowledge base, but here are general patterns to consider:\n" + general_advice
 
 
-    def get_focused_rag_examples(self, query):  
-        """Get highly condensed code examples from RAG to fit in context window."""  
-        if not self.index:  
-            return ""  
-            
-        # Use fewer examples when context is tight  
-        retriever = self.index.as_retriever(similarity_top_k=2)  
-        nodes = retriever.retrieve(query)  
-        
-        if not nodes:  
-            return ""  
-        
-        # Extract only the most relevant code sections  
-        patterns = []  
-                
-        # Look for function name/signature in the query  
-        function_pattern = re.search(r'(void|int|float|double|bool)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(', query)  
-        function_name = function_pattern.group(2) if function_pattern else None  
-        
-        # Look for key algorithmic terms  
-        key_terms = re.findall(r'\b(sort|search|matrix|vector|array|loop|unroll|pipeline)\w*\b', query.lower())  
-        
-        for node in nodes:  
-            content = node.get_content()  
-            
-            # Get file name for reference  
-            example_name = node.metadata.get('file_name', 'example')  
-            
-            # Apply more aggressive filtering based on query  
-            relevant_sections = []  
-            
-            # If we identified a function name in the query, prioritize matching functions  
-            if function_name and function_name in content:  
-                # Try to extract just the relevant function  
-                func_match = re.search(rf'(void|int|float|double|bool)\s+{function_name}\s*\([^{{]*{{[^}}]*}}', content, re.DOTALL)  
-                if func_match:  
-                    relevant_sections.append(f"// Relevant function:\n{func_match.group(0)}")  
-            
-            # Extract only the most relevant pragmas for the task  
-            pragmas = re.findall(r'#pragma\s+HLS[^\n]*', content)  
-            if pragmas:  
-                # Keep only a limited number of unique pragmas  
-                unique_pragmas = set(pragmas)  
-                if len(unique_pragmas) > 5:  # Limit to 5 pragmas max  
-                    relevant_sections.append("// Key pragmas:\n" + "\n".join(list(unique_pragmas)[:5]))  
-                else:  
-                    relevant_sections.append("// Key pragmas:\n" + "\n".join(unique_pragmas))  
-            
-            # Look for code patterns related to key terms  
-            for term in key_terms:  
-                # Find lines containing the term  
-                for line in content.split('\n'):  
-                    if term in line.lower() and len(line) < 100:  # Avoid huge lines  
-                        relevant_sections.append(f"// {term} pattern: {line.strip()}")  
-            
-            # If we found relevant sections, add them  
-            if relevant_sections:  
-                condensed = f"From {example_name}:\n" + "\n".join(relevant_sections)  
-                patterns.append(condensed)  
-        
-        # Return a very condensed version, or nothing if we couldn't find relevant code  
-        if patterns:  
-            return "RELEVANT CODE PATTERNS:\n" + "\n\n".join(patterns)  
-        else:  
-            return "No directly relevant code patterns found."  
 
     def count_tokens(self, text, model="gpt-4o"):  
         """Estimate token count for a given text string."""  
