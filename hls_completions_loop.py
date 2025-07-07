@@ -9,6 +9,7 @@ import subprocess
 import argparse
 from datetime import datetime
 import hlseval
+from hlseval import run_dynarapid
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -40,10 +41,10 @@ Your job is to write C++ code for a single kernel that will be compiled to with 
 The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
 Make this code so that it is Deterministic when synthesized.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
-Most kernels are dependent on the C standar integer library (<stdint.h>). As such, that header almost always needs to be added.
+Dynamatic does not support arbitrary precision integers (from the <ap_int.h> library) or C++ standard integers (from the <stdint.h> library). Therefore, only C++ built-in types may be used.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
-IMPORTANT: With each kernel, produce a simple main function to initialize any arrays and call the function.
+IMPORTANT: With each kernel, produce a simple main function to initialize any arrays and call the function. Do not add any kind of print statements to the main function. These will prevent the code from compiling successfully.
 
 In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
 1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
@@ -55,7 +56,7 @@ Analyze the given feedback to determine whether the code meets the first and sec
 
 def feedback_prompt(prev_code, feedback):
     return f"""
-        Here is my C HLS code for Vitis:
+        Here is my C HLS code:
 
         {prev_code}
 
@@ -134,6 +135,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             prev_code = f.read()
 
         new_prompt = feedback_prompt(prev_code=prev_code, feedback=prev_feedback)
+        logger.error(new_prompt)
         url = (model_parameters[model])[f"{workflow}_url"]
         improved_code = hlseval.generate_one_completion(
             new_prompt,
@@ -206,8 +208,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
-        returncode = 0
-        feedback = ""
+        returncode, feedback = run_dynarapid(kernel_name, solutions_path)
     return returncode, feedback
 
 
@@ -258,7 +259,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run HLS kernel processing with optional goals.")
 
-    parser.add_argument("--log", dest='loglevel', help="desired loglevel", default="WARNING")
+    parser.add_argument("--log", dest='loglevel', help="Desired loglevel", default="WARNING")
+
+    parser.add_argument("--attempts", dest='attempts', help="Number of results to generate", default=1)
+
 
     parser.add_argument(
         'workflow', 
@@ -299,7 +303,7 @@ if __name__ == "__main__":
     # Add any models you want completions run for to this list
     # models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
     models = ["gpt-4o"]
-    passes = 4
+    passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
     
