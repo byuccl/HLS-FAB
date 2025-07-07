@@ -42,7 +42,7 @@ exit
             logger.debug(f"Successfully wrote to {filename}")
         except Exception as e:
             logger.error(f"An error occurred while writing TCL script: {e}")
-            return 1, "No feedback at this time"
+            return 1, "No feedback at this time", 0
         
         # Prepare the source directory with proper permissions
         try:
@@ -55,7 +55,7 @@ exit
             
         except Exception as e:
             logger.error(f"Error setting up directories: {e}")
-            return 1, "No feedback at this time"
+            return 1, "No feedback at this time", 0
 
         # Start the container if it's not already running
         try:
@@ -72,11 +72,11 @@ exit
             
             if not container_check.stdout.strip():
                 logger.error("Error: Container not running properly")
-                return 1, "Container not running"
+                return 1, "Container not running", 0
                 
         except Exception as e:
             logger.error(f"Error with container operations: {e}")
-            return 1, "Container operation failed"
+            return 1, "Container operation failed", 0
         
         # Execute commands separately with timeout protection
         try:
@@ -89,7 +89,7 @@ exit
             
             if test_result.returncode != 0:
                 logger.error("Error: Cannot access the directory in the container")
-                return 1, "Directory access failed"
+                return 1, "Directory access failed", 0
             
             # Run the dynamatic command
             logger.info("Running dynamatic synthesis...")
@@ -110,7 +110,8 @@ exit
                 logger.debug(f"Synthesis exit code: {process.returncode}")
                 logger.debug(f"Synthesis output: {stdout}")
                 logger.debug(f"Synthesis error: {stderr}")
-                logger.debug(f"Dynamatid elapsed time: {dynamatic_end-dynamatic_begin}")
+                dynamatic_elapsed_time = dynamatic_end-dynamatic_begin
+                logger.debug(f"Dynamatid elapsed time: {dynamatic_elapsed_time}")
 
             except subprocess.TimeoutExpired:
                 process.kill()
@@ -130,13 +131,13 @@ exit
                 
         except subprocess.TimeoutExpired:
             logger.warning("A command timed out")
-            return 1, "Command execution timed out"
+            return 1, "Command execution timed out", 0
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
-            return 1, "Unexpected error"
+            return 1, "Unexpected error", 0
             
     finally:
         # Restore original umask
         os.umask(old_umask)
     
-    return 0, stdout
+    return 0, stdout, dynamatic_elapsed_time
