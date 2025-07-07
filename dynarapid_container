@@ -1,0 +1,117 @@
+# Dockerfile to setup Dynamatic and DynaRapid - 2025-02-05
+# Intended for BYU
+
+# This probably could be updated to a newer version, not necessarily a requirement since we are 
+FROM ubuntu:18.04  
+  
+# Set environment variables to avoid interactive prompts during package installation  
+ENV DEBIAN_FRONTEND=noninteractive  
+  
+# Update the package list and install necessary packages  
+RUN apt-get update && \  
+    apt-get install -y --no-install-recommends \  
+    software-properties-common \  
+    wget \  
+    gnupg2 \  
+    lsb-release \  
+    ca-certificates  
+  
+  
+# Install LLVM 6.0 pre-requisites
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    git \
+    cmake \
+    build-essential \
+    graphviz \
+    graphviz-dev \
+    ninja-build \
+    subversion \
+    wget \
+    pkg-config \
+    libboost-all-dev
+
+# Build LLVM 6.0 debug release -- this will take a long time (~2 hours)
+RUN git clone http://github.com/llvm-mirror/llvm --branch release_60 --depth 1 && \
+    cd llvm/tools && \
+    git clone http://github.com/llvm-mirror/clang --branch release_60 --depth 1 && \
+    git clone http://github.com/llvm-mirror/polly --branch release_60 --depth 1 && \
+    cd .. && \
+    mkdir _build && cd _build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Debug -DLLVM_INSTALL_UTILS=ON -DLLVM_TARGETS_TO_BUILD="X86" -DCMAKE_INSTALL_PREFIX=/usr/lib/llvm-6.0 && \
+    make && \
+    make install && \
+    rm -rf llvm
+
+# Install Dynamatic 
+RUN git clone https://github.com/Andrea-Guerrieri/dynamatic.git && \
+    cd dynamatic/elastic-circuits && \
+    mkdir _build && \
+    cd _build && \    
+    cmake .. -DLLVM_ROOT=/usr/lib/llvm-6.0 && \
+    make
+
+# Compile Dynamatic - Elastic Buffers
+RUN cd /dynamatic/Buffers && \
+    mkdir bin && \
+    make clean && \
+    make && \
+    ln -s /dynamatic/Buffers/bin/buffers /dynamatic/bin/buffers
+
+# Compile Dynamatic - Resource Sharing
+RUN cd /dynamatic/resource_sharing && \
+    mkdir bin && \
+    ln -s /dynamatic/Buffers/src src/DFnetlist && \
+    make && \
+    ln -s /dynamatic/resource_sharing/bin/resource_minimization /dynamatic/bin/resource_minimization
+    
+# Compile Dynamatic - dot2vhdl
+RUN cd /dynamatic/dot2vhdl && \
+    mkdir bin && \
+    make clean && \
+    make && \
+    ln -s /dynamatic/dot2vhdl/bin/dot2vhdl /dynamatic/bin/dot2vhdl
+
+# Compile Dynamatic - Install Shell
+RUN cd /dynamatic/Frontend && \
+    mkdir bin && \
+    make clean && \
+    make && \
+    ln -s /dynamatic/Frontend/bin/dhls /dynamatic/bin/dhls && \
+    ln -s /dynamatic/Frontend/bin/analyze /dynamatic/bin/analyze && \
+    ln -s /dynamatic/Frontend/bin/elaborate /dynamatic/bin/elaborate
+
+# Make compile executable
+RUN chmod a+x /dynamatic/bin/compile
+
+ENV PATH="/dynamatic/bin:$PATH"
+ENV DHLS_INSTALL_DIR=/dynamatic
+ENV CLANG_DIR=/usr/lib/llvm-6.0/bin
+ENV OPT_DIR="$CLANG_DIR"
+ENV ELASTIC_DIR=/dynamatic/elastic-circuits
+
+# Create symlink for handling hard-coded rel-paths in Dynamatic
+RUN mkdir /dynamatic/etc && ln -s /dynamatic /dynamatic/etc/dynamatic
+
+# Install Java for DynaRapid / RapidWright
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    openjdk-17-jre-headless 
+
+
+# Setup DynaRapid
+RUN git clone --recurse-submodules -j8 https://github.com/AGS-L/DynaRapid.git && \
+    cd DynaRapid && \
+    ./gradlew compileJava
+
+# Setup DynaRapid/RapidWright environment variables
+ENV RAPIDWRIGHT_PATH=/DynaRapid/RapidWright
+ENV CLASSPATH=/DynaRapid/build/classes/java/main:$RAPIDWRIGHT_PATH/bin:$RAPIDWRIGHT_PATH/jars/*
+ENV PATH=$RAPIDWRIGHT_PATH/bin:$PATH
+
+# Clean up to reduce image size  
+RUN apt-get clean && \  
+    rm -rf /var/lib/apt/lists/*
+ 
+# Set the default command to run when the container starts  
+CMD ["bash"]

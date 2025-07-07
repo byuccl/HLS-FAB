@@ -4,7 +4,7 @@ import numpy as np
 import re  
 import subprocess  
 import json
-from hlseval.utils import get_cpp_type_str, import_module_functions
+from hlseval.utils import get_ap_cpp_type_str, import_module_functions, get_norm_cpp_type_str
 
 logger = logging.getLogger("CSIM")
 
@@ -126,7 +126,7 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
     pass
 
     
-def create_testbench(kernel_name, test_data_json_path, model_dir):
+def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="vitis"):
     """
     Generates a C++ testbench file (`testbench.cpp`) that reads test data from a JSON file,
     executes the specified kernel, and compares its outputs to expected results.
@@ -189,7 +189,8 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     testbench_code.append("#include <vector>")
     testbench_code.append("#include <string>")
     testbench_code.append("#include <cmath>") # For std::abs
-    testbench_code.append("#include <ap_int.h>") # For ap_int
+    if hls_flow == "vitis":
+        testbench_code.append("#include <ap_int.h>") # For ap_int
     testbench_code.append("#include <limits>") # For numeric_limits epsilon
     testbench_code.append("#include \"nlohmann/json.hpp\"") # Assuming nlohmann/json.hpp is available in include path
     testbench_code.append("#include \"utils.hpp\"")    # Floating-point comparison helper function
@@ -240,7 +241,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
         array_dimension = var_info["array_dimension"]
         in_out_status = var_info["in_out"]
         dtype_str = var_info["dtype"] # e.g., "int32", "float64", "int", "float"
-        cpp_base_type = get_cpp_type_str(dtype_str)
+        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_norm_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
         total_elements = var_info.get('total_elements', 1) # Total elements for flattening
         # Handle scalar (dimension 0)
@@ -309,7 +310,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
         array_dimension = var_info["array_dimension"]
         in_out_status = var_info["in_out"]
         dtype_str = var_info["dtype"]
-        cpp_base_type = get_cpp_type_str(dtype_str)
+        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_norm_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
         total_elements = var_info.get('total_elements', 1) # Total elements for flattening
         
@@ -434,7 +435,7 @@ def write_json_test_data(filename, test_cases_list):
         raise
 
 
-def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0):
+def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0, hls_flow="vitis"):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
 
@@ -576,7 +577,8 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
         testbench_cpp_path, json_filename_basename, generation_status = create_testbench(
             kernel_name=name,
             test_data_json_path=json_output_filename, # This is the full path to the source JSON
-            model_dir=model_dir
+            model_dir=model_dir,
+            hls_flow=hls_flow
         )
 
         if generation_status == "SUCCESS" and testbench_cpp_path:
@@ -601,9 +603,9 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
 
     return all_results
 
-def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1"):
+def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", hls_flow="vitis"):
     logger.info("Preparing CSIM")
-    result = create_reference_data(kernel_name, model_dir, seed=45)
+    result = create_reference_data(kernel_name, model_dir, seed=45, hls_flow=hls_flow)
     
     project_dir = model_dir
     kernel_code_path = os.path.join(project_dir, f"{kernel_name}.cpp")

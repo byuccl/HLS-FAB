@@ -74,7 +74,7 @@ def import_module_functions(kernel_name, function_names=None):
           
     return functions    
  
-def get_cpp_type_str(dtype_str):
+def get_ap_cpp_type_str(dtype_str):
     dtype_map = {
         "int8": "ap_int<8>", "uint8": "ap_uint<8>",
         "int16": "ap_int<16>", "uint16": "ap_uint<16>",
@@ -87,6 +87,21 @@ def get_cpp_type_str(dtype_str):
         "float": "float",
     }
     return dtype_map.get(dtype_str.lower(), "void*")
+
+def get_norm_cpp_type_str(dtype_str):
+    dtype_map = {
+        "int8": "char", "uint8": "unsigned char",
+        "int16": "short", "uint16": "unsigned short",
+        "int32": "int", "uint32": "unsigned int",
+        "int64": "long", "uint64": "unsigned long",
+        "float16": "half_float_type",
+        "float32": "float", "float64": "double",
+        "bool": "bool",
+        "int": "int",
+        "float": "float",
+    }
+    return dtype_map.get(dtype_str.lower(), "void*")
+
 
 
 def generate_examples(generate_function):

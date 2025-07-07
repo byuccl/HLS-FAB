@@ -40,9 +40,9 @@ The goal is to create HLS code that runs correctly, taking as little time and us
 Make this code so that it is Deterministic when synthesized.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
 Dynamatic does not support arbitrary precision integers (from the <ap_int.h> library) or C++ standard integers (from the <stdint.h> library). Therefore, only C++ built-in types may be used.
+The integer types you are allowed to use are char, unsigned char, short, unsigned short, int, unsigned int, long, unsigned long.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
-IMPORTANT: With each kernel, produce a simple main function to initialize any arrays and call the function. Do not add any kind of print statements to the main function. These will prevent the code from compiling successfully.
 
 In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
 1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
@@ -188,7 +188,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         if csim_output.returncode == 0:
         # Run Synthesis only if CSIM was successful
             try:
-                logger.info("--- Running CSYNTH ---")
+                logger.info("Running CSYNTH")
                 csynth_begin = datetime.now()
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
@@ -223,6 +223,22 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
+        # Run CSIM    
+        dsim_begin = datetime.now()
+
+        try:
+            logger.info("Starting Dynarapid Simulation")
+            dsim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim", hls_flow=hls_flow)
+            logger.debug(dsim_output)
+            timeout_dsim = False
+            sim_returncode = dsim_output.returncode
+        except hlseval.CsimTimeoutError as e:
+            timeout_dsim = True
+            sim_returncode = 1
+            logger.warning("Vitis timed out on Simulation")
+        dsim_end = datetime.now()
+        logger.debug(f"Dynarapid Simulation elapsed time: {dsim_end-dsim_begin}")
+
         returncode, feedback = run_dynarapid(kernel_name, solutions_path)
 
 

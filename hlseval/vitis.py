@@ -7,7 +7,7 @@ class CsynthTimeoutError(Exception):
     pass
 
 # Run vitis tools on the generated code
-def run_vitis_tools(filepath, kernel_name, mode="csynth"):
+def run_vitis_tools(filepath, kernel_name, mode="csynth", hls_flow="vitis"):
     if mode == "csynth":
         with open("vitis_config.cfg", "w") as file:
             file.write(
@@ -44,5 +44,5 @@ def run_vitis_tools(filepath, kernel_name, mode="csynth"):
         except subprocess.TimeoutExpired:
             raise CsynthTimeoutError("Vitis tools stalled during HLS Synthesis.")
     elif mode == "csim":
-        return run_csim(kernel_name, filepath)
+        return run_csim(kernel_name, filepath, hls_flow=hls_flow)
         
