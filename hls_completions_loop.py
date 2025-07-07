@@ -1,6 +1,3 @@
-# This is just a practice file an attempt 
-# to get a recursive feedback for improvement
-
 import logging
 from openai import OpenAI
 import json
@@ -9,6 +6,7 @@ import subprocess
 import argparse
 from datetime import datetime
 import hlseval
+import csv
 from hlseval import run_dynarapid
 
 logger = logging.getLogger("COMPLETIONS")
@@ -92,11 +90,13 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
 
 
     if attempt == 0:
-        logger.debug(f"Generating base completion for {kernel_name} (Attempt {attempt+1})")
+        logger.debug(f"\tGenerating base completion for {kernel_name} (Attempt {attempt+1})")
+
         context_string = "Reference vectorized code:\n"
         prompt_with_context = test["prompt"] + "\n" + context_string
         url = (model_parameters[model])[f"{workflow}_url"]
 
+        llm_completion_begin = datetime.now()
 
         response = hlseval.generate_one_completion(
             prompt_with_context,
@@ -109,6 +109,10 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             top_p=1.0,
             rag=True if hls_flow=="vitis" else False
         )
+        llm_completion_end = datetime.now()
+        llm_elapsed_time = llm_completion_end - llm_completion_begin
+        logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
+
         try:
             with open(f"{solutions_path}/{kernel_name}.json", "x") as file:
                 json.dump(response, file, indent=4)
@@ -134,8 +138,10 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         with open(f"{prev_solutions_path}/{kernel_name}.cpp", "r") as f:
             prev_code = f.read()
 
+        llm_completion_begin = datetime.now()
+
         new_prompt = feedback_prompt(prev_code=prev_code, feedback=prev_feedback)
-        logger.error(new_prompt)
+        logger.debug(new_prompt)
         url = (model_parameters[model])[f"{workflow}_url"]
         improved_code = hlseval.generate_one_completion(
             new_prompt,
@@ -148,7 +154,8 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             top_p=1.0,
             rag=True if hls_flow=="vitis" else False
         )
-
+        llm_completion_end = datetime.now()
+        logger.debug(f"LLM API call elapsed time: {llm_completion_end-llm_completion_begin}")
         try:
             with open(f"{solutions_path}/{kernel_name}.json", "x") as file:
                 json.dump(improved_code, file, indent=4)
@@ -164,6 +171,8 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
     
     if hls_flow == "vitis":
         # Run CSIM    
+        csim_begin = datetime.now()
+
         try:
             logger.info("Starting Vitis Run")
             csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
@@ -173,14 +182,20 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             timeout_csim = True
             sim_returncode = 1
             logger.warning("Vitis timed out on Simulation")
+        csim_end = datetime.now()
+        logger.debug(f"CSIM elapsed time: {csim_end-csim_begin}")
 
         if csim_output.returncode == 0:
         # Run Synthesis only if CSIM was successful
             try:
-                logger.info("Running CSYNTH")
+                logger.info("--- Running CSYNTH ---")
+                csynth_begin = datetime.now()
+
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
                 vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
                 synth_returncode = synth_output.returncode
+                csynth_end = datetime.now()
+                logger.debug(f"CYNTH elapsed time: {csynth_end-csynth_begin}")  
             except hlseval.CsynthTimeoutError as e:
                 logger.warning("Vitis timed out")
                 vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
@@ -198,7 +213,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
-        
+
         logger.info("Vitis Run Completed")
 
         out_data_path = f"{solutions_path}/{kernel_name}_data.json"
@@ -209,6 +224,8 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
         returncode, feedback = run_dynarapid(kernel_name, solutions_path)
+
+
     return returncode, feedback
 
 
