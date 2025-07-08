@@ -214,65 +214,96 @@ def gather_parsed_data(kernel_name, model="gpt4o", hls_flow="vitis", attempt=1, 
     old_sim_log_file = f"{solutions_path}/logs/hls_run_csim.log"
     
     log_file = f"{log_file_dir}/{kernel_name}_synth{timestamp}.log"
+    if hls_flow == "vitis":
+        final_feedback = {
+            "csim_feedback": None,
+            "synth_feedback": None,
+        }
 
-    final_feedback = {
-        "csim_feedback": None,
-        "synth_feedback": None,
-    }
-    # Read in the log file from the HLS synthesis attempt
-    try:
-        with open(f"{solutions_path}{saved_log_file}", "r") as f:
-            old_log = f.read()
-            with open(log_file, "w") as log:
-                log.write(old_log)
-                log.write("\n\n")
-    except FileNotFoundError:
-        logger.error(
-            f"The file {solutions_path}{saved_log_file} does not exist."
-        )
-        old_log = None
-    # Check if the synthesis was successful then add the data to json
-    try:
-        with open(in_report_file, 'r') as file:
-            report = file.read()
-            summary = parse_synth_report(in_report_file)
-            with open(log_file, "a") as log:
-                log.write("\n\n")
-                log.write(report)
-                log.write("\n\n")
-                
-            synth_feedback = gather_feedback(old_log, summary, goals=goals)
+        # Read in the log file from the HLS synthesis attempt
+        try:
+            with open(f"{solutions_path}{saved_log_file}", "r") as f:
+                old_log = f.read()
+                with open(log_file, "w") as log:
+                    log.write(old_log)
+                    log.write("\n\n")
+        except FileNotFoundError:
+            logger.error(
+                f"The file {solutions_path}{saved_log_file} does not exist."
+            )
+            old_log = None
+        # Check if the synthesis was successful then add the data to json
+        try:
+            with open(in_report_file, 'r') as file:
+                report = file.read()
+                summary = parse_synth_report(in_report_file)
+                with open(log_file, "a") as log:
+                    log.write("\n\n")
+                    log.write(report)
+                    log.write("\n\n")
+                    
+                synth_feedback = gather_feedback(old_log, summary, goals=goals)
 
-    except FileNotFoundError:
-        synth_feedback = gather_feedback(old_log, goals=goals)
+        except FileNotFoundError:
+            synth_feedback = gather_feedback(old_log, goals=goals)
 
-        logger.error(
-            f"The file {in_report_file} does not exist."
-        )
-    
-    # Check if the simulation was successful then add the data to json
-    try:
-        with open(old_sim_log_file, 'r') as file:
-            report = file.read()
-            with open(log_file, "a") as log:
-                log.write("\n\n")
-                log.write(report)
-                log.write("\n\n")
-                
-            sim_feedback = parse_sim_report(old_sim_log_file)
+            logger.error(
+                f"The file {in_report_file} does not exist."
+            )
+        
+        # Check if the simulation was successful then add the data to json
+        try:
+            with open(old_sim_log_file, 'r') as file:
+                report = file.read()
+                with open(log_file, "a") as log:
+                    log.write("\n\n")
+                    log.write(report)
+                    log.write("\n\n")
+                    
+                sim_feedback = parse_sim_report(old_sim_log_file)
+                # with open(out_data_path, 'w') as of:
+                #     json.dump(feedback, of, indent=4)
+        except FileNotFoundError:
+            sim_feedback = parse_sim_report()
             # with open(out_data_path, 'w') as of:
             #     json.dump(feedback, of, indent=4)
-    except FileNotFoundError:
-        sim_feedback = parse_sim_report()
-        # with open(out_data_path, 'w') as of:
-        #     json.dump(feedback, of, indent=4)
-        logger.error(
-            f"The file {old_sim_log_file} does not exist."
-        )
-    
-    
-    final_feedback["csim_feedback"] = sim_feedback
-    final_feedback["synth_feedback"] = synth_feedback    
+            logger.error(
+                f"The file {old_sim_log_file} does not exist."
+            )
+        
+        
+        final_feedback["csim_feedback"] = sim_feedback
+        final_feedback["synth_feedback"] = synth_feedback  
+
+
+    elif hls_flow == "dynarapid":
+        final_feedback = {
+            "sim_feedback": None,
+            "compile_feedback": None,
+        }
+
+        # Check if the simulation was successful then add the data to json
+        try:
+            with open(old_sim_log_file, 'r') as file:
+                report = file.read()
+                with open(log_file, "a") as log:
+                    log.write("\n\n")
+                    log.write(report)
+                    log.write("\n\n")
+                    
+                sim_feedback = parse_sim_report(old_sim_log_file)
+                # with open(out_data_path, 'w') as of:
+                #     json.dump(feedback, of, indent=4)
+        except FileNotFoundError:
+            sim_feedback = parse_sim_report()
+            # with open(out_data_path, 'w') as of:
+            #     json.dump(feedback, of, indent=4)
+            logger.error(
+                f"The file {old_sim_log_file} does not exist."
+            )
+        final_feedback["sim_feedback"] = sim_feedback
+        
+  
         
     return final_feedback
 

@@ -52,7 +52,7 @@ In cases where you are asked to improve existing code, Prioritize these goals to
 Analyze the given feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
-def feedback_prompt(prev_code, feedback):
+def feedback_prompt(prev_code, feedback, hls_flow="vitis"):
     return f"""
         Here is my C HLS code:
 
@@ -192,13 +192,13 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
                 csynth_begin = datetime.now()
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow, goals=goals)
                 synth_returncode = synth_output.returncode
                 csynth_end = datetime.now()
                 logger.debug(f"CYNTH elapsed time: {csynth_end-csynth_begin}")  
             except hlseval.CsynthTimeoutError as e:
                 logger.warning("Vitis timed out")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow, goals=goals)
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
@@ -209,7 +209,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
                 logger.debug("vitis Feedback before Adding new Errors")
                 synth_returncode = 1
         else:
-            vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+            vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow, goals=goals)
             vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
@@ -238,8 +238,20 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             logger.warning("Vitis timed out on Simulation")
         dsim_end = datetime.now()
         logger.debug(f"Dynarapid Simulation elapsed time: {dsim_end-dsim_begin}")
+        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow)
+    
 
-        returncode, feedback = run_dynarapid(kernel_name, solutions_path)
+        returncode, stdout = run_dynarapid(kernel_name, solutions_path)
+
+        dynarapid_feedback['compile_feedback'] = {
+            "returncode": returncode,
+            "stdout": stdout,
+        }
+        out_data_path = f"{solutions_path}/{kernel_name}_data.json"
+        hlseval.save_feedback_data(out_data_path, dynarapid_feedback)
+        feedback = dynarapid_feedback
+
+
 
 
     return returncode, feedback
