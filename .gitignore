@@ -21,4 +21,5 @@ temp.cc
 rag_data/*
 storage/**
 results/tests_wo_rag/*
+**.log
 results/*
