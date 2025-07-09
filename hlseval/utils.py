@@ -11,20 +11,55 @@ import sys
 import traceback  
 import importlib.util
 import logging
+from ml_dtypes import bfloat16
 from .hlscoder import HLSCoder
 
 logger = logging.getLogger("UTILS")
 
-# def generate_inputs(inputs_dict, seed=0):
-#     """
-#     generate the inputs that will be used in the kernel function.
-#     """
-#     np.random.seed(seed)
-#     for key, value in inputs_dict.items():
-#         if key == "io_types":
-#         if isinstance(value, np.ndarray):
-#             inputs_dict[key] = np.random.uniform(-1, 1, value.shape).astype(value.dtype)
-#     return inputs_dict
+def generate_inputs(inputs_info, seed=0):
+    """
+    generate the inputs that will be used in the kernel function.
+    """
+    np.random.seed(seed)
+    if seed == -1:
+        # Load from a saved npz file if seed is -1
+        data = np.load('data.npz')
+        inputs = [data[x['name']] for x in inputs_info]
+
+    else: 
+        # Generate random inputs based on the provided inputs_info
+        inputs = []
+        for info in inputs_info:
+            shape = info.get('shape', (1,))
+            dtype = info['dtype']
+            min_val = info.get('min', 0)
+            max_val = info.get('max', 127)
+            if info['iotype'] == "in" or info['iotype'] == "inout":
+                if info['array_dimension'] > 0:
+                    # Generate a random array of the specified shape and dtype
+                    if "float" in dtype:
+                        # Generate a float array
+                        inputs.append(np.random.uniform(min_val, max_val, size=shape).astype(dtype).flatten())
+                    elif "int" in dtype:
+                        inputs.append(np.random.randint(min_val, max_val, size=shape, dtype=dtype).flatten())
+
+                else:
+                    # Generate a scalar value
+                    if "float" in info['dtype']:
+                        inputs.append(np.random.uniform(min_val, max_val).astype(bfloat16))
+                    elif "int" in info['dtype']:
+                        inputs.append(np.random.randint(min_val, max_val, dtype=dtype))
+            elif info['iotype'] == "out":
+                output = np.zeros(shape, dtype=dtype)
+                if info['array_dimension'] > 0:
+                    # Flatten the output array to match the expected shape
+                    inputs.append(output.flatten())
+                else:
+                    # For scalar outputs, just append the zero value
+                    inputs.append(output.item())
+
+
+    return [inputs, inputs_info]
 
 def import_module_functions(kernel_name, function_names=None):      
     """      
