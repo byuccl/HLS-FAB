@@ -191,6 +191,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     testbench_code.append("#include <cmath>") # For std::abs
     if hls_flow == "vitis":
         testbench_code.append("#include <ap_int.h>") # For ap_int
+        testbench_code.append("#include <ap_float.h>") # For ap_float
     testbench_code.append("#include <limits>") # For numeric_limits epsilon
     testbench_code.append("#include \"nlohmann/json.hpp\"") # Assuming nlohmann/json.hpp is available in include path
     testbench_code.append("#include \"utils.hpp\"")    # Floating-point comparison helper function

@@ -149,6 +149,9 @@ def parse_sim_report(file_path=None):
         try:
             with open(file_path, 'r') as f:
                 lines = f.readlines()
+        except UnicodeDecodeError:
+            with open(file_path, 'r', encoding='latin-1') as f:
+                lines = f.readlines()
         except FileNotFoundError:
             logger.error(f"The file {file_path} does not exist.")
             return feedback
@@ -285,6 +288,17 @@ def gather_parsed_data(kernel_name, model="gpt4o", hls_flow="vitis", attempt=1, 
         # Check if the simulation was successful then add the data to json
         try:
             with open(old_sim_log_file, 'r') as file:
+                report = file.read()
+                with open(log_file, "a") as log:
+                    log.write("\n\n")
+                    log.write(report)
+                    log.write("\n\n")
+                    
+                sim_feedback = parse_sim_report(old_sim_log_file)
+                # with open(out_data_path, 'w') as of:
+                #     json.dump(feedback, of, indent=4)
+        except UnicodeDecodeError:
+            with open(old_sim_log_file, 'r', encoding='latin-1') as file:
                 report = file.read()
                 with open(log_file, "a") as log:
                     log.write("\n\n")

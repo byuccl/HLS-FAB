@@ -8,9 +8,9 @@ num_values = 16384
 function_signature = "void dot_product_float32(float *in_vector1, float *in_vector2, float *result)"
 
 description = f"""
-This HLS kernel implements a function to calculate the dot product of two input vectors containing 64 values of the 32-bit floating point values."
+This HLS kernel implements a function to calculate the dot product of two input vectors containing {num_values} values of the 32-bit floating point values."
 Parameters to the function include three float32 pointers:
-    The first and second pointers point to arrays containing {num_values} float values. These are the imput vectors.
+    The first and second pointers point to arrays containing {num_values} float values. These are the input vectors.
     The third pointer points to a single float value to be used as the output.
 """
 
