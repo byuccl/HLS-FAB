@@ -4,7 +4,7 @@ import numpy as np
 import re  
 import subprocess  
 import json
-from hlseval.utils import get_ap_cpp_type_str, import_module_functions, get_norm_cpp_type_str
+from hlseval.utils import get_ap_cpp_type_str, import_module_functions, get_std_cpp_type_str
 
 logger = logging.getLogger("CSIM")
 
@@ -242,7 +242,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
         array_dimension = var_info["array_dimension"]
         in_out_status = var_info["in_out"]
         dtype_str = var_info["dtype"] # e.g., "int32", "float64", "int", "float"
-        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_norm_cpp_type_str(dtype_str)
+        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
         total_elements = var_info.get('total_elements', 1) # Total elements for flattening
         # Handle scalar (dimension 0)
@@ -311,7 +311,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
         array_dimension = var_info["array_dimension"]
         in_out_status = var_info["in_out"]
         dtype_str = var_info["dtype"]
-        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_norm_cpp_type_str(dtype_str)
+        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
         total_elements = var_info.get('total_elements', 1) # Total elements for flattening
         

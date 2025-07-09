@@ -15,6 +15,16 @@ from .hlscoder import HLSCoder
 
 logger = logging.getLogger("UTILS")
 
+# def generate_inputs(inputs_dict, seed=0):
+#     """
+#     generate the inputs that will be used in the kernel function.
+#     """
+#     np.random.seed(seed)
+#     for key, value in inputs_dict.items():
+#         if key == "io_types":
+#         if isinstance(value, np.ndarray):
+#             inputs_dict[key] = np.random.uniform(-1, 1, value.shape).astype(value.dtype)
+#     return inputs_dict
 
 def import_module_functions(kernel_name, function_names=None):      
     """      
@@ -80,6 +90,21 @@ def get_ap_cpp_type_str(dtype_str):
         "int16": "ap_int<16>", "uint16": "ap_uint<16>",
         "int32": "ap_int<32>", "uint32": "ap_uint<32>",
         "int64": "ap_int<64>", "uint64": "ap_uint<64>",
+        "float16": "ap_float<16,5>",
+        "bfloat16": "ap_float<16,8>",
+        "float32": "float", "float64": "double",
+        "bool": "bool",
+        "int": "int",
+        "float": "float",
+    }
+    return dtype_map.get(dtype_str.lower(), "void*")
+
+def get_std_cpp_type_str(dtype_str):
+    dtype_map = {
+        "int8": "int8_t", "uint8": "uint8_t",
+        "int16": "int16_t", "uint16": "uint16_t",
+        "int32": "int32_t", "uint32": "uint32_t",
+        "int64": "int64_t", "uint64": "uint64_t",
         "float16": "half_float_type",
         "float32": "float", "float64": "double",
         "bool": "bool",
@@ -88,6 +113,7 @@ def get_ap_cpp_type_str(dtype_str):
     }
     return dtype_map.get(dtype_str.lower(), "void*")
 
+#Never Used
 def get_norm_cpp_type_str(dtype_str):
     dtype_map = {
         "int8": "char", "uint8": "unsigned char",
@@ -102,8 +128,7 @@ def get_norm_cpp_type_str(dtype_str):
     }
     return dtype_map.get(dtype_str.lower(), "void*")
 
-
-
+#used in ever generate
 def generate_examples(generate_function):
     # Example 1
     example1 = generate_function()
@@ -141,6 +166,7 @@ def get_kernel_code(hls_flow, test: dict, solutions_path: str = None) -> str:
             
         return srccode
 
+#Never Used
 def extract_buffers(test):
     """Specific helper for the AIEval dataset - parses the test dictionary and returns
     input buffers, output buffers and RTPs as separate lists.
@@ -164,6 +190,7 @@ def extract_buffers(test):
     
     return input_buffers, output_buffers, rtps
 
+#never Used
 def trace_to_json(trace_file: str, mlir_file: str, output_name: str="trace.json"):
     """Subprocesses wrapper over parse_trace.py utility.
 
@@ -196,6 +223,7 @@ def trace_to_json(trace_file: str, mlir_file: str, output_name: str="trace.json"
         logger.error(f"Trace failed\n{e.output}")
         return e.output
 
+#never USed
 def get_cycles(trace_path):
     """This helper function should only be used to extract cycle counts
     from NPUEval trace files where the expectation is to have exactly 1 of
@@ -218,6 +246,7 @@ def get_cycles(trace_path):
     except:
         return np.inf
 
+#never Used
 def get_vector_time(trace):
     """This function extracts the total time spent on the vectorized unit
     from an NPUEval AIE trace (this must have exactly 1 event0 and 1 event1
@@ -260,8 +289,7 @@ def get_vector_time(trace):
             
     return total_duration/(end-start)
 
-
-# Helper function to determine C++ type for an input  
+#Never used
 def get_cpp_type(input_val, type_info=None):  
     """Determine the appropriate C++ type for an input value
         input_value: variable that we want to find the type.
@@ -309,6 +337,7 @@ def get_cpp_type(input_val, type_info=None):
     else:  
         return "void*"  # Default for unknown types  
 
+#USed in ever generate
 def generate_types(inputs):  
     """
     Generate comprehensive type information for a list of inputs/outputs,
@@ -391,9 +420,9 @@ def generate_types(inputs):
         lower_var_name = var_name.lower()
         if "inout" in lower_var_name:
             type_dict["in_out"] = "inout"
-        elif "output" in lower_var_name:
+        elif "output" in lower_var_name or "out" in lower_var_name:
             type_dict["in_out"] = "out"
-        elif "input" in lower_var_name:
+        elif "input" in lower_var_name or "in" in lower_var_name:
             type_dict["in_out"] = "in"
         else:
             # Default to "in" if no clear convention is found in the name
