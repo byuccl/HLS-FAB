@@ -147,8 +147,10 @@ def parse_sim_report(file_path=None):
             with open(file_path, 'r') as f:
                 lines = f.readlines()
         except FileNotFoundError:
-            logger.error(f"The file {file_path} does not exist.")
+            logger.warning(f"The file {file_path} does not exist.")
             return feedback
+    else:
+        return feedback
         
     
     # Regex patterns for different types of errors/warnings
@@ -224,7 +226,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
                 log.write(old_log)
                 log.write("\n\n")
     except FileNotFoundError:
-        logger.error(
+        logger.warning(
             f"The file {solutions_path}{saved_log_file} does not exist."
         )
         old_log = None
@@ -243,7 +245,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
     except FileNotFoundError:
         synth_feedback = gather_feedback(old_log, goals=goals)
 
-        logger.error(
+        logger.warning(
             f"The file {in_report_file} does not exist."
         )
     
@@ -263,7 +265,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
         sim_feedback = parse_sim_report()
         # with open(out_data_path, 'w') as of:
         #     json.dump(feedback, of, indent=4)
-        logger.error(
+        logger.warning(
             f"The file {old_sim_log_file} does not exist."
         )
     

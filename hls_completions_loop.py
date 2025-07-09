@@ -184,7 +184,19 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
                 logger.debug("Writing to file")
-                file.write(hlseval.get_kernel_code(hls_flow, test, solutions_path))
+                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+                if kernel_code == None:
+                        add_table_row(
+                            logfile,
+                            kernel_name, 
+                            llm_elapsed_time, 
+                            dynamatic_elapsed_time, 
+                            csim_elapsed_time, 
+                            csynth_elapsed_time
+                        )
+                        return 1, "Failed to produce kernel code"
+                else:
+                    file.write(kernel_code)
         except FileExistsError:
             logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
 
@@ -227,7 +239,19 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
                 logger.debug("Writing to file")
-                file.write(hlseval.get_kernel_code(hls_flow, test, solutions_path))
+                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+                if kernel_code == None:
+                        add_table_row(
+                            logfile,
+                            kernel_name, 
+                            llm_elapsed_time, 
+                            dynamatic_elapsed_time, 
+                            csim_elapsed_time, 
+                            csynth_elapsed_time
+                        )
+                        return 1, "Failed to produce kernel code"
+                else:
+                    file.write(kernel_code)
         except FileExistsError:
             logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
     
@@ -287,7 +311,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
-        returncode, feedback, dynamatic_elapsed_time = run_dynarapid(kernel_name, solutions_path)
+        returncode, feedback, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt_num=attempt, model=model, rapidwrite=True)
 
     add_table_row(
         logfile,
