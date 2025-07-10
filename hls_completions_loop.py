@@ -124,6 +124,9 @@ def feedback_prompt(prev_code, feedback):
         Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
         """
 
+byu_gpt_url2 = "https://api.openai.com/v1/completions"
+
+
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
 amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
 OpenAI_o1_url = "https://llm-api.amd.com/openai/deployments/OpenAI-o1/chat/completions"
