@@ -1,7 +1,7 @@
 __all__ = ["prompt_constructor", "utils"]
 
 from .prompt_constructor import PromptConstructor
-from .utils import get_kernel_code,  get_cpp_type, generate_types, generate_examples, import_module_functions, get_ap_cpp_type_str, get_norm_cpp_type_str
+from .utils import get_kernel_code,  get_cpp_type, generate_types, generate_examples, import_module_members, get_ap_cpp_type_str, get_norm_cpp_type_str, generate_inputs
 from .utils import generate_one_completion
 from .hlscoder import HLSCoder
 from .parser import gather_parsed_data, save_feedback_data

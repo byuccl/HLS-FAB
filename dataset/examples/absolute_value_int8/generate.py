@@ -43,27 +43,27 @@ inputs_info = [
 # A function to return the inputs and types to the function. 
 # Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 
 # Types are determined by the 'generate_types' function.
-def generate_inputs(seed=0):  
-    if seed == -1: 
-        data = np.load('data.npz')  
-        input_vector = data["input_vector"]
-        output_vector = data["output_vector"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly  
-        np.random.seed(seed)  
+# def generate_inputs(seed=0):  
+#     if seed == -1: 
+#         data = np.load('data.npz')  
+#         input_vector = data["input_vector"]
+#         output_vector = data["output_vector"]
+#     else:
+#         # Set a seed so the example inputs and outputs work correctly  
+#         np.random.seed(seed)  
 
-        input_vector = np.random.randint(-128, 127, size=(num_values), dtype=np.int8)  
-        output_vector = np.zeros(num_values, dtype=np.int8)  
-    inputs = [input_vector, output_vector]  
+#         input_vector = np.random.randint(-128, 127, size=(num_values), dtype=np.int8)  
+#         output_vector = np.zeros(num_values, dtype=np.int8)  
+#     inputs = [input_vector, output_vector]  
 
-    types = generate_types(inputs)  
-    return {"inputs": inputs, "types": types}  
+#     types = generate_types(inputs)  
+#     return {"inputs": inputs, "types": types}  
 
 # A function to generate a correct solution based on sample input vectors
 def behavioral(input_vector):
     return np.abs(input_vector)
 
-examples = generate_examples(generate_inputs)
+examples = generate_examples(inputs_info=inputs_info)
 
 # Create the prompt constructor.
 pc = PromptConstructor(

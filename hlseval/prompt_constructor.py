@@ -192,7 +192,7 @@ class PromptConstructor:
             # Loop through saving the inputs and rtps and the index for the outputs in order to generate the test vectors
             for i, arr in enumerate(arrays):
                 meta = types[i]
-                in_out = meta["in_out"]
+                in_out = meta["iotype"]
                 array_dim = meta["array_dimension"]
                 # Check if the array is an RTP or a buffer
                 if in_out == "in":

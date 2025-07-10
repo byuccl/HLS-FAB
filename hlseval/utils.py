@@ -34,8 +34,8 @@ def generate_inputs(inputs_info, seed=0):
             dtype = info['dtype']
             min_val = info.get('min', 0)
             max_val = info.get('max', 127)
-            if info['iotype'] == "in" or info['iotype'] == "inout":
-                if info['array_dimension'] > 0:
+            if info['iotype'] == "in" or info['iotype'] == "inout": #if an input or any kind it needs some data
+                if info['array_dimension'] > 0: 
                     # Generate a random array of the specified shape and dtype
                     if "float" in dtype:
                         # Generate a float array
@@ -46,10 +46,10 @@ def generate_inputs(inputs_info, seed=0):
                 else:
                     # Generate a scalar value
                     if "float" in info['dtype']:
-                        inputs.append(np.random.uniform(min_val, max_val).astype(bfloat16))
+                        inputs.append(np.random.uniform(min_val, max_val, 1).astype(dtype).item())
                     elif "int" in info['dtype']:
                         inputs.append(np.random.randint(min_val, max_val, dtype=dtype))
-            elif info['iotype'] == "out":
+            elif info['iotype'] == "out": # if its an output, we just need to create a zero array of the correct shape
                 output = np.zeros(shape, dtype=dtype)
                 if info['array_dimension'] > 0:
                     # Flatten the output array to match the expected shape
@@ -59,16 +59,16 @@ def generate_inputs(inputs_info, seed=0):
                     inputs.append(output.item())
 
 
-    return [inputs, inputs_info]
+    return { "inputs": inputs, "types": inputs_info } 
 
-def import_module_functions(kernel_name, function_names=None):      
+def import_module_members(kernel_name, member_names=None):      
     """      
     Dynamically import specified functions from the kernel's generate.py file.      
     """      
-    if function_names is None:      
-        function_names = ["generate_inputs", "behavioral"]      
+    if member_names is None:      
+        member_names = ["behavioral"]      
           
-    # Get the project root directory (2 levels up from results/testing)      
+    # Get the project root directory (1 level up from this file)      
     project_root = os.path.dirname(os.path.dirname(__file__))     
      
           
@@ -108,17 +108,17 @@ def import_module_functions(kernel_name, function_names=None):
         return None      
           
     # Create a dictionary to hold the requested functions      
-    functions = {}      
+    members = {}      
           
     # Get the requested functions      
-    for func_name in function_names:      
-        if hasattr(module, func_name):      
-            functions[func_name] = getattr(module, func_name)      
+    for mem_name in member_names:      
+        if hasattr(module, mem_name):      
+            members[mem_name] = getattr(module, mem_name)      
         else:      
-            logger.warning(f"Module {module_path} does not have a {func_name} function")      
-          
-    return functions    
- 
+            logger.warning(f"Module {module_path} does not have a {mem_name} member")      
+
+    return members
+
 def get_ap_cpp_type_str(dtype_str):
     dtype_map = {
         "int8": "ap_int<8>", "uint8": "ap_uint<8>",
@@ -164,17 +164,9 @@ def get_norm_cpp_type_str(dtype_str):
     return dtype_map.get(dtype_str.lower(), "void*")
 
 #used in ever generate
-def generate_examples(generate_function):
-    # Example 1
-    example1 = generate_function()
-    example1_inputs = example1["inputs"]
-    example1_types = example1["types"]
-
-    # Example 2
-    example2 = generate_function(seed=1)
-    example2_inputs = example2["inputs"]
-    example2_types = example2["types"]
-
+def generate_examples(inputs_info):
+    example1 = generate_inputs(inputs_info=inputs_info, seed=0)
+    example2 = generate_inputs(inputs_info=inputs_info, seed=1)
     # Combine the inputs and types into a single list
     examples = [example1, example2]
     return examples

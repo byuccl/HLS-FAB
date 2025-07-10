@@ -131,6 +131,7 @@ byu_gpt_url = "https://api.openai.com/v1/chat/completions"
 amd_gpt_4o_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
 amd_gpt_4_1_url = "https://llm-api.amd.com/azure/engines/dvue-aoai-001-gpt-4.1/chat/completions"
 amd_llama_3_2_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/Llama-3.2-11B-Vision/chat/completions?api-version=2023-05-15"
+byu_llama_url = "https://api.llama.com/v1/chat/completions"
 amd_deepseek_r1_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/deepseek-r1/chat/completions?api-version=2023-05-15"
 byu_antrhopic_url = "https://api.anthropic.com/v1/complete"
 byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
@@ -139,11 +140,11 @@ amd_gemini_2_url = "https://llm-api.amd.com/vertex/gemini/deployments/gemini-2.0
 
 model_parameters = {
                         "gpt-4o": {"amd_url": amd_gpt_4o_url, "byu_url": byu_gpt_url},
-                        "gpt-4.1": {"amd_url": amd_gpt_4_1_url},
+                        "gpt-4.1": {"amd_url": amd_gpt_4_1_url, "byu_url": byu_gpt_url},
                         "Claude-3.5": {"amd_url": amd_claude_3_5_url, "byu_url": byu_anthropic_url2},
-                        "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url},
-                        "Deepseek-R1": {"amd_url": amd_deepseek_r1_url},
-                        "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url}
+                        "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url, "byu_url": byu_gpt_url},
+                        "Deepseek-R1": {"amd_url": amd_deepseek_r1_url, "byu_url": byu_gpt_url},
+                        "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
                     }
     
 def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feedback=None, goals=None):
@@ -425,7 +426,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash"]
+    models = ["gpt-4o", "gpt-4.1"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided

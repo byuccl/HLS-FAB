@@ -4,7 +4,7 @@ import numpy as np
 import re  
 import subprocess  
 import json
-from hlseval.utils import get_ap_cpp_type_str, import_module_functions, get_std_cpp_type_str
+from hlseval.utils import get_ap_cpp_type_str, import_module_members, get_std_cpp_type_str, generate_inputs
 
 logger = logging.getLogger("CSIM")
 
@@ -240,7 +240,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     for var_info in all_var_metadata:
         var_name = var_info["name"]
         array_dimension = var_info["array_dimension"]
-        in_out_status = var_info["in_out"]
+        in_out_status = var_info["iotype"]
         dtype_str = var_info["dtype"] # e.g., "int32", "float64", "int", "float"
         cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
@@ -309,7 +309,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     for var_info in all_var_metadata:
         var_name = var_info["name"]
         array_dimension = var_info["array_dimension"]
-        in_out_status = var_info["in_out"]
+        in_out_status = var_info["iotype"]
         dtype_str = var_info["dtype"]
         cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
@@ -467,16 +467,15 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
     for name in kernel_names:
         logger.info(f"Processing kernel for JSON reference data: {name}")
         
-        functions = import_module_functions(name, ["generate_inputs", "behavioral"])
+        members = import_module_members(name, ["inputs_info","behavioral"])
         
         
-        if not functions or "generate_inputs" not in functions:
-            logger.warning(f"Could not import generate_inputs for {name}, skipping...")
-            all_results[name] = {"status": "error", "message": "Could not import generate_inputs"}
+        if not members or "inputs_info" not in members:
+            logger.warning(f"Could not import inputs info for {name}, skipping...")
+            all_results[name] = {"status": "error", "message": "Could not import inputs_info"}
             continue
-
-        generate_inputs_func = functions["generate_inputs"]
-        generation_result = generate_inputs_func(np.int64(seed))
+        inputs_info = members["inputs_info"]
+        generation_result = generate_inputs(inputs_info, np.int64(seed))
         
         if isinstance(generation_result, dict) and "inputs" in generation_result:
             inputs_list = generation_result["inputs"]
@@ -501,13 +500,13 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             var_name = type_info["name"]
             current_value = inputs_list[i] # Get the actual value from the inputs_list
 
-            if type_info["in_out"] in ["in", "inout"]:
+            if type_info["iotype"] in ["in", "inout"]:
                 # These are inputs to the kernel, so they go into the JSON's "inputs"
                 json_inputs_dict[var_name] = current_value
                 # Also collect for behavioral function call (copy if mutable)
                 input_arg_values_for_behavioral.append(np.copy(current_value) if isinstance(current_value, np.ndarray) else current_value)
 
-            if type_info["in_out"] in ["out", "inout"]:
+            if type_info["iotype"] in ["out", "inout"]:
                 # These are outputs from the kernel. We need their names to map behavioral results.
                 json_inputs_dict[var_name] = current_value
                 # All inputs and outputs are inputs to the c++ kernel. 
@@ -516,8 +515,8 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             # For 'in' only types, they don't get added to json_expected_outputs_dict
             # For 'out' only types, they are not added to input_arg_values_for_behavioral
         
-        if "behavioral" in functions:
-            behavioral_func = functions["behavioral"]
+        if "behavioral" in members:
+            behavioral_func = members["behavioral"]
             try:
                 # Call behavioral with only the 'in' and 'inout' args, which are collected in order
                 behavioral_result_raw = behavioral_func(*input_arg_values_for_behavioral)
