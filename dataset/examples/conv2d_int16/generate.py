@@ -15,8 +15,8 @@ in_channels = 3
 out_channels = 16  
 
 # Calculate the dimensions of the output matrix with stride    
-output_height = int((input_height - kernel_size) / stride + 1 )     
-output_width = int((input_width - kernel_size) / stride + 1 )
+output_height = (input_height - kernel_size) // stride + 1 
+output_width = (input_width - kernel_size) // stride + 1 
 
 function_signature = """
 void conv2d_int16(ap_int<16> *input, ap_int<16> *kernel, ap_int<16> *output)
