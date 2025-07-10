@@ -188,8 +188,12 @@ def get_kernel_code(hls_flow, test: dict, solutions_path: str = None) -> str:
     with open(os.path.join(solutions_path, f"{test['kernel_name']}.json"), 'r') as sol_file:
         solution = json.load(sol_file)
         if not solution.get('code'):
-            logger.warning(f"No code available in {solutions_path} for {test['kernel_name']}")
-            return None
+            if not solution.get('content'):
+                logger.warning(f"UTILS: No code available in {solutions_path} for {test['kernel_name']}")
+                return None
+            srccode = solution['content']
+            return srccode
+
 
         srccode = solution['code']
         if hls_flow == "vitis":

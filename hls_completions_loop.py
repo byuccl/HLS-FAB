@@ -128,16 +128,22 @@ byu_gpt_url2 = "https://api.openai.com/v1/completions"
 
 
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
-amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
-OpenAI_o1_url = "https://llm-api.amd.com/openai/deployments/OpenAI-o1/chat/completions"
+amd_gpt_4o_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
+amd_gpt_4_1_url = "https://llm-api.amd.com/azure/engines/dvue-aoai-001-gpt-4.1/chat/completions"
+amd_llama_3_2_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/Llama-3.2-11B-Vision/chat/completions?api-version=2023-05-15"
+amd_deepseek_r1_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/deepseek-r1/chat/completions?api-version=2023-05-15"
 byu_antrhopic_url = "https://api.anthropic.com/v1/complete"
 byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
-amd_anthropic_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
+amd_claude_3_5_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
+amd_gemini_2_url = "https://llm-api.amd.com/vertex/gemini/deployments/gemini-2.0-flash-001/chat/completions"
 
 model_parameters = {
-                        "gpt-4o": {"amd_url": amd_gpt_url, "byu_url": byu_gpt_url},
-                        "Claude-3.5": {"amd_url": amd_anthropic_url, "byu_url": byu_anthropic_url2},
-                        "OpenAI-o1": {"amd_url": OpenAI_o1_url}
+                        "gpt-4o": {"amd_url": amd_gpt_4o_url, "byu_url": byu_gpt_url},
+                        "gpt-4.1": {"amd_url": amd_gpt_4_1_url},
+                        "Claude-3.5": {"amd_url": amd_claude_3_5_url, "byu_url": byu_anthropic_url2},
+                        "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url},
+                        "Deepseek-R1": {"amd_url": amd_deepseek_r1_url},
+                        "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url}
                     }
     
 def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feedback=None, goals=None):
@@ -248,21 +254,21 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         csim_elapsed_time = csim_end-csim_begin
         logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")
 
-        if csim_output.returncode == 0:
+        if sim_returncode == 0:
         # Run Synthesis only if CSIM was successful
             try:
                 logger.info("Running CSYNTH")
                 csynth_begin = datetime.now()
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow, goals=goals)
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
                 synth_returncode = synth_output.returncode
                 csynth_end = datetime.now()
                 csynth_elapsed_time = csynth_end-csynth_begin
                 logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
             except hlseval.CsynthTimeoutError as e:
-                logger.warning("Vitis timed out")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow, goals=goals)
+                logger.warning(" Vitis timed out")
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
@@ -273,7 +279,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
                 logger.debug("vitis Feedback before Adding new Errors")
                 synth_returncode = 1
         else:
-            vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow, goals=goals)
+            vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
             vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
@@ -418,8 +424,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=numeric_level)
     
     # Add any models you want completions run for to this list
-    # models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
-    models = ["gpt-4o"]
+    # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
+    models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
@@ -433,7 +439,8 @@ if __name__ == "__main__":
             logger.warning(f"Model {model} not recognized.")
             continue
 
-        with open (f"{model}_timing.log", "w") as logfile:
+        pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/logs/").mkdir(parents=True, exist_ok=True)
+        with open (f"results/solutions/{args.hls_flow}/{model}/logs/timing.log", "w") as logfile:
             write_table_header(logfile)
 
             for test in tests:

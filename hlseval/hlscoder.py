@@ -433,6 +433,51 @@ void my_function(...) {
         return summary + "\n\nNo specific examples found in the knowledge base, but here are general patterns to consider:\n" + general_advice
 
 
+    def process_response(self, api_response):
+        """Process the API response, handling different formats"""
+        
+        try:
+            # Check if this is a Claude-style response
+            if "content" in api_response and isinstance(api_response["content"], list):
+                # Claude format
+                content_items = api_response["content"]
+                response_text = ""
+                for item in content_items:
+                    if item.get("type") == "text":
+                        response_text += item["text"]
+                response = response_text
+            
+            # Check if this is an OpenAI-style response (Llama, DeepSeek)
+            elif "choices" in api_response and len(api_response["choices"]) > 0:
+                if "message" in api_response["choices"][0]:
+                    response = api_response["choices"][0]["message"]["content"]
+                else:
+                    response = api_response["choices"][0].get("text", "")
+            
+            # Check if this is a Gemini-style response
+            elif "candidates" in api_response and len(api_response["candidates"]) > 0:
+                candidate = api_response["candidates"][0]
+                if "content" in candidate and "parts" in candidate["content"]:
+                    # Extract text from all parts and combine
+                    parts = candidate["content"]["parts"]
+                    response = "".join(part.get("text", "") for part in parts)
+                else:
+                    # Fallback if structure is different
+                    response = str(candidate)
+            
+            else:
+                # Fallback - try to extract any text we can find
+                logger.warning("HLS CODER: Unknown response format")
+                response = str(api_response)
+            
+            logger.debug("HLS CODER: Final Response:")  
+            logger.debug("HLS CODER: " + response)  
+            
+            self.messages.append({"role": "assistant", "content": response})  
+            return response
+        except Exception as e:
+            logger.error(f"HLS CODER: Error processing response: {str(e)}")
+            return f"Error processing LLM response: {str(e)}"
 
     def count_tokens(self, text, model="gpt-4o"):  
         """Estimate token count for a given text string."""  
@@ -559,12 +604,7 @@ void my_function(...) {
         # Call the LLM API with the optimized context  
         try:  
             api_response = call_llm_api(self)  
-            response = api_response["choices"][0]["message"]["content"]  
-            
-            logger.debug("Final Response:")  
-            logger.debug("" + response)  
-            
-            self.messages.append({"role": "assistant", "content": response})  
+            response = self.process_response(api_response)
             return response  
         except Exception as e:  
             logger.error(f"Error calling LLM API: {e}")  
@@ -671,9 +711,6 @@ def compiler_check(code):
 # Function to call the LLM API  
 def call_llm_api(coder, tools=None):  
     """Call the LLM API directly"""  
-    # url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"  
-    # api_key = os.environ["API_KEY"]  
-    # headers = {"Ocp-Apim-Subscription-Key": api_key}  
       
     body = {  
         "messages": coder.messages,  
@@ -687,8 +724,11 @@ def call_llm_api(coder, tools=None):
     if coder.workflow == "byu":
         body["model"] = coder.model # The model is only needed for the byu API
 
+    if "claude" in coder.url.lower() or "gemini" in coder.url.lower(): # The Claude models needed a max_tokens value
+        body["max_tokens"] = 8000
 
-    logger.debug(f"API Request: {json.dumps(body, indent=2)}")  
+    logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
+    logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")  
 
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
       
@@ -820,6 +860,14 @@ def search_documents(coder, query: str, index) -> str:
       
     if "choices" in response and len(response["choices"]) > 0:  
         return response["choices"][0]["message"]["content"]  
+    elif "content" in api_response and isinstance(api_response["content"], list):
+            # Claude format
+            content_items = api_response["content"]
+            response_text = ""
+            for item in content_items:
+                if item.get("type") == "text":
+                    response_text += item["text"]
+            response = response_text
     else:  
         return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
 
@@ -843,10 +891,20 @@ def rag_agent(coder, index):
     if "response" in response and "error" in response["response"]:  
         return f"Error: {response['response']['error']['message']}"  
       
-    if "choices" not in response or len(response["choices"]) == 0:  
-        return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
+    if "choices" in response and len(response["choices"]) >= 0:  
       
-    assistant_message = response["choices"][0]["message"]  
+        assistant_message = response["choices"][0]["message"]  
+    elif "content" in api_response and isinstance(api_response["content"], list):
+        # Claude format
+        content_items = api_response["content"]
+        response_text = ""
+        for item in content_items:
+            if item.get("type") == "text":
+                response_text += item["text"]
+        response = response_text
+    else:
+        return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
+
     messages = coder.messages.copy()  # Start with the existing message history  
     messages.append(assistant_message)  # Add the assistant's response        
 
@@ -889,10 +947,20 @@ def rag_agent(coder, index):
         if "response" in final_response and "error" in final_response["response"]:  
             return f"Error: {final_response['response']['error']['message']}"  
           
-        if "choices" not in final_response or len(final_response["choices"]) == 0:  
-            return f"Error: Unable to get a proper final response from the LLM API. Response: {final_response}"  
+        if "choices" in final_response and len(final_response["choices"]) >= 0:  
               
-        return final_response["choices"][0]["message"]["content"]  
+            return final_response["choices"][0]["message"]["content"]  
+        elif "content" in api_response and isinstance(api_response["content"], list):
+            # Claude format
+            content_items = api_response["content"]
+            response_text = ""
+            for item in content_items:
+                if item.get("type") == "text":
+                    response_text += item["text"]
+            response = response_text
+        else:
+            return f"Error: Unable to get a proper final response from the LLM API. Response: {final_response}"  
+
     else:  
         # LLM answered directly  
         logger.info("LLM answered directly without using tools")  

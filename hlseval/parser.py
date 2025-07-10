@@ -199,7 +199,7 @@ def parse_sim_report(file_path=None):
     
     return feedback
 
-def gather_parsed_data(kernel_name, model="gpt4o", hls_flow="vitis", attempt=1, goals=None):
+def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=None):
     f""" 
         Send in the  kernel name and the model and attempt and it will search the solutions for the specific
         file where to parse data from.
