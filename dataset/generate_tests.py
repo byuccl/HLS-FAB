@@ -2,7 +2,7 @@ from openai import OpenAI
 import pathlib
 from hlseval import HLSCoder, get_kernel_code
 import json
-import argparse 
+import argparse
 import logging
 
 logger = logging.getLogger("__main__")
@@ -18,13 +18,14 @@ Both these files should follow the patterns set out by the provided examples.
 Produce only the code requested, no main, no additional examples or code, and no wrappers of any kind.
 """
 if __name__ == "__main__":
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")
 
     parser.add_argument("--log", dest='loglevel', help="desired loglevel", default="WARNING")
 
     byu_gpt_url = "https://api.openai.com/v1/chat/completions"
     amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
 
-    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")  
     parser.add_argument('workflow', choices=['amd', 'byu'],  
                         help="Which workflow to follow for API calls ('amd' or 'byu')")  
     args = parser.parse_args()  
@@ -41,21 +42,18 @@ if __name__ == "__main__":
         raise ValueError('Invalid log level: %s' % args.loglevel)
     logging.basicConfig(level=numeric_level)
 
-    # Set up prompt
-    desired_test = "mat_mult_int16"
+
+    desired_test = "argmin_float64"
     desired_test_description = (
-        """
-    Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
-
-    Matrix 1 of MxN size 16-bit integers
-    Matrix 2 of NxK size 16-bit integers 
-    Result matrix of MxK size 16-bit integers
-
-    M = 64 
-    N = 64
-    K = 64
-        """
+        """The argmin function finds the index of the minimum value in an input vector (X) of type float64 and generates the output index (Y) of the same type
+        
+        Y = argmin(X)
+                                
+        Y is the index of the minimum value in the input vector X.
+                                
+        The input vector will be 4096 values long."""
     )
+
 
     # Open example files
     with open("dataset/examples/absolute_value_int8/generate.py", "r") as f:
@@ -107,6 +105,7 @@ if __name__ == "__main__":
     attempts = 1
     coder = HLSCoder(
         model=model,
+        hls_flow="vitis",
         temperature=temperature,
         workflow=workflow,
         top_p=top_p,
@@ -115,16 +114,26 @@ if __name__ == "__main__":
         system_prompt=SYSTEM_PROMPT
     )
 
+    # try:
+    #     with open("dataset/generation_prompts.json", "r") as f:
+    #             generation_prompts = json.load(f)
+    # except FileNotFoundError:
+    #     logger.error("generation_prompts.json file not found. Please ensure it exists in the current directory.")
+    #     exit(1)
+
+
+
     pathlib.Path(f"dataset/generated_tests/{desired_test}").mkdir(parents=True, exist_ok=True)
-
-
     generate_line = f"""
     Your task is to create a 'generate.py script for the following test:\n{desired_test}: {desired_test_description}'\n\n
     Use the same naming convention for variables using input_ for inputs and output_ for outputs and inout_ for combinations of the two.
     Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
     If there are constants then include them at the top of the file as variables. 
+    Please ensure that the behavioral function performs a correct implementation of the kernel in Python, using numpy or pytorch as needed.
     """
+    logger.debug(f"Generating code for {desired_test} with prompt: {prompt + generate_line}")
     response = coder(prompt + generate_line)
+    logger.debug(f"Response for {desired_test}: {response}")
 
     result = {
         "code": coder.extract_codeblock(response["response"]),

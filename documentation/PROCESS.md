@@ -32,7 +32,7 @@ Run the `hls_completions_loop.py` in the `hlseval` main directory.
   - The output will be in a `solutions` folder in the `results` directory.
 ### 6. Analyze results: 
 Look at the results from the scripts.
-  - The dirctory which holds all the results is in the `results/solutions` directory. There are subfolders for each model and each model has different attempts. Each attempt number contains the kernels results with a file called `<kernel_name>_data.json`. This file contains the errors, warnings, performance data, and testbench results. Each attempt will show if the model used the feedback and followed the guidelines you provided it. 
+  - The directory which holds all the results is in the `results/solutions` directory. There are subfolders for each model and each model has different attempts. Each attempt number contains the kernels results with a file called `<kernel_name>_data.json`. This file contains the errors, warnings, performance data, and testbench results. Each attempt will show if the model used the feedback and followed the guidelines you provided it. 
 ### 7. Makefile Completions: 
 There is a make file rule for replacing the individual steps 3-6.
   - `make` from within the `hlseval` directory will run steps 3-6.

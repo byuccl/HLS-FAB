@@ -4,7 +4,7 @@ from datetime import datetime
 import pathlib
 import logging
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("PARSER")
 
 file_path_begin = "./results/solutions/"
 in_file_path_mid = "/hls/syn/report/"
@@ -63,6 +63,9 @@ def gather_feedback(synthesis_output=None, data=None, goals=None):
     }
     if goals is not None:
         feedback["goals"].extend(goals)
+
+    if feedback["latency"]["max"] == 0:
+        feedback["errors"].append("The maximum latency is 0, which may indicate an issue with the synthesis process.")
     return feedback
 
 # Function to parse through the HLS report and extract the relevant data
@@ -147,8 +150,10 @@ def parse_sim_report(file_path=None):
             with open(file_path, 'r') as f:
                 lines = f.readlines()
         except FileNotFoundError:
-            logger.error(f"The file {file_path} does not exist.")
+            logger.warning(f"The file {file_path} does not exist.")
             return feedback
+    else:
+        return feedback
         
     
     # Regex patterns for different types of errors/warnings
@@ -193,7 +198,7 @@ def parse_sim_report(file_path=None):
     
     return feedback
 
-def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
+def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=None):
     f""" 
         Send in the  kernel name and the model and attempt and it will search the solutions for the specific
         file where to parse data from.
@@ -202,7 +207,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
         Send the goals as ["new goal", "another new goal"]
     """
     #Create all the files needed if not already created
-    solutions_path = f"{file_path_begin}{model}/{kernel_name}/attempts_{attempt}"
+    solutions_path = f"{file_path_begin}{hls_flow}/{model}/{kernel_name}/attempts_{attempt}"
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
     
     in_report_file = f"{solutions_path}{in_file_path_mid}{kernel_name}{rpt_file_end}"
@@ -224,7 +229,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
                 log.write(old_log)
                 log.write("\n\n")
     except FileNotFoundError:
-        logger.error(
+        logger.warning(
             f"The file {solutions_path}{saved_log_file} does not exist."
         )
         old_log = None
@@ -243,7 +248,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
     except FileNotFoundError:
         synth_feedback = gather_feedback(old_log, goals=goals)
 
-        logger.error(
+        logger.warning(
             f"The file {in_report_file} does not exist."
         )
     
@@ -263,7 +268,7 @@ def gather_parsed_data(kernel_name, model="gpt4o", attempt=1, goals=None):
         sim_feedback = parse_sim_report()
         # with open(out_data_path, 'w') as of:
         #     json.dump(feedback, of, indent=4)
-        logger.error(
+        logger.warning(
             f"The file {old_sim_log_file} does not exist."
         )
     

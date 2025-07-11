@@ -27,15 +27,3 @@ with open(output_file, "w") as outfile, open(kernel_name_list, "w") as namefile:
                     #     f'#include "kernels/{kernel_name}/testbench.h"\n'
                     # )
                     namefile.write(kernel_name + "\n")
-
-# # Generate the test function map header
-# with open(test_map_header, "w") as mapfile:
-#     mapfile.write("#pragma once\n")
-#     mapfile.write('#include "kernel_testbench_includes.h"\n')
-#     mapfile.write("#include <map>\n")
-#     mapfile.write("#include <string>\n\n")
-#     mapfile.write("using TestFunc = int(*)();\n\n")
-#     mapfile.write("const std::map<std::string, TestFunc> testMap = {\n")
-#     for name in kernel_names:
-#         mapfile.write(f'    {{ "{name}", {name}_test }},\n')
-#     mapfile.write("};\n")

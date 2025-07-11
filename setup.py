@@ -11,6 +11,7 @@ setup(
         "numpy",
         "requests",
         "torch",
-        "llama_index"
+        "llama_index", 
+        "scipy",
     ]
 )

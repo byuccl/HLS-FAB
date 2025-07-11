@@ -1,0 +1,205 @@
+import os
+import json
+import csv
+import re
+from pathlib import Path
+
+def parse_timing_log(log_path):
+    """Parse the timing.log file to extract csim and csynth times."""
+    timing_data = {}
+    
+    if not os.path.exists(log_path):
+        print(f"Warning: Timing log not found at {log_path}")
+        return timing_data
+    
+    with open(log_path, 'r') as f:
+        content = f.read()
+    
+    # Extract rows from the timing table
+    rows = re.findall(r'\|\s+([^|]+)\s+\|\s+([^|]+)\s+\|\s+([^|]+)\s+\|\s+([^|]+)\s+\|\s+([^|]+)\s+\|', content)
+    
+    # Skip the header row
+    for row in rows[1:]:
+        kernel = row[0].strip()
+        
+        # Extract attempt number from kernel name if present
+        kernel_parts = kernel.split('_')
+        if kernel_parts[-2] == "attempts" and kernel_parts[-1].isdigit():
+            attempt = int(kernel_parts[-1])
+            kernel_name = "_".join(kernel_parts[:-2])
+            key = f"{kernel_name}_{attempt}"
+        else:
+            # Use the kernel name directly if no attempt is in the name
+            key = kernel
+        
+        csim_time = row[3].strip() if len(row) > 3 else '-'
+        csynth_time = row[4].strip() if len(row) > 4 else '-'
+        
+        timing_data[key] = {
+            'csim_time': csim_time,
+            'csynth_time': csynth_time
+        }
+    
+    return timing_data
+
+def create_csv(base_dir, output_file):
+    """Process all data and create a CSV file."""
+    # Define the models and kernels to process
+    models = ['gpt-4o', 'gpt-4.1', 'Claude-3.5', 'Gemini-2.0-Flash', 'Llama-3_2-11B']
+    kernels = [
+        'matrix_multiply_int32',
+        'relu_activation_float32',
+        'absolute_value_int8',
+        'affine_float32',
+        'dot_product_float32',
+        'conv2d_int16'
+    ]
+    
+    # Map kernel directory names to kernel names used in the CSV
+    kernel_dir_to_csv = {
+        'matrix_multiply_int32': 'matrix_multiply_int32',
+        'relu_activation_float32': 'relu_activation_float32',
+        'absolute_value_int8': 'abs_int8',
+        'affine_float32': 'affine_float',
+        'dot_product_float32': 'dot_product_float32',
+        'conv2d_int16': 'conv2d_int16'
+    }
+    
+    # Define CSV headers
+    headers = [
+        'model', 'kernel', 'attempts', 'status', 'match', 'errors', 'csim_time',
+        'synth_errors', 'fmax', 'latency', 'bram', 'dsp', 'ff', 'lut', 'csynth_time'
+    ]
+    
+    base_path = Path(base_dir)
+    
+    # Debug info
+    print(f"Base directory: {base_path}")
+    if not base_path.exists():
+        print(f"ERROR: Base directory does not exist: {base_path}")
+        return
+    
+    # Open CSV file for writing
+    with open(output_file, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(headers)
+        
+        # Process each model
+        for model in models:
+            model_dir = base_path / model
+            if not model_dir.exists():
+                print(f"Skipping model directory (not found): {model_dir}")
+                continue
+            
+            print(f"Processing model: {model}")
+                
+            # Parse timing log
+            timing_log_path = model_dir / 'logs' / 'timing.log'
+            timing_data = parse_timing_log(str(timing_log_path))
+            
+            # Process each kernel
+            for kernel_dir in kernels:
+                kernel_path = model_dir / kernel_dir
+                
+                if not kernel_path.exists():
+                    print(f"Skipping kernel directory (not found): {kernel_path}")
+                    continue
+                
+                kernel_csv_name = kernel_dir_to_csv.get(kernel_dir, kernel_dir)
+                print(f"  Processing kernel: {kernel_dir} (CSV name: {kernel_csv_name})")
+                
+                # Process each attempt
+                rows_for_kernel = []
+                for attempt in range(1, 5):
+                    attempt_dir = kernel_path / f"attempts_{attempt}"
+                    if not attempt_dir.exists():
+                        print(f"    Skipping attempt directory (not found): {attempt_dir}")
+                        continue
+                    
+                    print(f"    Processing attempt: {attempt}")
+                    
+                    data_file = attempt_dir / f"{kernel_dir}_data.json"
+                    if not data_file.exists():
+                        print(f"      Skipping data file (not found): {data_file}")
+                        continue
+                    
+                    # Parse JSON data
+                    try:
+                        with open(data_file, 'r') as f:
+                            data = json.load(f)
+                    except json.JSONDecodeError as e:
+                        print(f"      ERROR: Failed to parse JSON in {data_file}: {e}")
+                        continue
+                    
+                    # Extract data
+                    status = data.get('csim_feedback', {}).get('status', '')
+                    match = data.get('csim_feedback', {}).get('match', '')
+                    
+                    # Extract errors as string
+                    csim_errors = data.get('csim_feedback', {}).get('errors', [])
+                    if csim_errors and isinstance(csim_errors, list) and len(csim_errors) > 0:
+                        errors = f'"{csim_errors[0]}"'
+                    else:
+                        errors = '-'
+                    
+                    # Extract synthesis errors
+                    synth_errors = data.get('synth_feedback', {}).get('errors', [])
+                    if synth_errors and isinstance(synth_errors, list) and len(synth_errors) > 0:
+                        synth_errors_str = f'"{synth_errors[0]}"'
+                    else:
+                        synth_errors_str = '-'
+                    
+                    # Extract timing data
+                    timing_key = f"{kernel_dir}_{attempt}"
+                    csim_time = timing_data.get(timing_key, {}).get('csim_time', '-')
+                    csynth_time = timing_data.get(timing_key, {}).get('csynth_time', '-')
+                    
+                    # Extract synthesis data
+                    fmax = data.get('synth_feedback', {}).get('fmax', 'null')
+                    
+                    latency_data = data.get('synth_feedback', {}).get('latency', {})
+                    if latency_data and isinstance(latency_data, dict):
+                        if 'max' in latency_data and latency_data['max'] is not None:
+                            latency = latency_data['max']
+                        else:
+                            latency = '-'
+                    else:
+                        latency = 'null'
+                    
+                    resources = data.get('synth_feedback', {}).get('resources', {})
+                    bram = resources.get('bram', 'null')
+                    dsp = resources.get('dsp', 'null')
+                    ff = resources.get('ff', 'null')
+                    lut = resources.get('lut', 'null')
+                    
+                    # Create row for CSV
+                    row = [
+                        model if attempt == 1 else '',  # Only show model name for first attempt
+                        kernel_csv_name,
+                        attempt,
+                        status,
+                        match,
+                        errors,
+                        csim_time,
+                        synth_errors_str,
+                        fmax,
+                        latency,
+                        bram,
+                        dsp,
+                        ff,
+                        lut,
+                        csynth_time
+                    ]
+                    
+                    rows_for_kernel.append(row)
+                
+                # Write all rows for this kernel
+                for row in rows_for_kernel:
+                    writer.writerow(row)
+    
+    print(f"CSV file created successfully: {output_file}")
+
+# Execute the script
+base_directory = "./solutions/vitis"
+output_csv = "results_summary.csv"
+create_csv(base_directory, output_csv)

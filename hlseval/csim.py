@@ -6,7 +6,7 @@ import subprocess
 import json
 from hlseval.utils import get_cpp_type_str, import_module_functions
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("CSIM")
 
 
 class NumpyEncoder(json.JSONEncoder):  
@@ -121,7 +121,7 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
         f.write(func_declaration + "\n\n")
         f.write(f"#endif // {guard_macro}\n")
 
-    logger.info(f"CSIM: Header file generated at: {h_file_path}")
+    logger.info(f"Header file generated at: {h_file_path}")
 
     pass
 
@@ -147,7 +147,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     cpp_kernel_file_abs_path = os.path.join(model_dir, f"{kernel_name}.cpp")
 
     if not os.path.exists(cpp_kernel_file_abs_path):
-        logger.error(f"CSIM: C++ kernel file not found: {cpp_kernel_file_abs_path}")
+        logger.error(f"C++ kernel file not found: {cpp_kernel_file_abs_path}")
         return None, test_data_json_path, f"FAILED: C++ kernel file not found: {cpp_kernel_file_abs_path}"
 
     # Create the path for the testbench file
@@ -178,7 +178,11 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
             kernel_code = f.read()  
     # Generating H File
     logger.info("CSIM: Generating H File for CSIM")
-    generate_h_file(kernel_code, model_dir, kernel_name)
+    try:
+        generate_h_file(kernel_code, model_dir, kernel_name)
+    except:
+        logger.error(f"CSIM: Error writing C++ testbench file: {e}")
+        return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
     
     # --- C++ Testbench Code Generation ---
     testbench_code = []
@@ -311,7 +315,8 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
         dtype_str = var_info["dtype"]
         cpp_base_type = get_cpp_type_str(dtype_str)
         shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
-
+        total_elements = var_info.get('total_elements', 1) # Total elements for flattening
+        
         if in_out_status in ["out", "inout"]:
             # Get expected values from JSON
             testbench_code.append(f"\n        num_mismatches = 0;")
@@ -405,13 +410,13 @@ def create_testbench(kernel_name, test_data_json_path, model_dir):
     try:
         with open(testbench_cpp_file_path, "w") as f:
             f.write("\n".join(testbench_code))
-        logger.info(f"CSIM: Generated C++ testbench source file: {testbench_cpp_file_path}")
+        logger.info(f"Generated C++ testbench source file: {testbench_cpp_file_path}")
         return testbench_cpp_file_path, test_data_json_path, "SUCCESS"
     except FileExistsError as e:
-        logger.warning(f"CSIM: C++ Testbench {testbench_cpp_file_path} already exists.")
+        logger.warning(f"C++ Testbench {testbench_cpp_file_path} already exists.")
         return testbench_cpp_file_path, test_data_json_path, f"SUCCESS: Testbench already exists: {e}"
     except Exception as e:
-        logger.error(f"CSIM: Error writing C++ testbench file: {e}")
+        logger.error(f"Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
 
 
@@ -423,13 +428,13 @@ def write_json_test_data(filename, test_cases_list):
         output_dir = os.path.dirname(filename)
         if output_dir and not os.path.exists(output_dir):
             os.makedirs(output_dir)
-            logger.info(f"CSIM: Created directory: {output_dir}")
+            logger.info(f"Created directory: {output_dir}")
 
         with open(filename, 'w') as f:
             json.dump(test_cases_list, f, indent=4, cls=NumpyEncoder)
-        logger.info(f"CSIM: Successfully wrote test data to {filename}")
+        logger.info(f"Successfully wrote test data to {filename}")
     except Exception as e:
-        logger.error(f"CSIM: Error writing test data to {filename}: {e}")
+        logger.error(f"Error writing test data to {filename}: {e}")
         raise
 
 
@@ -462,13 +467,13 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
     all_results = {} # Changed to all_results to avoid confusion with single kernel results
 
     for name in kernel_names:
-        logger.info(f"CSIM: Processing kernel for JSON reference data: {name}")
+        logger.info(f"Processing kernel for JSON reference data: {name}")
         
         functions = import_module_functions(name, ["generate_inputs", "behavioral"])
         
         
         if not functions or "generate_inputs" not in functions:
-            logger.warning(f"CSIM: Could not import generate_inputs for {name}, skipping...")
+            logger.warning(f"Could not import generate_inputs for {name}, skipping...")
             all_results[name] = {"status": "error", "message": "Could not import generate_inputs"}
             continue
 
@@ -482,7 +487,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             inputs_list = generation_result # Old format
             input_types = None # No type info
 
-        logger.info(f"CSIM: Generated raw inputs for {name}")
+        logger.info(f"Generated raw inputs for {name}")
 
         # Separate 'in' arguments for behavioral model call
         input_arg_values_for_behavioral = []
@@ -518,7 +523,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             try:
                 # Call behavioral with only the 'in' and 'inout' args, which are collected in order
                 behavioral_result_raw = behavioral_func(*input_arg_values_for_behavioral)
-                logger.info(f"CSIM: Behavioral model executed successfully for {name}")
+                logger.info(f"Behavioral model executed successfully for {name}")
 
                 # Map behavioral_result_raw to json_expected_outputs_dict
                 if isinstance(behavioral_result_raw, tuple):
@@ -540,11 +545,11 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
                     json_expected_outputs_dict[output_var_names_in_order[0]] = behavioral_result_raw
 
             except Exception as e:
-                logger.error(f"CSIM: Error running behavioral function for {name}: {e}")
+                logger.error(f"Error running behavioral function for {name}: {e}")
                 all_results[name] = {"status": "error", "message": f"Behavioral error: {e}"}
                 continue
         else:
-            logger.error(f"CSIM: No behavioral model found for {name}, skipping JSON generation.")
+            logger.error(f"No behavioral model found for {name}, skipping JSON generation.")
             all_results[name] = {"status": "error", "message": "No behavioral model"}
             continue
 
@@ -563,15 +568,15 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
         try:
             # write_json_test_data expects a list of test cases, even if it's just one
             write_json_test_data(json_output_filename, [current_test_case])
-            logger.info(f"CSIM: Generated JSON test data for {name} at: {json_output_filename}")
+            logger.info(f"Generated JSON test data for {name} at: {json_output_filename}")
         except Exception as e:
-            logger.error(f"CSIM: Failed to write JSON test data for {name}: {e}")
+            logger.error(f"Failed to write JSON test data for {name}: {e}")
             all_results[name] = {"status": "error", "message": f"JSON write error: {e}"}
             continue
 
 
         # --- NOW CALL THE NEW sim_cpp_with_inputs (Testbench File Generator) ---
-        logger.info(f"CSIM: Generating C++ testbench source file for {name}")
+        logger.info(f"Generating C++ testbench source file for {name}")
         testbench_cpp_path, json_filename_basename, generation_status = create_testbench(
             kernel_name=name,
             test_data_json_path=json_output_filename, # This is the full path to the source JSON
@@ -601,7 +606,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
     return all_results
 
 def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1"):
-    logger.info("CSIM: Preparing CSIM")
+    logger.info("Preparing CSIM")
     result = create_reference_data(kernel_name, model_dir, seed=45)
     
     project_dir = model_dir
@@ -629,7 +634,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
     result_success = "success" in result[kernel_name]["status"]
     if result_success:
         try:
-            logger.info("CSIM: Running CSIM")
+            logger.info("Running CSIM")
             sim_result = subprocess.run(
                 sim_cmd,
                 capture_output=True,
@@ -641,7 +646,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
             return sim_result
 
         except subprocess.TimeoutExpired as e:
-            logger.warning(f"CSIM: Timeout occured: {e}")
+            logger.warning(f"Timeout occured: {e}")
             # IMPORTANT: Access stdout and stderr from the exception object 'e'
             # Decode them just like you would from the result object
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
@@ -652,14 +657,14 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
 
 
         except subprocess.CalledProcessError as e: # Catch this specifically for non-zero exit codes
-            logger.error(f"CSIM: Failed with exit code {e.returncode}")
+            logger.error(f"Failed with exit code {e.returncode}")
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
             sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
             # logger.debug(sim_stdout)
             return e
 
         except Exception as e:
-            logger.error(f"CSIM: An unexpected error occurred during CSIM: {e}")
+            logger.error(f"An unexpected error occurred during CSIM: {e}")
             return e
                 
 # --- Main execution block for debugging purposes ---

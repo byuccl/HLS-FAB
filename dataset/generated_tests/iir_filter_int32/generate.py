@@ -6,15 +6,16 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 signal_length = 1024
 filter_order = 4
 
+function_signature = """void iir_filter_int32(ap_int<32> *input_signal, ap_int<32> *output_signal, ap_int<32> *a_coeffs, ap_int<32> *b_coeffs)"""
+
 description = f"""
 This HLS kernel implements an infinite impulse response (IIR) filter applied to a 32-bit integer signal.
-Parameters to the function include four int32_t pointers:
+Parameters to the function include four ap_int<32> pointers:
     The first parameter points to the start of an array of {signal_length} int32 values. This is the input signal.
     The second parameter points to the start of an array of {signal_length} int32 values. This is the output signal.
     The third parameter points to an array of {filter_order + 1} int32 values. These are the 'a' coefficients of the filter.
     The fourth parameter points to an array of {filter_order + 1} int32 values. These are the 'b' coefficients of the filter.
 """
-source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
 def generate_inputs(seed=0):
     if seed == -1: 
@@ -51,7 +52,7 @@ def behavioral(input_signal, a_coeffs, b_coeffs):
 examples = generate_examples(generate_inputs)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

@@ -17,7 +17,7 @@ from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
 from llama_index.core import MockEmbedding  
 from llama_index.core import StorageContext, load_index_from_storage  
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("HLSCODER")
 
 
 
@@ -46,23 +46,23 @@ def get_or_create_rag_components():
     global _RAG_INDEX, _EMBED_MODEL  
       
     if _RAG_INDEX is None:  
-        logger.info("HLS CODER: Creating new RAG index...")  
+        logger.info("Creating new RAG index...")  
           
         # Check if we have a saved index  
         if os.path.exists("storage"):  
             try:  
-                logger.debug("HLS CODER: Loading index from disk...")  
+                logger.debug("Loading index from disk...")  
                 # Set up the embedding model  
                 if HuggingFaceEmbedding is not None:    
                     try:    
                         _EMBED_MODEL = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")    
-                        logger.debug("HLS CODER: Using HuggingFaceEmbedding")    
+                        logger.debug("Using HuggingFaceEmbedding")    
                     except Exception as e:    
-                        logger.warning(f"HLS CODER: Problem creating HuggingFaceEmbedding: {e}")    
-                        logger.warning("HLS CODER: Falling back to MockEmbedding")    
+                        logger.warning(f"Problem creating HuggingFaceEmbedding: {e}")    
+                        logger.warning("Falling back to MockEmbedding")    
                         _EMBED_MODEL = MockEmbedding(embed_dim=1536)    
                 else:    
-                    logger.warning("HLS CODER: Using MockEmbedding")    
+                    logger.warning("Using MockEmbedding")    
                     _EMBED_MODEL = MockEmbedding(embed_dim=1536)  
                   
                 # Disable LLM in the global settings - we'll provide our own    
@@ -72,15 +72,15 @@ def get_or_create_rag_components():
                 # Load the saved index  
                 storage_context = StorageContext.from_defaults(persist_dir="storage")  
                 _RAG_INDEX = load_index_from_storage(storage_context)  
-                logger.debug("HLS CODER: Successfully loaded index from disk")  
+                logger.debug("Successfully loaded index from disk")  
             except Exception as e:  
-                logger.warning(f"HLS CODER: Problem loading index from disk: {e}")  
-                logger.warning("HLS CODER: Creating new index...")  
+                logger.warning(f"Problem loading index from disk: {e}")  
+                logger.warning("Creating new index...")  
                 _RAG_INDEX, _EMBED_MODEL = setup_rag()  
                 # Save the index for future use  
                 _RAG_INDEX.storage_context.persist("storage")  
         else:  
-            logger.warning("HLS CODER: No saved index found, creating new index...")  
+            logger.warning("No saved index found, creating new index...")  
             _RAG_INDEX, _EMBED_MODEL = setup_rag()  
             # Save the index for future use  
             _RAG_INDEX.storage_context.persist("storage")  
@@ -433,6 +433,51 @@ void my_function(...) {
         return summary + "\n\nNo specific examples found in the knowledge base, but here are general patterns to consider:\n" + general_advice
 
 
+    def process_response(self, api_response):
+        """Process the API response, handling different formats"""
+        
+        try:
+            # Check if this is a Claude-style response
+            if "content" in api_response and isinstance(api_response["content"], list):
+                # Claude format
+                content_items = api_response["content"]
+                response_text = ""
+                for item in content_items:
+                    if item.get("type") == "text":
+                        response_text += item["text"]
+                response = response_text
+            
+            # Check if this is an OpenAI-style response (Llama, DeepSeek)
+            elif "choices" in api_response and len(api_response["choices"]) > 0:
+                if "message" in api_response["choices"][0]:
+                    response = api_response["choices"][0]["message"]["content"]
+                else:
+                    response = api_response["choices"][0].get("text", "")
+            
+            # Check if this is a Gemini-style response
+            elif "candidates" in api_response and len(api_response["candidates"]) > 0:
+                candidate = api_response["candidates"][0]
+                if "content" in candidate and "parts" in candidate["content"]:
+                    # Extract text from all parts and combine
+                    parts = candidate["content"]["parts"]
+                    response = "".join(part.get("text", "") for part in parts)
+                else:
+                    # Fallback if structure is different
+                    response = str(candidate)
+            
+            else:
+                # Fallback - try to extract any text we can find
+                logger.warning("HLS CODER: Unknown response format")
+                response = str(api_response)
+            
+            logger.debug("HLS CODER: Final Response:")  
+            logger.debug("HLS CODER: " + response)  
+            
+            self.messages.append({"role": "assistant", "content": response})  
+            return response
+        except Exception as e:
+            logger.error(f"HLS CODER: Error processing response: {str(e)}")
+            return f"Error processing LLM response: {str(e)}"
 
     def count_tokens(self, text, model="gpt-4o"):  
         """Estimate token count for a given text string."""  
@@ -461,7 +506,7 @@ void my_function(...) {
         
         # Count tokens in current messages  
         total_tokens = self.get_messages_token_count(self.messages, self.model)  
-        logger.debug(f"HLS CODER: Current context size: {total_tokens} tokens")  
+        logger.debug(f"Current context size: {total_tokens} tokens")  
         
         # If we're under the limit, no need to truncate  
         if total_tokens <= max_tokens:  
@@ -500,7 +545,7 @@ void my_function(...) {
         
         # Log the new token count  
         new_tokens = self.get_messages_token_count(self.messages, self.model)  
-        logger.debug(f"HLS CODER: Reduced context size from {total_tokens} to {new_tokens} tokens")  
+        logger.debug(f"Reduced context size from {total_tokens} to {new_tokens} tokens")  
 
     def generate_code(self):  
         """Lightweight wrapper to generate a response using OpenAI API with strict context management."""  
@@ -539,13 +584,13 @@ void my_function(...) {
                     ]  
                 logger.debug(self.messages)
             except Exception as e:  
-                logger.error(f"HLS CODER: Error during RAG processing: {e}")  
+                logger.error(f"Error during RAG processing: {e}")  
                 # Fall back to basic prompt if RAG fails  
         
         # Before calling the API, verify we're within limits  
         token_count = self.get_messages_token_count(self.messages)  
         if token_count > 7000:  # Safety margin  
-            logger.warning(f"HLS CODER: Context size {token_count} may exceed limits. Applying emergency reduction.")  
+            logger.warning(f"Context size {token_count} may exceed limits. Applying emergency reduction.")  
             # Emergency reduction - just keep system prompt and a simplified version of the last query  
             last_query = self.messages[-1]["content"]  
             if len(last_query) > 1500:  
@@ -559,15 +604,10 @@ void my_function(...) {
         # Call the LLM API with the optimized context  
         try:  
             api_response = call_llm_api(self)  
-            response = api_response["choices"][0]["message"]["content"]  
-            
-            logger.debug("HLS CODER: Final Response:")  
-            logger.debug("HLS CODER: " + response)  
-            
-            self.messages.append({"role": "assistant", "content": response})  
+            response = self.process_response(api_response)
             return response  
         except Exception as e:  
-            logger.error(f"HLS CODER: Error calling LLM API: {e}")  
+            logger.error(f"Error calling LLM API: {e}")  
             # Return an error message that can be displayed to the user  
             error_response = f"Error generating code: {str(e)}"  
             self.messages.append({"role": "assistant", "content": error_response})  
@@ -671,9 +711,6 @@ def compiler_check(code):
 # Function to call the LLM API  
 def call_llm_api(coder, tools=None):  
     """Call the LLM API directly"""  
-    # url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"  
-    # api_key = os.environ["API_KEY"]  
-    # headers = {"Ocp-Apim-Subscription-Key": api_key}  
       
     body = {  
         "messages": coder.messages,  
@@ -687,19 +724,22 @@ def call_llm_api(coder, tools=None):
     if coder.workflow == "byu":
         body["model"] = coder.model # The model is only needed for the byu API
 
+    if "claude" in coder.url.lower() or "gemini" in coder.url.lower(): # The Claude models needed a max_tokens value
+        body["max_tokens"] = 8000
 
-    logger.debug(f"HLS CODER: API Request: {json.dumps(body, indent=2)}")  
+    logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
+    logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")  
 
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
       
     # Log the raw response for debugging  
-    logger.debug(f"HLS CODER: API Response status: {response.status_code}")  
+    logger.debug(f"API Response status: {response.status_code}")  
     try:  
         response_json = response.json()  
-        logger.debug(f"HLS CODER: API Response: {json.dumps(response_json, indent=2)}")  
+        logger.debug(f"API Response: {json.dumps(response_json, indent=2)}")  
         return response_json  
     except json.JSONDecodeError:  
-        logger.debug(f"HLS CODER: Raw response: {response.text}")  
+        logger.debug(f"Raw response: {response.text}")  
         raise ValueError(f"Failed to decode JSON from API response: {response.text}")  
 
 # Convert function to OpenAI tool format with correct JSON Schema types  
@@ -746,36 +786,36 @@ def format_node_content(node):
 # Initialize the RAG components with appropriate embedding  
 def setup_rag():  
     """Initialize RAG with a multi-content splitter for diverse document types."""  
-    logger.debug("HLS CODER: Loading documents...")  
+    logger.debug("Loading documents...")  
     documents = SimpleDirectoryReader("./rag_data").load_data()  
       
-    logger.debug("HLS CODER: Creating multi-content splitter...")  
+    logger.debug("Creating multi-content splitter...")  
     content_splitter = hlseval.MultiContentSplitter()  
       
-    logger.debug("HLS CODER: Creating embedding model...")  
+    logger.debug("Creating embedding model...")  
     if HuggingFaceEmbedding is not None:  
         try:  
             embed_model = HuggingFaceEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")  
-            logger.debug("HLS CODER: Using HuggingFaceEmbedding")  
+            logger.debug("Using HuggingFaceEmbedding")  
         except Exception as e:  
-            logger.warning(f"HLS CODER: Error creating HuggingFaceEmbedding: {e}")  
-            logger.warning("HLS CODER: Falling back to MockEmbedding")  
+            logger.warning(f"Error creating HuggingFaceEmbedding: {e}")  
+            logger.warning("Falling back to MockEmbedding")  
             embed_model = MockEmbedding(embed_dim=1536)  
     else:  
-        logger.warning("HLS CODER: Using MockEmbedding")  
+        logger.warning("Using MockEmbedding")  
         embed_model = MockEmbedding(embed_dim=1536)  
       
     # Configure settings  
     Settings.llm = None  
     Settings.embed_model = embed_model  
       
-    logger.debug("HLS CODER: Splitting documents based on content type...")  
+    logger.debug("Splitting documents based on content type...")  
     # Split documents into nodes  
     nodes = content_splitter.split_documents(documents)  
       
-    logger.debug(f"HLS CODER: Created {len(nodes)} nodes from {len(documents)} documents")  
+    logger.debug(f"Created {len(nodes)} nodes from {len(documents)} documents")  
       
-    logger.debug("HLS CODER: Creating vector index...")  
+    logger.debug("Creating vector index...")  
     # Create index from nodes instead of documents  
     index = VectorStoreIndex(nodes)  
       
@@ -820,6 +860,14 @@ def search_documents(coder, query: str, index) -> str:
       
     if "choices" in response and len(response["choices"]) > 0:  
         return response["choices"][0]["message"]["content"]  
+    elif "content" in api_response and isinstance(api_response["content"], list):
+            # Claude format
+            content_items = api_response["content"]
+            response_text = ""
+            for item in content_items:
+                if item.get("type") == "text":
+                    response_text += item["text"]
+            response = response_text
     else:  
         return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
 
@@ -836,28 +884,38 @@ def rag_agent(coder, index):
         function_to_tool(search_wrapper)  
     ]  
       
-    logger.info("HLS CODER: Starting RAG agent interaction...")  
+    logger.info("Starting RAG agent interaction...")  
     response = call_llm_api(coder, tools=tools)  
       
     # Check if the response has the expected format  
     if "response" in response and "error" in response["response"]:  
         return f"Error: {response['response']['error']['message']}"  
       
-    if "choices" not in response or len(response["choices"]) == 0:  
-        return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
+    if "choices" in response and len(response["choices"]) >= 0:  
       
-    assistant_message = response["choices"][0]["message"]  
+        assistant_message = response["choices"][0]["message"]  
+    elif "content" in api_response and isinstance(api_response["content"], list):
+        # Claude format
+        content_items = api_response["content"]
+        response_text = ""
+        for item in content_items:
+            if item.get("type") == "text":
+                response_text += item["text"]
+        response = response_text
+    else:
+        return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
+
     messages = coder.messages.copy()  # Start with the existing message history  
     messages.append(assistant_message)  # Add the assistant's response        
 
     # If the LLM wants to use a tool  
     if "tool_calls" in assistant_message:  
-        logger.info("HLS CODER: LLM decided to use tools")  
+        logger.info("LLM decided to use tools")  
         for tool_call in assistant_message["tool_calls"]:  
             function_name = tool_call["function"]["name"]  
             arguments = json.loads(tool_call["function"]["arguments"])  
               
-            logger.info(f"HLS CODER: Executing tool: {function_name} with arguments: {arguments}")  
+            logger.info(f"Executing tool: {function_name} with arguments: {arguments}")  
               
             # Execute the function   
             if function_name == "search_wrapper":  
@@ -865,7 +923,7 @@ def rag_agent(coder, index):
             else:  
                 result = f"Unknown function: {function_name}"  
                   
-            logger.debug(f"HLS CODER: Tool result: {result}")  
+            logger.debug(f"Tool result: {result}")  
                   
             # Add the function response to messages  
             messages.append({  
@@ -875,7 +933,7 @@ def rag_agent(coder, index):
             })  
           
         # Get the final response  
-        logger.debug(" HLS CODER: Getting final response after tool calls...")  
+        logger.debug(" Getting final response after tool calls...")  
         temp_coder = HLSCoder(  
             url=coder.url,  
             workflow=coder.workflow,  
@@ -889,11 +947,21 @@ def rag_agent(coder, index):
         if "response" in final_response and "error" in final_response["response"]:  
             return f"Error: {final_response['response']['error']['message']}"  
           
-        if "choices" not in final_response or len(final_response["choices"]) == 0:  
-            return f"Error: Unable to get a proper final response from the LLM API. Response: {final_response}"  
+        if "choices" in final_response and len(final_response["choices"]) >= 0:  
               
-        return final_response["choices"][0]["message"]["content"]  
+            return final_response["choices"][0]["message"]["content"]  
+        elif "content" in api_response and isinstance(api_response["content"], list):
+            # Claude format
+            content_items = api_response["content"]
+            response_text = ""
+            for item in content_items:
+                if item.get("type") == "text":
+                    response_text += item["text"]
+            response = response_text
+        else:
+            return f"Error: Unable to get a proper final response from the LLM API. Response: {final_response}"  
+
     else:  
         # LLM answered directly  
-        logger.info("HLS CODER: LLM answered directly without using tools")  
+        logger.info("LLM answered directly without using tools")  
         return assistant_message["content"]  

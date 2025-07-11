@@ -9,12 +9,14 @@ import hlseval
 import csv
 from hlseval import run_dynarapid
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("COMPLETIONS")
+timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
 
 VITIS_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
 Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
 The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
-Make this code so that it is Deterministic when synthesized.
+Do not use size as a function argument, instead use a constant defined at the top of the file or function.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
 Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>). As such, that header almost always needs to be added.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
@@ -50,6 +52,57 @@ In cases where you are asked to improve existing code, Prioritize these goals to
 Analyze the given feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
+def write_table_header(logfile):
+    """Write the header of the ASCII table to the logfile."""
+    # Define headers and column widths
+    headers = ["Kernel", "LLM Time", "Dynamatic time", "Vitis CSIM time", "Vitis CSYNTH time"]
+    col_widths = [30, 20, 20, 20, 20]
+    
+    # Create top border
+    border = "+"
+    for width in col_widths:
+        border += "-" * width + "+"
+    logfile.write(border + "\n")
+    
+    # Write header row
+    header_row = "|"
+    for header, width in zip(headers, col_widths):
+        header_row += header.center(width) + "|"
+    logfile.write(header_row + "\n")
+    
+    # Write separator after headers
+    logfile.write(border + "\n")
+    logfile.flush()
+
+def add_table_row(logfile, kernel, llm_time = "-", dynamatic_time = "-", vitis_csim_time = "-", vitis_csynth_time = "-"):
+    """Add a row to the ASCII table in the logfile."""
+    col_widths = [30, 20, 20, 20, 20]
+    
+    # Prepare the data
+    data = [kernel, llm_time, dynamatic_time, vitis_csim_time, vitis_csynth_time]
+    
+    # Create the data row
+    data_row = "|"
+    for value, width in zip(data, col_widths):
+        # Convert to string and center in the column
+        value_str = str(value) if value is not None else ""
+        data_row += value_str.center(width) + "|"
+    
+    logfile.write(data_row + "\n")
+    logfile.flush()
+
+def write_table_footer(logfile):
+    """Write the footer (bottom border) of the ASCII table to the logfile."""
+    col_widths = [30, 20, 20, 20, 20]
+    
+    # Create bottom border
+    border = "+"
+    for width in col_widths:
+        border += "-" * width + "+"
+    
+    logfile.write(border + "\n")
+    logfile.flush()
+
 def feedback_prompt(prev_code, feedback):
     return f"""
         Here is my C HLS code:
@@ -71,18 +124,30 @@ def feedback_prompt(prev_code, feedback):
         """
 
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
-amd_gpt_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
+amd_gpt_4o_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
+amd_gpt_4_1_url = "https://llm-api.amd.com/azure/engines/dvue-aoai-001-gpt-4.1/chat/completions"
+amd_llama_3_2_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/Llama-3.2-11B-Vision/chat/completions?api-version=2023-05-15"
+amd_deepseek_r1_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/deepseek-r1/chat/completions?api-version=2023-05-15"
 byu_antrhopic_url = "https://api.anthropic.com/v1/complete"
 byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
-amd_anthropic_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
+amd_claude_3_5_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
+amd_gemini_2_url = "https://llm-api.amd.com/vertex/gemini/deployments/gemini-2.0-flash-001/chat/completions"
 
 model_parameters = {
-                        "gpt-4o": {"amd_url": amd_gpt_url, "byu_url": byu_gpt_url},
-                        "Claude-3.5": {"amd_url": amd_anthropic_url, "byu_url": byu_anthropic_url2}
+                        "gpt-4o": {"amd_url": amd_gpt_4o_url, "byu_url": byu_gpt_url},
+                        "gpt-4.1": {"amd_url": amd_gpt_4_1_url},
+                        "Claude-3.5": {"amd_url": amd_claude_3_5_url, "byu_url": byu_anthropic_url2},
+                        "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url},
+                        "Deepseek-R1": {"amd_url": amd_deepseek_r1_url},
+                        "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url}
                     }
     
-def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feedback=None, goals=None):
+def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mode, prev_feedback=None, goals=None):
     kernel_name = test["kernel_name"]
+    llm_elapsed_time = None
+    dynamatic_elapsed_time = None
+    csim_elapsed_time = None
+    csynth_elapsed_time = None
     solutions_path = f"./results/solutions/{hls_flow}/{model}/{kernel_name}/attempts_{attempt+1}"
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
 
@@ -121,7 +186,19 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
                 logger.debug("Writing to file")
-                file.write(hlseval.get_kernel_code(hls_flow, test, solutions_path))
+                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+                if kernel_code == None:
+                        add_table_row(
+                            logfile,
+                            kernel_name, 
+                            llm_elapsed_time, 
+                            dynamatic_elapsed_time, 
+                            csim_elapsed_time, 
+                            csynth_elapsed_time
+                        )
+                        return 1, "Failed to produce kernel code"
+                else:
+                    file.write(kernel_code)
         except FileExistsError:
             logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
 
@@ -153,7 +230,8 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             rag=True if hls_flow=="vitis" else False
         )
         llm_completion_end = datetime.now()
-        logger.debug(f"LLM API call elapsed time: {llm_completion_end-llm_completion_begin}")
+        llm_elapsed_time = llm_completion_end - llm_completion_begin
+        logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
         try:
             with open(f"{solutions_path}/{kernel_name}.json", "x") as file:
                 json.dump(improved_code, file, indent=4)
@@ -163,7 +241,19 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
                 logger.debug("Writing to file")
-                file.write(hlseval.get_kernel_code(hls_flow, test, solutions_path))
+                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+                if kernel_code == None:
+                        add_table_row(
+                            logfile,
+                            kernel_name, 
+                            llm_elapsed_time, 
+                            dynamatic_elapsed_time, 
+                            csim_elapsed_time, 
+                            csynth_elapsed_time
+                        )
+                        return 1, "Failed to produce kernel code"
+                else:
+                    file.write(kernel_code)
         except FileExistsError:
             logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
     
@@ -172,7 +262,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         csim_begin = datetime.now()
 
         try:
-            logger.info("--- Starting Vitis Run ---")
+            logger.info("Starting Vitis Run")
             csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
             timeout_csim = False
             sim_returncode = csim_output.returncode
@@ -181,33 +271,35 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             sim_returncode = 1
             logger.warning("Vitis timed out on Simulation")
         csim_end = datetime.now()
-        logger.debug(f"CSIM elapsed time: {csim_end-csim_begin}")
+        csim_elapsed_time = csim_end-csim_begin
+        logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")
 
-        if csim_output.returncode == 0:
+        if sim_returncode == 0:
         # Run Synthesis only if CSIM was successful
             try:
                 logger.info("--- Running CSYNTH ---")
                 csynth_begin = datetime.now()
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
                 synth_returncode = synth_output.returncode
                 csynth_end = datetime.now()
-                logger.debug(f"CYNTH elapsed time: {csynth_end-csynth_begin}")  
+                csynth_elapsed_time = csynth_end-csynth_begin
+                logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
             except hlseval.CsynthTimeoutError as e:
                 logger.warning(" Vitis timed out")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
                 vitis_feedback['synth_feedback']['goals'].extend([
-                    "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining.",
-                    "Do not unroll completely or partition complete arrays. This may include avoiding pipeline directives."])
+                    "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining."
+                ])
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 synth_returncode = 1
         else:
-            vitis_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, goals=goals)
+            vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
             vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
@@ -221,13 +313,20 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
-        returncode, feedback = run_dynarapid(kernel_name, solutions_path)
+        returncode, feedback, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt_num=attempt, model=model, rapidwrite=rapidwrite)
 
-
+    add_table_row(
+        logfile,
+        kernel_name, 
+        llm_elapsed_time, 
+        dynamatic_elapsed_time, 
+        csim_elapsed_time, 
+        csynth_elapsed_time
+    )
     return returncode, feedback
 
 
-def process_kernel(model, test, workflow, hls_flow, passes=3, mode="optimization", goals=None):
+def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=3, mode="optimization", goals=None):
     kernel_name = test["kernel_name"]
     prev_ret_code = -1
     testbench_status = "failure"
@@ -255,7 +354,7 @@ def process_kernel(model, test, workflow, hls_flow, passes=3, mode="optimization
 
         # Pass `goals` only if in optimization mode
         current_goals = goals if mode == "optimization" else None
-        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, feedback, goals=current_goals)
+        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwrite, feedback, goals=current_goals)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -306,6 +405,12 @@ if __name__ == "__main__":
         nargs="*",
         help="List of goals for optimization mode (e.g., --goals 'maximize Fmax' 'reduce latency')"
     )
+    parser.add_argument(
+        "--rapidwrite",
+        action='store_true',
+        help="Add this flag to enable RapidWrite"
+    ) 
+
 
 
     args = parser.parse_args()  
@@ -316,22 +421,37 @@ if __name__ == "__main__":
     logging.basicConfig(level=numeric_level)
     
     # Add any models you want completions run for to this list
-    # models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"]
-    models = ["gpt-4o"]
+    # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
+    models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
-    
+    if args.rapidwrite:
+        rapidwrite = True
+    else:
+        rapidwrite = False
+    logger.debug(f"RapidWrite: {rapidwrite}")
+
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
+
 
     for model in models:
         if model not in model_parameters:
             logger.warning(f"Model {model} not recognized.")
             continue
 
-        for test in tests:
-            process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, passes=passes, mode=mode, goals=goals)
+        pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/logs/").mkdir(parents=True, exist_ok=True)
+        with open (f"results/solutions/{args.hls_flow}/{model}/logs/timing.log", "w") as logfile:
+            write_table_header(logfile)
+
+            for test in tests:
+                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals)
+            
+            write_table_footer(logfile)
+
+
+
 
 
 
