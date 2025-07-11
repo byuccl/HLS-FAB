@@ -11,19 +11,64 @@ import sys
 import traceback  
 import importlib.util
 import logging
+from ml_dtypes import bfloat16
 from .hlscoder import HLSCoder
 
 logger = logging.getLogger("UTILS")
 
+def generate_inputs(inputs_info, seed=0):
+    """
+    generate the inputs that will be used in the kernel function.
+    """
+    np.random.seed(seed)
+    if seed == -1:
+        # Load from a saved npz file if seed is -1
+        data = np.load('data.npz')
+        inputs = [data[x['name']] for x in inputs_info]
 
-def import_module_functions(kernel_name, function_names=None):      
+    else: 
+        # Generate random inputs based on the provided inputs_info
+        inputs = []
+        for info in inputs_info:
+            shape = info.get('shape', (1,))
+            dtype = info['dtype']
+            min_val = info.get('min', 0)
+            max_val = info.get('max', 127)
+            if info['iotype'] == "in" or info['iotype'] == "inout": #if an input or any kind it needs some data
+                if info['array_dimension'] > 0: 
+                    # Generate a random array of the specified shape and dtype
+                    if "float" in dtype:
+                        # Generate a float array
+                        inputs.append(np.random.uniform(min_val, max_val, size=shape).astype(dtype).flatten())
+                    elif "int" in dtype:
+                        inputs.append(np.random.randint(min_val, max_val, size=shape, dtype=dtype).flatten())
+
+                else:
+                    # Generate a scalar value
+                    if "float" in info['dtype']:
+                        inputs.append(np.random.uniform(min_val, max_val, 1).astype(dtype).item())
+                    elif "int" in info['dtype']:
+                        inputs.append(np.random.randint(min_val, max_val, dtype=dtype))
+            elif info['iotype'] == "out": # if its an output, we just need to create a zero array of the correct shape
+                output = np.zeros(shape, dtype=dtype)
+                if info['array_dimension'] > 0:
+                    # Flatten the output array to match the expected shape
+                    inputs.append(output.flatten())
+                else:
+                    # For scalar outputs, just append the zero value
+                    inputs.append(output.item())
+
+
+    return { "inputs": inputs, "types": inputs_info } 
+
+def import_module_members(kernel_name, member_names=None):      
     """      
     Dynamically import specified functions from the kernel's generate.py file.      
     """      
-    if function_names is None:      
-        function_names = ["generate_inputs", "behavioral"]      
+    if member_names is None:      
+        member_names = ["behavioral"]      
           
-    # Get the project root directory (2 levels up from results/testing)      
+    # Get the project root directory (1 level up from this file)      
     project_root = os.path.dirname(os.path.dirname(__file__))     
      
           
@@ -63,23 +108,38 @@ def import_module_functions(kernel_name, function_names=None):
         return None      
           
     # Create a dictionary to hold the requested functions      
-    functions = {}      
+    members = {}      
           
     # Get the requested functions      
-    for func_name in function_names:      
-        if hasattr(module, func_name):      
-            functions[func_name] = getattr(module, func_name)      
+    for mem_name in member_names:      
+        if hasattr(module, mem_name):      
+            members[mem_name] = getattr(module, mem_name)      
         else:      
-            logger.warning(f"Module {module_path} does not have a {func_name} function")      
-          
-    return functions    
- 
-def get_cpp_type_str(dtype_str):
+            logger.warning(f"Module {module_path} does not have a {mem_name} member")      
+
+    return members
+
+def get_ap_cpp_type_str(dtype_str):
     dtype_map = {
         "int8": "ap_int<8>", "uint8": "ap_uint<8>",
         "int16": "ap_int<16>", "uint16": "ap_uint<16>",
         "int32": "ap_int<32>", "uint32": "ap_uint<32>",
         "int64": "ap_int<64>", "uint64": "ap_uint<64>",
+        "float16": "ap_float<16,5>",
+        "bfloat16": "ap_float<16,8>",
+        "float32": "float", "float64": "double",
+        "bool": "bool",
+        "int": "int",
+        "float": "float",
+    }
+    return dtype_map.get(dtype_str.lower(), "void*")
+
+def get_std_cpp_type_str(dtype_str):
+    dtype_map = {
+        "int8": "int8_t", "uint8": "uint8_t",
+        "int16": "int16_t", "uint16": "uint16_t",
+        "int32": "int32_t", "uint32": "uint32_t",
+        "int64": "int64_t", "uint64": "uint64_t",
         "float16": "half_float_type",
         "float32": "float", "float64": "double",
         "bool": "bool",
@@ -88,18 +148,25 @@ def get_cpp_type_str(dtype_str):
     }
     return dtype_map.get(dtype_str.lower(), "void*")
 
+#Never Used
+def get_norm_cpp_type_str(dtype_str):
+    dtype_map = {
+        "int8": "char", "uint8": "unsigned char",
+        "int16": "short", "uint16": "unsigned short",
+        "int32": "int", "uint32": "unsigned int",
+        "int64": "long", "uint64": "unsigned long",
+        "float16": "half_float_type",
+        "float32": "float", "float64": "double",
+        "bool": "bool",
+        "int": "int",
+        "float": "float",
+    }
+    return dtype_map.get(dtype_str.lower(), "void*")
 
-def generate_examples(generate_function):
-    # Example 1
-    example1 = generate_function()
-    example1_inputs = example1["inputs"]
-    example1_types = example1["types"]
-
-    # Example 2
-    example2 = generate_function(seed=1)
-    example2_inputs = example2["inputs"]
-    example2_types = example2["types"]
-
+#used in ever generate
+def generate_examples(inputs_info):
+    example1 = generate_inputs(inputs_info=inputs_info, seed=0)
+    example2 = generate_inputs(inputs_info=inputs_info, seed=1)
     # Combine the inputs and types into a single list
     examples = [example1, example2]
     return examples
@@ -130,6 +197,7 @@ def get_kernel_code(hls_flow, test: dict, solutions_path: str = None) -> str:
             
         return srccode
 
+#Never Used
 def extract_buffers(test):
     """Specific helper for the AIEval dataset - parses the test dictionary and returns
     input buffers, output buffers and RTPs as separate lists.
@@ -153,6 +221,7 @@ def extract_buffers(test):
     
     return input_buffers, output_buffers, rtps
 
+#never Used
 def trace_to_json(trace_file: str, mlir_file: str, output_name: str="trace.json"):
     """Subprocesses wrapper over parse_trace.py utility.
 
@@ -185,6 +254,7 @@ def trace_to_json(trace_file: str, mlir_file: str, output_name: str="trace.json"
         logger.error(f"Trace failed\n{e.output}")
         return e.output
 
+#never USed
 def get_cycles(trace_path):
     """This helper function should only be used to extract cycle counts
     from NPUEval trace files where the expectation is to have exactly 1 of
@@ -207,6 +277,7 @@ def get_cycles(trace_path):
     except:
         return np.inf
 
+#never Used
 def get_vector_time(trace):
     """This function extracts the total time spent on the vectorized unit
     from an NPUEval AIE trace (this must have exactly 1 event0 and 1 event1
@@ -249,8 +320,7 @@ def get_vector_time(trace):
             
     return total_duration/(end-start)
 
-
-# Helper function to determine C++ type for an input  
+#Never used
 def get_cpp_type(input_val, type_info=None):  
     """Determine the appropriate C++ type for an input value
         input_value: variable that we want to find the type.
@@ -298,6 +368,7 @@ def get_cpp_type(input_val, type_info=None):
     else:  
         return "void*"  # Default for unknown types  
 
+#USed in ever generate
 def generate_types(inputs):  
     """
     Generate comprehensive type information for a list of inputs/outputs,
@@ -380,9 +451,9 @@ def generate_types(inputs):
         lower_var_name = var_name.lower()
         if "inout" in lower_var_name:
             type_dict["in_out"] = "inout"
-        elif "output" in lower_var_name:
+        elif "output" in lower_var_name or "out" in lower_var_name:
             type_dict["in_out"] = "out"
-        elif "input" in lower_var_name:
+        elif "input" in lower_var_name or "in" in lower_var_name:
             type_dict["in_out"] = "in"
         else:
             # Default to "in" if no clear convention is found in the name
