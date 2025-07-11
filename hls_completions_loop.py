@@ -140,7 +140,7 @@ model_parameters = {
                         "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url}
                     }
     
-def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feedback=None, goals=None):
+def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mode, prev_feedback=None, goals=None):
     kernel_name = test["kernel_name"]
     llm_elapsed_time = None
     dynamatic_elapsed_time = None
@@ -311,7 +311,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
-        returncode, feedback, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt_num=attempt, model=model, rapidwrite=True)
+        returncode, feedback, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt_num=attempt, model=model, rapidwrite=rapidwrite)
 
     add_table_row(
         logfile,
@@ -324,7 +324,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
     return returncode, feedback
 
 
-def process_kernel(model, test, workflow, hls_flow, logfile, passes=3, mode="optimization", goals=None):
+def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=3, mode="optimization", goals=None):
     kernel_name = test["kernel_name"]
     prev_ret_code = -1
     testbench_status = "failure"
@@ -352,7 +352,7 @@ def process_kernel(model, test, workflow, hls_flow, logfile, passes=3, mode="opt
 
         # Pass `goals` only if in optimization mode
         current_goals = goals if mode == "optimization" else None
-        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, feedback, goals=current_goals)
+        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwrite, feedback, goals=current_goals)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -403,6 +403,12 @@ if __name__ == "__main__":
         nargs="*",
         help="List of goals for optimization mode (e.g., --goals 'maximize Fmax' 'reduce latency')"
     )
+    parser.add_argument(
+        "--rapidwrite",
+        action='store_true',
+        help="Add this flag to enable RapidWrite"
+    ) 
+
 
 
     args = parser.parse_args()  
@@ -418,7 +424,12 @@ if __name__ == "__main__":
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
-    
+    if args.rapidwrite:
+        rapidwrite = True
+    else:
+        rapidwrite = False
+    logger.debug(f"RapidWrite: {rapidwrite}")
+
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
 
@@ -433,7 +444,7 @@ if __name__ == "__main__":
             write_table_header(logfile)
 
             for test in tests:
-                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, passes=passes, mode=mode, goals=goals)
+                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals)
             
             write_table_footer(logfile)
 

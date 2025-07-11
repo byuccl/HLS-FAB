@@ -132,7 +132,7 @@ exit
             logger.info("Running Java GenerateDesign command...")
             
             # Define the target directory for this attempt with new structure
-            attempt_dir = f"/mount/results/{model}/dcp_designs/{kernel_name}/attempt_{attempt_num}"
+            attempt_dir = f"/mount/results/dcp_designs/{model}/{kernel_name}/attempt_{attempt_num}"
             
             # Create the target directory
             mkdir_cmd = f"docker exec dynarapid_container bash -c 'mkdir -p {attempt_dir}'"
