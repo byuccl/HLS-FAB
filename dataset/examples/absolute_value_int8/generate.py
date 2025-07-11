@@ -1,6 +1,5 @@
 import numpy as np
-import os
-from hlseval import PromptConstructor, generate_types, generate_examples
+from hlseval import PromptConstructor,  generate_examples
 
 # Set the number of values in the array
 num_values = 16384
