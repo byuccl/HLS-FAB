@@ -2,9 +2,11 @@ import os
 import subprocess
 import logging
 import time
+import json
 from datetime import datetime
+import hlseval
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("DYNARAPID")
 
 def run_dynarapid(kernel_name, solutions_path, attempt_num, model, rapidwrite=False):
     dynamatic_elapsed_time = None

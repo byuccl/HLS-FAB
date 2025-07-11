@@ -18,7 +18,8 @@ Your job is to write C++ code for a single kernel that will be compiled to with 
 The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
 Do not use size as a function argument, instead use a constant defined at the top of the file or function.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
-Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>). As such, that header almost always needs to be added.
+Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>) or the arbitrary precision floating point library (<ap_float.h>). As such, that header almost always needs to be added.
+Some data types are represented as these arbitrary precision integers or floating point numbers, for example, a bfloat16 is represented with the type `ap_float<16,8>`.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
@@ -39,10 +40,10 @@ Your job is to write C++ code for a single kernel that will be compiled to with 
 The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
 Make this code so that it is Deterministic when synthesized.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
-Dynamatic does not support arbitrary precision integers (from the <ap_int.h> library) or C++ standard integers (from the <stdint.h> library). Therefore, only C++ built-in types may be used.
+Dynamatic does not support arbitrary precision integers (from the <ap_int.h> library) 
+The integer types you are allowed to use are int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
-IMPORTANT: With each kernel, produce a simple main function to initialize any arrays and call the function. Do not add any kind of print statements to the main function. These will prevent the code from compiling successfully.
 
 In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
 1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
@@ -123,10 +124,14 @@ def feedback_prompt(prev_code, feedback):
         Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
         """
 
+byu_gpt_url2 = "https://api.openai.com/v1/completions"
+
+
 byu_gpt_url = "https://api.openai.com/v1/chat/completions"
 amd_gpt_4o_url = "https://llm-api.amd.com/openai/deployments/swe-gpt4o-exp1/chat/completions"
 amd_gpt_4_1_url = "https://llm-api.amd.com/azure/engines/dvue-aoai-001-gpt-4.1/chat/completions"
 amd_llama_3_2_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/Llama-3.2-11B-Vision/chat/completions?api-version=2023-05-15"
+byu_llama_url = "https://api.llama.com/v1/chat/completions"
 amd_deepseek_r1_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/deepseek-r1/chat/completions?api-version=2023-05-15"
 byu_antrhopic_url = "https://api.anthropic.com/v1/complete"
 byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
@@ -135,11 +140,11 @@ amd_gemini_2_url = "https://llm-api.amd.com/vertex/gemini/deployments/gemini-2.0
 
 model_parameters = {
                         "gpt-4o": {"amd_url": amd_gpt_4o_url, "byu_url": byu_gpt_url},
-                        "gpt-4.1": {"amd_url": amd_gpt_4_1_url},
+                        "gpt-4.1": {"amd_url": amd_gpt_4_1_url, "byu_url": byu_gpt_url},
                         "Claude-3.5": {"amd_url": amd_claude_3_5_url, "byu_url": byu_anthropic_url2},
-                        "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url},
-                        "Deepseek-R1": {"amd_url": amd_deepseek_r1_url},
-                        "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url}
+                        "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url, "byu_url": byu_gpt_url},
+                        "Deepseek-R1": {"amd_url": amd_deepseek_r1_url, "byu_url": byu_gpt_url},
+                        "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
                     }
     
 def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mode, prev_feedback=None, goals=None):
@@ -313,7 +318,36 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
-        returncode, feedback, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt_num=attempt, model=model, rapidwrite=rapidwrite)
+        # Run CSIM    
+        dsim_begin = datetime.now()
+
+        try:
+            logger.info("Starting Dynarapid Simulation")
+            dsim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim", hls_flow=hls_flow)
+            logger.debug(dsim_output)
+            timeout_dsim = False
+            sim_returncode = dsim_output.returncode
+        except hlseval.CsimTimeoutError as e:
+            timeout_dsim = True
+            sim_returncode = 1
+            logger.warning("Vitis timed out on Simulation")
+        dsim_end = datetime.now()
+        csim_elapsed_time = dsim_end-dsim_begin
+        logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
+        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow)
+    
+
+        returncode, stdout, dynamatic_elapsed_time = run_dynarapid(kernel_name, solutions_path)
+
+        dynarapid_feedback['compile_feedback'] = {
+            "returncode": returncode,
+            "stdout": stdout,
+        }
+        out_data_path = f"{solutions_path}/{kernel_name}_data.json"
+        hlseval.save_feedback_data(out_data_path, dynarapid_feedback)
+        feedback = dynarapid_feedback
+
+
 
     add_table_row(
         logfile,
@@ -422,7 +456,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash"]
+    models = ["gpt-4o", "gpt-4.1"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided

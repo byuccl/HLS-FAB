@@ -2,12 +2,13 @@
 #define JSON_APINT_ADAPTER_HPP
 
 #include <ap_int.h>
+#include <ap_float.h>
 #include "json.hpp"
 #include <cstdint>
 
 using json = nlohmann::json;
 
-// Specialization for ap_int<N>
+// Specialization for ap_int<W>
 template<int W>
 struct nlohmann::adl_serializer<ap_int<W>> {
     static void to_json(json& j, const ap_int<W>& value) {
@@ -30,5 +31,19 @@ struct nlohmann::adl_serializer<ap_uint<W>> {
         value = static_cast<ap_uint<W>>(j.get<uint64_t>());
     }
 };
+
+// Specialization for ap_float<W, E>
+template<int W, int E>
+struct nlohmann::adl_serializer<ap_float<W, E>> {
+    static void to_json(json& j, const ap_float<W, E>& value) {
+        j = static_cast<double>(value);
+    }
+
+    static void from_json(const json& j, ap_float<W, E>& value) {
+        value = static_cast<ap_float<W, E>>(j.get<double>());
+    }
+};
+
+
 
 #endif // JSON_APINT_ADAPTER_HPP
