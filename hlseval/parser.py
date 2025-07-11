@@ -219,12 +219,13 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
     old_sim_log_file = f"{solutions_path}/logs/hls_run_csim.log"
     
     log_file = f"{log_file_dir}/{kernel_name}_synth{timestamp}.log"
-    if hls_flow == "vitis":
-        final_feedback = {
+    final_feedback = {
             "csim_feedback": None,
             "synth_feedback": None,
-        }
-
+    }
+    synth_feedback = None
+    sim_feedback = None
+    if hls_flow == "vitis":
         # Read in the log file from the HLS synthesis attempt
         try:
             with open(f"{solutions_path}{saved_log_file}", "r") as f:
