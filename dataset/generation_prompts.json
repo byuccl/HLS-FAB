@@ -1,0 +1,74 @@
+[
+  {
+    "name": "mat_mult_int16",
+    "description": "Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. \n\nMatrix 1 of MxN size 16-bit integers\nMatrix 2 of NxK size 16-bit integers \nResult matrix of MxK size 16-bit integers\n\nM = 64 \nN = 64\nK = 64"
+  },
+  {
+    "name": "axpy_int32_res",
+    "description": "The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) with the the same type.\nThe output is the sum of these vectors in vector (Y_res)\n\nY_res = alpha*X + Y\n\nThe input vectors will be 4096 values long"
+  },
+  {
+    "name": "axpy_int32",
+    "description": "The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) with the the same type.\nThe output is the sum of these vectors in vector (Y)\n\nY = alpha*X + Y\n\nThe input vectors will be 4096 values long"
+  },
+  {
+    "name": "scale_vector_uint16",
+    "description": "The scale vector function multiplies each element of 16-bit unsigned array (input) by some scalar value (alpha), and generates the resulting array (output)\n\noutput[i] = input[i] * alpha\n\noutput[i] is the i-th element of the output array.\ninput[i] is the i-th element of the input array.\nalpha is the scalar value to be multiplied.\n\nThe arrays will have 8192 unsigned 16 bit integers."
+  },
+  {
+    "name": "matrix_vector_multiply_float32",
+    "description": "Multiplies a 32-bit floating-point matrix by a 32-bit floating-point vector, resulting in a 32-bit floating-point vector."
+  },
+  {
+    "name": "iir_filter_float32",
+    "description": "The iir filter function applies a iir filter to the input vector (X) of type float32. The output is the filtered vector (Y) of the same type.\nThe a and b coefficients are also of type float32.\n\nThe input vector will be 1024 values long.\nThe filter order will be 4."
+  },
+  {
+    "name": "bit_depth_convert_opencv",
+    "description": "The bit_depth_convert_opencv function converts the input image bit depth to the required bit depth in the output image.\n\n\nThe input image will be 128x128 pixels\nThe shift parameter allows for an optional scale factor to be applied\nEach pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer\nEach pixel of the output image is represented by a 3-channel, 16-bit, unsigned integer\nThe image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV implementation unless otherwise specified\n\nvoid bit_depth_convert_opencv((uint8_t*)in_img.data, (int)shift, (uint8_t*)out_img_hls.data);"
+  },
+  {
+    "name": "bilateral_filter_opencv",
+    "description": ""
+  },
+  {
+    "name": "auto_exposure_correction_opencv",
+    "description": "Auto exposure correction improves contrast and brightness of the image and also corrects the exposure of the input frame. The algorithm uses luminence histogram equalization to improve overall exposure and contrast of the image. Luminence (V) is extracted after converting input image to HSV color space. Once the algorthm is applied the image is converted back to RGB color space.\n\nThe input image will be 128x128 pixels\nEach pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer\nEach pixel of the output image is represented by a 3-channel, 8-bit, unsigned integer\nThe image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV implementation unless otherwise specified\n\nvoid auto_exposure_correction_opencv((uint8_t*)in_img.data, (uint8_t*)out_img_hls.data);"
+  },
+  {
+    "name": "add_weighted_opencv",
+    "description": "The addweighted function calculates a weighted sum of two input images src1, src2 and generates the result in dst.\n\n\ndst[i] = alpha * src1[i] + beta * src2[i] + gamma\n\ndst[i] is the i-th element of the output array.\nsrc1[i] is the i-th element of the first input array.\nsrc2[i] is the i-th element of the second input array.\n\n\nThe input image will be 128x128 pixels\nEach pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer\nEach pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer\nThe image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV Reduce implementation unless otherwise specified\n\nvoid add_weighted_opencv((uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint8_t*)dst_hls.data, float(alpha), float(beta), float(gamma));"
+  },
+  {
+    "name": "accumulate_weighted_opencv",
+    "description": "The accumulate weighted function computes the weighted sum of the input image (src1) and the accumulator image (src2) and generates the result in dst.\n\ndst[i] = alpha * src1[i] + (1-alpha) * src2[i]\n\ndst[i] is the i-th element of the output array.\nsrc1[i] is the i-th element of the first input array.\nsrc2[i] is the i-th element of the second input array.\n\n\nThe input image will be 128x128 pixels\nEach pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer\nEach pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer\nThe image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV Reduce implementation unless otherwise specified\n\nvoid accumulate_weighted_opencv((uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data, float(alpha));"
+  },
+  {
+    "name": "accumulate_squared_opencv",
+    "description": "The accumulate square function adds the square of an image (src1) to the accumulator image (src2) and generates the accumulated result (dst).\n\ndst[i] = src1[i]^2 + src2[i]\n\ndst[i] is the i-th element of the output array.\nsrc1[i] is the i-th element of the first input array.\nsrc2[i] is the i-th element of the second input array.\n\n\nThe input image will be 128x128 pixels\nEach pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer\nEach pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer\nThe image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV Reduce implementation unless otherwise specified\n\nvoid accumulate_squared_opencv(ap_uint<8>*)in_gray.data, (ap_uint<8>*)in_gray1.data, (ap_uint<16>*)dst_hls.data);"
+  },
+  {
+    "name": "accumulate_opencv",
+    "description": "The accumulate function adds an image (src1) to the accumulator image (src2), and generates the accumulated result image (dst).\n\ndst[i] = |src1[i] + src2[i]|\n\ndst[i] is the i-th element of the output array.\nsrc1[i] is the i-th element of the first input array.\nsrc2[i] is the i-th element of the second input array.\n\n\nThe input image will be 128x128 pixels\nEach pixel of the output image is represented by a 1-channel, 8-bit, unsigned integer\nEach pixel of the output image is represented by a 1-channel, 16-bit, unsigned integer\nThe image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV Reduce implementation\n\nvoid accumulate_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data);"
+  },
+  {
+    "name": "reduce_avg_opencv",
+    "description": "The Reduce function reduces the matrix to a vector by treating rows/cols as set of 1-D vectors and performing specified operation on vectors until a single row/col is obtained.\n\nSpecific functionality for this kernel will be:\nREDUCE_AVG : The output is the mean vector of all of the matrix’s rows/columns.\n\nThe input image will be 128x128 pixels\nThe 'dim' parameter represents the dimension index along which the matrix is reduced. 0 means that the matrix is reduced to a single row. 1 means that the matrix is reduced to a single column.\nEach pixel of the image is represented by an 8-bit unsigned integer.\nThe image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV Reduce implementation\n\nvoid reduce_avg_opencv((uint8_t*)in_img.data, dimension, (uint8_t*)dst_hls.data);"
+  },
+  {
+    "name": "sobel_filter_opencv",
+    "description": "The sobel_filter_opencv function Computes the gradients of input image in both x and y direction by convolving the kernel with input image being processed.\n\nThe input image will be 128x128 pixels\nThe filter is a standard 3x3 Sobel filter\nEach pixel of the image is represented by an 8-bit unsigned integer.\nThe images will be passed in and out as single-row arrays. Defined constants for 'ROWS' and 'COLS' (both set to 128) should be used to correctly break the array into a 2D image.\nImplementation details should match the OpenCV Sobel Filter implementation\nThe border pixels should be set to a constant 0\n\nvoid sobel_filter_opencv(ap_uint<INPUT_PTR_WIDTH>* img_inp,\n                         ap_uint<OUTPUT_PTR_WIDTH>* img_out1,\n                         ap_uint<OUTPUT_PTR_WIDTH>* img_out2);"
+  },
+  {
+    "name": "add_offset_int8",
+    "description": "The add_offset function adds an offset value to each element of the input vector (X) of type int8 and generates the output vector (Y) of the same type.\n\nY[i] = X[i] + offset\n\nY[i] is the i-th element of the output array.\nX[i] is the i-th element of the input array.\noffset is the value to be added to each element.\n\nThe input vector will be 4096 values long."
+  },
+  {
+    "name": "argmax_int32",
+    "description": "The argmax function finds the index of the maximum value in an input vector (X) of type int32 and generates the output index (Y) of the same type.\n\nY = argmax(X)\n\nY is the index of the maximum value in the input vector X.\n\nThe input vector will be 4096 values long."
+  },
+  {
+    "name": "argmin_float64",
+    "description": "The argmin function finds the index of the minimum value in an input vector (X) of type float64 and generates the output index (Y) of the same type.\n\nY = argmin(X)\n\nY is the index of the minimum value in the input vector X.\n\nThe input vector will be 4096 values long."
+  }
+]

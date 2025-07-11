@@ -8,7 +8,7 @@ import re
 import numpy as np
 import json
 
-logger = logging.getLogger("__main__")
+logger = logging.getLogger("_PROMPT CONSTRUCTOR")
 
 C_TO_NUMPY_DTYPE = {
     "int": "int",
@@ -310,7 +310,7 @@ Use the following function signature to implement the kernel:
             self.sample['tolerances'] = tolerances
 
     def write_json(self, filepath):
-        logger.info(f"PROMPT CONSTRUCTOR: Writing JSON to {filepath}")
+        logger.info(f"Writing JSON to {filepath}")
         with open(filepath, "w") as f:
             json.dump(self.sample, f)
             

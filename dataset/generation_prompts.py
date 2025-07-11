@@ -1,3 +1,114 @@
+desired_test = "mat_mult_int16"
+desired_test_description = (
+    """
+Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
+
+Matrix 1 of MxN size 16-bit integers
+Matrix 2 of NxK size 16-bit integers 
+Result matrix of MxK size 16-bit integers
+
+M = 64 
+N = 64
+K = 64
+    """
+)
+
+
+desired_test = "axpy_int32_res"
+desired_test_description = (
+    """
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) with the the same type.
+The output is the sum of these vectors in vector (Y_res)
+
+Y_res = alpha*X + Y
+
+The input vectors will be 4096 values long
+    """
+)
+
+desired_test = "axpy_int32"
+desired_test_description = (
+    """
+The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) with the the same type.
+The output is the sum of these vectors in vector (Y)
+
+Y = alpha*X + Y
+
+The input vectors will be 4096 values long
+    """
+)
+
+
+desired_test = "scale_vector_uint16"
+desired_test_description = (
+    """
+The scale vector function multiplies each element of 16-bit unsigned array (input) by some scalar value (alpha), and generates the resulting array (output)
+
+output[i] = input[i] * alpha
+
+output[i] is the i-th element of the output array.
+input[i] is the i-th element of the input array.
+alpha is the scalar value to be multiplied.
+
+The arrays will have 8192 unsigned 16 bit integers. 
+    """
+)
+
+
+
+desired_test = "matrix_vector_multiply_float32"
+desired_test_description = (
+    """
+    Multiplies a 32-bit floating-point matrix by a 32-bit floating-point vector, resulting in a 32-bit floating-point vector.
+    """
+)
+
+
+desired_test = "add_offset_int8"
+desired_test_description = (
+    """The add_offset function adds an offset value to each element of the input vector (X) of type int8 and generates the output vector (Y) of the same type.
+
+    Y[i] = X[i] + offset
+    
+    Y[i] is the i-th element of the output array.
+    X[i] is the i-th element of the input array.
+    offset is the value to be added to each element.
+    
+    The input vector will be 4096 values long."""
+)
+
+desired_test = "argmax_int32"
+desired_test_description = (  
+    """The argmax function finds the index of the maximum value in an input vector (X) of type int32 and generates the output index (Y) of the same type.
+    
+    Y = argmax(X)
+    
+    Y is the index of the maximum value in the input vector X.
+    
+    The input vector will be 4096 values long."""
+)
+
+desired_test = "argmin_float64"
+desired_test_description = (
+    """The argmin function finds the index of the minimum value in an input vector (X) of type float64 and generates the output index (Y) of the same type
+    
+    Y = argmin(X)
+                            
+    Y is the index of the minimum value in the input vector X.
+                            
+    The input vector will be 4096 values long."""
+)
+
+desired_test = "iir_filter_float32"
+desired_test_description = (
+    """
+The iir filter function applies a iir filter to the input vector (X) of type float32. The output is the filtered vector (Y) of the same type.
+The a and b coefficients are also of type float32.
+
+The input vector will be 1024 values long.
+The filter order will be 4.
+    """
+)
 
 desired_test = "bit_depth_convert_opencv"
 desired_test_description = (
@@ -19,20 +130,6 @@ void bit_depth_convert_opencv((uint8_t*)in_img.data, (int)shift, (uint8_t*)out_i
 desired_test = "bilateral_filter_opencv"
 
 
-desired_test = "mat_mult_int16"
-desired_test_description = (
-    """
-Matrix Multiply function takes 2 input matrices of 16 bit integers and Multiplies them to get a resulting matrix. 
-
-Matrix 1 of MxN size 16-bit integers
-Matrix 2 of NxK size 16-bit integers 
-Result matrix of MxK size 16-bit integers
-
-M = 64 
-N = 64
-K = 64
-    """
-)
 
 
 desired_test = "auto_exposure_correction_opencv"
@@ -116,57 +213,7 @@ Each pixel of the output image is represented by a 1-channel, 16-bit, unsigned i
 The image will be passed in and out as single-row arrays. Defined constants for 'HEIGHT' and 'WIDTH' (both set to 128) should be used to correctly break the array into a 2D image.
 Implementation details should match the OpenCV Reduce implementation unless otherwise specified
 
-void accumulate_squared_opencv(uint8_t*)in_gray.data, (uint8_t*)in_gray1.data, (uint16_t*)dst_hls.data);
-    """
-)
-
-
-desired_test = "axpy_int32_res"
-desired_test_description = (
-    """
-The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
-The output is the sum of these vectors in vector (Y_res)
-
-Y_res = alpha*X + Y
-
-The input vectors will be 4096 values long
-    """
-)
-
-desired_test = "axpy_int32"
-desired_test_description = (
-    """
-The axpy function multiplies an input vector (X) of type int32 by an alpha value of the same type. Then it adds the second vector (Y) withe the same type.
-The output is the sum of these vectors in vector (Y)
-
-Y = alpha*X + Y
-
-The input vectors will be 4096 values long
-    """
-)
-
-
-desired_test = "scale_vector_uint16"
-desired_test_description = (
-    """
-The scale vector function multiplies each element of 16 bit unsigned array (input) by some scalar value (alpha), and generates the resulting array (output)
-
-output[i] = input[i] * alpha
-
-output[i] is the i-th element of the output array.
-input[i] is the i-th element of the input array.
-alpha is the scalar value to be multiplied.
-
-The arrays will have 8192 unsigned 16 bit integers. 
-    """
-)
-
-
-
-desired_test = "matrix_vector_multiply_float32"
-desired_test_description = (
-    """
-    Multiplies a 32-bit floating-point matrix by a 32-bit floating-point vector, resulting in a 32-bit floating-point vector.
+void accumulate_squared_opencv(ap_uint<8>*)in_gray.data, (ap_uint<8>*)in_gray1.data, (ap_uint<16>*)dst_hls.data);
     """
 )
 
