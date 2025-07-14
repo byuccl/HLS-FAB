@@ -22,4 +22,4 @@ rag_data/*
 storage/**
 results/tests_wo_rag/*
 **.log
-results/*
+results/dcp_designs/

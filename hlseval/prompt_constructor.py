@@ -281,7 +281,7 @@ class PromptConstructor:
         try:
             examples = self._construct_examples(behavioral, test_vectors_list=test_vectors_list, num_examples=len(test_vectors_list), slice_size=8)
         except:
-            logger.warning(f"The kernel {self.name} prompt won't have examples")
+            logger.warning(f"PROMPT CONSTRUCTOR: The kernel {self.name} prompt won't have examples")
             examples = None
         
         if examples:

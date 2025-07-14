@@ -177,8 +177,12 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
         with open(cpp_kernel_file_abs_path, 'r', encoding='latin-1') as f:  
             kernel_code = f.read()  
     # Generating H File
-    logger.info("Generating H File for CSIM")
-    generate_h_file(kernel_code, model_dir, kernel_name)
+    logger.info("CSIM: Generating H File for CSIM")
+    try:
+        generate_h_file(kernel_code, model_dir, kernel_name)
+    except:
+        logger.error(f"CSIM: Error writing C++ testbench file: {e}")
+        return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
     
     # --- C++ Testbench Code Generation ---
     testbench_code = []

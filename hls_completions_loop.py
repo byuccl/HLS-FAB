@@ -147,7 +147,7 @@ model_parameters = {
                         "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
                     }
     
-def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feedback=None, goals=None):
+def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mode, prev_feedback=None, goals=None):
     kernel_name = test["kernel_name"]
     llm_elapsed_time = None
     dynamatic_elapsed_time = None
@@ -191,7 +191,19 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
                 logger.debug("Writing to file")
-                file.write(hlseval.get_kernel_code(hls_flow, test, solutions_path))
+                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+                if kernel_code == None:
+                        add_table_row(
+                            logfile,
+                            kernel_name, 
+                            llm_elapsed_time, 
+                            dynamatic_elapsed_time, 
+                            csim_elapsed_time, 
+                            csynth_elapsed_time
+                        )
+                        return 1, "Failed to produce kernel code"
+                else:
+                    file.write(kernel_code)
         except FileExistsError:
             logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
 
@@ -234,7 +246,19 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         try:
             with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
                 logger.debug("Writing to file")
-                file.write(hlseval.get_kernel_code(hls_flow, test, solutions_path))
+                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+                if kernel_code == None:
+                        add_table_row(
+                            logfile,
+                            kernel_name, 
+                            llm_elapsed_time, 
+                            dynamatic_elapsed_time, 
+                            csim_elapsed_time, 
+                            csynth_elapsed_time
+                        )
+                        return 1, "Failed to produce kernel code"
+                else:
+                    file.write(kernel_code)
         except FileExistsError:
             logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
     
@@ -258,7 +282,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         if sim_returncode == 0:
         # Run Synthesis only if CSIM was successful
             try:
-                logger.info("Running CSYNTH")
+                logger.info("--- Running CSYNTH ---")
                 csynth_begin = datetime.now()
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
@@ -285,7 +309,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
 
-        logger.info("Vitis Run Completed")
+        logger.info("--- Vitis Run Completed ---")
 
         out_data_path = f"{solutions_path}/{kernel_name}_data.json"
         hlseval.save_feedback_data(out_data_path, vitis_feedback)
@@ -310,9 +334,10 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         dsim_end = datetime.now()
         csim_elapsed_time = dsim_end-dsim_begin
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1)
+        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals)
+    
 
-        returncode, stdout, dynamatic_elapsed_time = run_dynarapid(kernel_name, solutions_path)
+        returncode, stdout, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwrite)
 
         dynarapid_feedback['compile_feedback'] = {
             "returncode": returncode,
@@ -335,7 +360,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
     return returncode, feedback
 
 
-def process_kernel(model, test, workflow, hls_flow, logfile, passes=3, mode="optimization", goals=None):
+def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=3, mode="optimization", goals=None):
     kernel_name = test["kernel_name"]
     prev_ret_code = -1
     testbench_status = "failure"
@@ -363,7 +388,7 @@ def process_kernel(model, test, workflow, hls_flow, logfile, passes=3, mode="opt
 
         # Pass `goals` only if in optimization mode
         current_goals = goals if mode == "optimization" else None
-        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, feedback, goals=current_goals)
+        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwrite, feedback, goals=current_goals)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -414,6 +439,12 @@ if __name__ == "__main__":
         nargs="*",
         help="List of goals for optimization mode (e.g., --goals 'maximize Fmax' 'reduce latency')"
     )
+    parser.add_argument(
+        "--rapidwrite",
+        action='store_true',
+        help="Add this flag to enable RapidWrite"
+    ) 
+
 
 
     args = parser.parse_args()  
@@ -425,11 +456,16 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["gpt-4o"]
+    models = ["gpt-4.1"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
-    
+    if args.rapidwrite:
+        rapidwrite = True
+    else:
+        rapidwrite = False
+    logger.debug(f"RapidWrite: {rapidwrite}")
+
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
 
@@ -444,7 +480,7 @@ if __name__ == "__main__":
             write_table_header(logfile)
 
             for test in tests:
-                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, passes=passes, mode=mode, goals=goals)
+                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals)
             
             write_table_footer(logfile)
 
