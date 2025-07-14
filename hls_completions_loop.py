@@ -310,8 +310,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, prev_feed
         dsim_end = datetime.now()
         csim_elapsed_time = dsim_end-dsim_begin
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow)
-    
+        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1)
 
         returncode, stdout, dynamatic_elapsed_time = run_dynarapid(kernel_name, solutions_path)
 
@@ -426,7 +425,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["gpt-4o", "gpt-4.1"]
+    models = ["gpt-4o"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
