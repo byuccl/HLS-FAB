@@ -269,6 +269,13 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
             sim_feedback = parse_sim_report(old_sim_log_file)
             # with open(out_data_path, 'w') as of:
             #     json.dump(feedback, of, indent=4)
+    except UnicodeDecodeError:
+            with open(old_sim_log_file, 'r', encoding='latin-1') as file:
+                report = file.read()
+            with open(log_file, "a") as log:
+                log.write("\n\n")
+                log.write(report)
+                log.write("\n\n")
     except FileNotFoundError:
         sim_feedback = parse_sim_report()
         # with open(out_data_path, 'w') as of:

@@ -727,7 +727,7 @@ def call_llm_api(coder, tools=None):
     if "claude" in coder.url.lower() or "gemini" in coder.url.lower(): # The Claude models needed a max_tokens value
         body["max_tokens"] = 8000
 
-    logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
+    # logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
     logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")  
 
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
