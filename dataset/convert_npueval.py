@@ -126,8 +126,11 @@ The following is an example of the old 'canonical_scalar.cc' file for the 'avgpo
             rag=False
         )
 
-        if i == 10:
-            logger.info("Stopping after 5 tests for demonstration purposes.")
+        if i < 20:
+            logger.info("Make the kernels after 10 tests for demonstration purposes.")
+            continue
+        if i >= 30:
+            logger.info("Only make the first 20 kernels for demonstration purposes.")
             break
         pathlib.Path(f"dataset/generated_tests/npueval/{desired_test}").mkdir(parents=True, exist_ok=True)
 
