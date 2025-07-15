@@ -209,6 +209,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
         The goals is optional if you want to send in specific goals for the optimization of the HLS Code. 
         Send the goals as ["new goal", "another new goal"]
     """
+    logger.info(f"Gathering parsed data for kernel: {kernel_name}, model: {model}, attempt: {attempt}")
     #Create all the files needed if not already created
     solutions_path = f"{file_path_begin}{hls_flow}/{model}/{kernel_name}/attempts_{attempt}"
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
@@ -220,8 +221,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
     
     log_file = f"{log_file_dir}/{kernel_name}_synth{timestamp}.log"
     final_feedback = {
-            "csim_feedback": None,
-            "synth_feedback": None,
+            "sim_feedback": None,
     }
     synth_feedback = None
     sim_feedback = None
@@ -256,6 +256,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
         logger.warning(
             f"The file {in_report_file} does not exist."
         )
+        final_feedback["synth_feedback"] = synth_feedback
     
     # Check if the simulation was successful then add the data to json
     try:
@@ -270,23 +271,23 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
             # with open(out_data_path, 'w') as of:
             #     json.dump(feedback, of, indent=4)
     except UnicodeDecodeError:
-            with open(old_sim_log_file, 'r', encoding='latin-1') as file:
-                report = file.read()
-            with open(log_file, "a") as log:
-                log.write("\n\n")
-                log.write(report)
-                log.write("\n\n")
+        logger.warning(f"UnicodeDecodeError: Trying to read {old_sim_log_file} with latin-1 encoding.")
+        with open(old_sim_log_file, 'r', encoding='latin-1') as file:
+            report = file.read()
+        with open(log_file, "a") as log:
+            log.write("\n\n")
+            log.write(report)
+            log.write("\n\n")
+        sim_feedback = parse_sim_report(old_sim_log_file)
     except FileNotFoundError:
-        sim_feedback = parse_sim_report()
-        # with open(out_data_path, 'w') as of:
-        #     json.dump(feedback, of, indent=4)
         logger.warning(
             f"The file {old_sim_log_file} does not exist."
         )
-    
-    
-    final_feedback["csim_feedback"] = sim_feedback
-    final_feedback["synth_feedback"] = synth_feedback    
+        sim_feedback = parse_sim_report()
+        # with open(out_data_path, 'w') as of:
+        #     json.dump(feedback, of, indent=4)
+
+    final_feedback["sim_feedback"] = sim_feedback
         
     return final_feedback
 

@@ -9,7 +9,7 @@ stride = 1
 output_rows = (input_rows - kernel_size) // stride + 1
 output_cols = (input_cols - kernel_size) // stride + 1
 
-function_signature = "void conv2d_int32(ap_int<32> *input_matrix, ap_int<32>* kernel, ap_int<32>* output_matrix, uint32_t stride)"
+function_signature = "void conv2d_int32(ap_int<32> *input_matrix, ap_int<32>* kernel, ap_int<32>* output_matrix)"
 
 description = f"""
 This HLS kernel performs a 2D convolution operation on an input matrix using a specified kernel and stride.
@@ -52,12 +52,9 @@ inputs_info = [
     }
 ]
 
-def behavioral(input_matrix, kernel, stride):
-    input_rows = input_matrix.shape[0]
-    input_cols = input_matrix.shape[1]
-    kernel_size = kernel.shape[0]
-    output_rows = (input_rows - kernel_size) // stride + 1
-    output_cols = (input_cols - kernel_size) // stride + 1
+def behavioral(input_matrix, kernel):
+    input_matrix = input_matrix.reshape((input_rows, input_cols))
+    kernel = kernel.reshape((kernel_size, kernel_size))
     output_matrix = np.zeros((output_rows, output_cols), dtype=np.int32)
     for i in range(output_rows):
         for j in range(output_cols):
@@ -66,7 +63,7 @@ def behavioral(input_matrix, kernel, stride):
                 for kj in range(kernel_size):
                     conv_sum += input_matrix[i * stride + ki, j * stride + kj] * kernel[ki, kj]
             output_matrix[i, j] = conv_sum
-    return output_matrix
+    return output_matrix.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 

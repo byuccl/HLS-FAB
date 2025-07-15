@@ -344,6 +344,11 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             "stdout": stdout,
         }
         out_data_path = f"{solutions_path}/{kernel_name}_data.json"
+        # try:
+        #     with open(f"{solutions_path}/{kernel_name}_test_data.json", "r") as f:
+        #         print(f"Found test data file for Dynarapid {solutions_path}/{kernel_name}_test_data.json")
+        # except FileNotFoundError:
+        #     print(f"Did not find test data file for Dynarapid {solutions_path}/{kernel_name}_test_data.json")
         hlseval.save_feedback_data(out_data_path, dynarapid_feedback)
         feedback = dynarapid_feedback
 
