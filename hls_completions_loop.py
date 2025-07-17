@@ -344,6 +344,11 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             "stdout": stdout,
         }
         out_data_path = f"{solutions_path}/{kernel_name}_data.json"
+        # try:
+        #     with open(f"{solutions_path}/{kernel_name}_test_data.json", "r") as f:
+        #         print(f"Found test data file for Dynarapid {solutions_path}/{kernel_name}_test_data.json")
+        # except FileNotFoundError:
+        #     print(f"Did not find test data file for Dynarapid {solutions_path}/{kernel_name}_test_data.json")
         hlseval.save_feedback_data(out_data_path, dynarapid_feedback)
         feedback = dynarapid_feedback
 
@@ -456,7 +461,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["gpt-4.1"]
+    models = ["gpt-4o","gpt-4.1"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided

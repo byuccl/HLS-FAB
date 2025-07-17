@@ -282,13 +282,14 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
                 testbench_code.append(f"            std::cerr << \"Error: {var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;")
                 testbench_code.append(f"            return 1;")
                 testbench_code.append(f"        }}") 
-
-                testbench_code.append(f"        // In testbench, after loading {var_name}_arr")
-                testbench_code.append(f"        std::cout << \"{var_name} (first 10 elements): \";")
-                testbench_code.append(f"        for (int i = 0; i < 10; ++i) {{")
-                testbench_code.append(f"            std::cout << {var_name}_arr[i] << \" \";")
-                testbench_code.append(f"        }}")
-                testbench_code.append(f"        std::cout << std::endl;")      
+                
+                ## Debugging output for input arrays
+                # testbench_code.append(f"        // In testbench, after loading {var_name}_arr")
+                # testbench_code.append(f"        std::cout << \"{var_name} (first 10 elements): \";")
+                # testbench_code.append(f"        for (int i = 0; i < 10; ++i) {{")
+                # testbench_code.append(f"            std::cout << {var_name}_arr[i] << \" \";")
+                # testbench_code.append(f"        }}")
+                # testbench_code.append(f"        std::cout << std::endl;")      
                 
             elif in_out_status == "out":
                 # Initialize output buffers to 0 for clarity
@@ -563,12 +564,17 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
         }
 
         # The JSON file path.
+        copy_model_dir = os.path.join(model_dir, "test_data")
+        if not os.path.exists(copy_model_dir):
+            os.makedirs(copy_model_dir)
+            logger.debug(f"Created directory for test data: {copy_model_dir}")
         json_output_filename = os.path.abspath(os.path.join(model_dir, f"{name}_test_data.json"))
-
+        copy_json_output_filename = os.path.abspath(os.path.join(copy_model_dir, f"{name}_test_data_copy.json"))
         # Write this single test case to a JSON file
         try:
             # write_json_test_data expects a list of test cases, even if it's just one
             write_json_test_data(json_output_filename, [current_test_case])
+            write_json_test_data(copy_json_output_filename, [current_test_case]  )
             logger.info(f"Generated JSON test data for {name} at: {json_output_filename}")
         except Exception as e:
             logger.error(f"Failed to write JSON test data for {name}: {e}")
