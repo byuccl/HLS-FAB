@@ -41,17 +41,17 @@ inputs_info = [
 ]
 
 def behavioral(input_matrix):
-    rows, cols = input_matrix.shape
-    out_rows = rows // stride
-    out_cols = cols // stride
+    input_matrix = input_matrix.reshape((input_rows, input_cols))
+    out_rows = input_rows // stride
+    out_cols = input_cols // stride
     output_matrix = np.zeros((out_rows, out_cols), dtype=bfloat16)
-    for i in range(0, rows, stride):
-        for j in range(0, cols, stride):
+    for i in range(0, input_rows, stride):
+        for j in range(0, input_cols, stride):
             window = input_matrix[i:i+window_size, j:j+window_size].astype(np.float32)
             avg = window.mean()
             relu = max(avg, 0.0)
             output_matrix[i//stride, j//stride] = bfloat16(relu)
-    return output_matrix
+    return output_matrix.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 

@@ -1,5 +1,6 @@
 import logging
 from openai import OpenAI
+import os
 import json
 import pathlib
 import subprocess
@@ -26,12 +27,6 @@ Produce only the kernel function, no main, no additional examples or code.
 
 IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
 
-In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
-1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
-2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
-3. Optimal performance - Reduce the latency while trying to also keep resource usage low
-
-Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
 DYNARAPID_SYSTEM_PROMPT = """
@@ -45,12 +40,6 @@ The integer types you are allowed to use are int8_t, uint8_t, int16_t, uint16_t,
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 
-In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
-1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
-2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
-3. Optimal performance - Reduce the latency while trying to also keep resource usage low - Note: Unlike many other HLS tools, Dynamatic does not use pragmas to help with optimization. Code restructuring is the only way to better optimize kernels.
-
-Analyze the given feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
 def write_table_header(logfile):
@@ -106,23 +95,35 @@ def write_table_footer(logfile):
 
 def feedback_prompt(prev_code, feedback):
     return f"""
-        Here is my C HLS code:
+Here is my C HLS code:
 
-        {prev_code}
+{prev_code}
 
-        Here is some feedback from the synthesis report and the testbench:
+Here is some feedback from the synthesis report and the testbench:
 
-        {json.dumps(feedback, indent=2)}
+{json.dumps(feedback, indent=2)}
 
-        Please modify the code using the goals from the feedback as a guideline.
+Please modify the code using the goals from the feedback as a guideline.
 
-        Prioritize the goals to improve the code in the following order:
-        1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed" or "Function 'main' returns nonzero value")
-        2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
-        3. Optimal performance - Reduce the latency while trying to also keep resource usage low. If the latency says 0 then something is probably wrong with the code. Look at the warnings and errors in the synthesis report to guide your optimizations.
-        
-        Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
-        """
+Prioritize the goals to improve the code in the following order:
+TIER 1 - CRITICAL ERRORS (Must Fix First):
+- Compilation failures (status: failed)
+- Synthesis failures (latency: NULL, resources: NULL, errors: non-empty)  
+- Simulation mismatches (percent_error > 0%, match: mismatch)
+- Function returns non-zero
+
+TIER 2 - PERFORMANCE WARNINGS (Address if Tier 1 is clear):
+- II Violations → Memory port contention
+- Resource overflow → Exceeding FPGA limits (BRAM: 216, DSP: 216, FF: 74880 , LUT: 37440)
+- Timing violations → Clock frequency issues
+
+TIER 3 - OPTIMIZATION OPPORTUNITIES (Final stage):
+- Latency reduction
+- Resource efficiency
+- Throughput improvement
+
+Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
+"""
 
 byu_gpt_url2 = "https://api.openai.com/v1/completions"
 
@@ -305,7 +306,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
                 synth_returncode = 1
         else:
             vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
-            vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
+            vitis_feedback['sim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
 
@@ -488,6 +489,21 @@ if __name__ == "__main__":
                 process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals)
             
             write_table_footer(logfile)
+    # Delete the unecessary files after running the completions
+    try:
+        os.remove("kernel.json")
+        logger.debug(f"File 'kernel.json' deleted successfully.")
+    except FileNotFoundError:
+        logger.debug(f"Error: File 'kernel.json' not found.")
+    except Exception as e:
+        logger.debug(f"An error occurred: {e}")
+    try:
+        os.remove("vitis_config.cfg")
+        logger.debug(f"File 'vitis_config.cfg' deleted successfully.")
+    except FileNotFoundError:
+        logger.debug(f"Error: File 'vitis_config.cfg' not found.")
+    except Exception as e:
+        logger.debug(f"An error occurred: {e}")
 
 
 
