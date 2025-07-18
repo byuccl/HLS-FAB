@@ -180,7 +180,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     logger.info("CSIM: Generating H File for CSIM")
     try:
         generate_h_file(kernel_code, model_dir, kernel_name)
-    except:
+    except Exception as e:
         logger.error(f"CSIM: Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
     
