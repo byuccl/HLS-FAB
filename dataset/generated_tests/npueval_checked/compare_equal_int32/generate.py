@@ -4,14 +4,14 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 VECTOR_SIZE = 256
 
-function_signature = "void compare_equal_int32(ap_int<32>* a, ap_int<32>* b, ap_int<8>* out)"
+function_signature = "void compare_equal_int32(ap_int<32>* a, ap_int<32>* b, ap_uint<8>* out)"
 
 description = f"""
 This HLS kernel performs an element-wise comparison of two input vectors of 32-bit integers for equality.
 Parameters to the function include:
     - First parameter: Pointer to the first input buffer of {VECTOR_SIZE} ap_int<32> values.
     - Second parameter: Pointer to the second input buffer of {VECTOR_SIZE} ap_int<32> values.
-    - Third parameter: Pointer to the output buffer of {VECTOR_SIZE} ap_int<8> values.
+    - Third parameter: Pointer to the output buffer of {VECTOR_SIZE} ap_uint<8> values.
 The kernel compares each element of the two input buffers and writes 1 to the output buffer if the elements are equal, otherwise writes 0.
 """
 
