@@ -39,8 +39,8 @@ inputs_info = [
         "array_dimension": 0,  # Scalar value
         "dtype": "int32",
         "iotype": "in",  # Input parameter for the kernel
-        "min": 0,  # Minimum value for the seed
-        "max": 2**32 - 1,  # Maximum value for the seed
+        "min": 1,  # Minimum value for the seed
+        "max": (2**32 - 1)//2,  # Maximum value for the seed
     }
 ]
 

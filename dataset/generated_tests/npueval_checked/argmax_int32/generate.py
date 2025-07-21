@@ -37,7 +37,7 @@ inputs_info = [
 
 def behavioral(input_vector):
     # Return as shape (1,) array for correct output serialization
-    return np.array([np.argmax(input_vector)], dtype=np.uint32)
+    return np.argmax(input_vector).astype(np.uint32)
 
 examples = generate_examples(inputs_info=inputs_info)
 

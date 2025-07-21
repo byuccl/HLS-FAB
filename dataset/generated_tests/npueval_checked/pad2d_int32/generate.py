@@ -8,7 +8,7 @@ pad_size = 2
 pad_value = 0
 
 # Function signature for the HLS kernel
-function_signature = "void pad2d_int32(ap_int<32> *input_matrix, ap_int<32> *padded_matrix, uint32_t pad_size, ap_int<32> pad_value)"
+function_signature = "void pad2d_int32(ap_int<32> *input_matrix, ap_int<32> *padded_matrix)"
 
 # Detailed description of the kernel
 description = f"""
@@ -45,7 +45,7 @@ inputs_info = [
 
 # Behavioral function to simulate the kernel's operation
 def behavioral(input_matrix, pad_size=pad_size, pad_value=pad_value):
-    input_rows, input_cols = input_matrix.shape
+    input_matrix = input_matrix.reshape(input_rows, input_cols)
     padded_rows = input_rows + 2 * pad_size
     padded_cols = input_cols + 2 * pad_size
     padded_matrix = np.full((padded_rows, padded_cols), pad_value, dtype=input_matrix.dtype)
