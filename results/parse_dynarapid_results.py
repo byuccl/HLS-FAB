@@ -7,20 +7,27 @@ def search_files(base_dir):
     Search for .dot and _routed.dcp files in the given directory structure
     and return information about their existence.
     """
-    models = ['Claude-3.5', 'Gemini-2.0-Flash', 'gpt-4.1', 'gpt-4o', 'Llama-3_2-11B']
+    models = ['gpt-4.1', 'gpt-4o']
     kernels = [
-        'absolute_value_int8',
-        'affine_float32',
-        'conv2d_int16',
-        'dot_product_float32',
-        'matrix_multiply_int32',
-        'relu_activation_float32'
+        'conv2d_int32',
+        'argmax_int32',
+        'matmul_16x16_int32',
+        'pad2d_int32',
+        'bitcount_uint32',
+        'negate_int32',
+        'sign_int32',
+        'hardsigmoid_int32',
+        'bitwisexor_uint32',
+        'compare_gt_int32',
+        'vectormatrix_mult_int32',
+        'compare_lt_int32',
+        'dotproduct_bias_relu_int32'
     ]
     
     results = []
     
     for model in models:
-        model_path = Path(base_dir) / model / 'dcp_designs'
+        model_path = Path(base_dir) / 'results' / 'dcp_designs' / model
         if not model_path.exists():
             print(f"Warning: Path does not exist: {model_path}")
             continue
