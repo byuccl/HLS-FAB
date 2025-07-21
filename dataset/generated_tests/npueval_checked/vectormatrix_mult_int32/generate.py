@@ -8,14 +8,12 @@ matrix_cols = 16
 function_signature = "void vectormatrix_mult_int32(ap_int<32> *vector, ap_int<32> *matrix, ap_int<32> *result)"
 
 description = f"""
-This HLS kernel performs a vector-matrix multiplication not matrix-vector multiplication. 
-result = vector * matrix
+This HLS kernel performs a vector-matrix multiplication. 
 The function takes three parameters:
     1. A pointer to a vector of {vector_size} ap_int<32> values.
     2. A pointer to a matrix of shape ({vector_size}, {matrix_cols}) represented as a flat array of ap_int<32> values.
     3. A pointer to a result vector of {matrix_cols} ap_int<32> values.
 The kernel computes the product of the input vector and matrix, storing the result in the output vector.
-Output dimensionality: 1×{vector_size} × {vector_size}×{matrix_cols} = 1×{matrix_cols}
 """
 
 inputs_info = [
