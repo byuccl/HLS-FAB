@@ -137,12 +137,14 @@ amd_deepseek_r1_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/dee
 byu_antrhopic_url = "https://api.anthropic.com/v1/complete"
 byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
 amd_claude_3_5_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
+amd_claude_3_7_url = "https://llm-api.amd.com/claude3/Claude-3.7/chat/completions"
 amd_gemini_2_url = "https://llm-api.amd.com/vertex/gemini/deployments/gemini-2.0-flash-001/chat/completions"
 
 model_parameters = {
                         "gpt-4o": {"amd_url": amd_gpt_4o_url, "byu_url": byu_gpt_url},
                         "gpt-4.1": {"amd_url": amd_gpt_4_1_url, "byu_url": byu_gpt_url},
                         "Claude-3.5": {"amd_url": amd_claude_3_5_url, "byu_url": byu_anthropic_url2},
+                        "Claude-3.7": {"amd_url": amd_claude_3_7_url},
                         "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url, "byu_url": byu_gpt_url},
                         "Deepseek-R1": {"amd_url": amd_deepseek_r1_url, "byu_url": byu_gpt_url},
                         "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
@@ -462,7 +464,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["gpt-4o","gpt-4.1"]
+    models = ["Claude-3.7","gpt-4.1"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
