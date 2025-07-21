@@ -4,7 +4,6 @@ from hlseval import PromptConstructor, generate_examples
 
 # Constants
 vector_size = 256
-PI = 3.14159265359
 
 function_signature = "void cos_bfloat16(ap_float<16,8> *input_vector, ap_float<16,8> *output_vector)"
 
@@ -42,14 +41,11 @@ def behavioral(input_vector):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
-
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples,
-    tolerances=tolerances
 )
 
 pc.write_json("kernel.json")

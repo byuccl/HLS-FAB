@@ -8,7 +8,7 @@ KERNEL_SIZE = 4
 STRIDE = 2
 OUTPUT_SIZE = (VECTOR_SIZE - KERNEL_SIZE) // STRIDE + 1
 
-function_signature = "void conv1d_bias_relu_bfloat16(ap_float<16,8>* in_buffer, ap_float<16,8>* kernel, ap_float<16,8>* out_buffer, ap_float<16,8> bias, uint32_t stride)"
+function_signature = "void conv1d_bias_relu_bfloat16(ap_float<16,8>* in_buffer, ap_float<16,8>* kernel, ap_float<16,8>* out_buffer, ap_float<16,8> bias)"
 
 description = f"""
 This HLS kernel performs a 1D convolution operation on a {VECTOR_SIZE}-length input vector of bfloat16 values using a {KERNEL_SIZE}-element kernel, a bfloat16 bias, and a specified stride.
@@ -52,28 +52,18 @@ inputs_info = [
         "total_elements": 1,
         "dtype": "bfloat16",
         "iotype": "in",
-        "min": -1.0,
-        "max": 1.0,
-    },
-    {
-        "name": "stride",
-        "array_dimension": 0,
-        "shape": (),
-        "total_elements": 1,
-        "dtype": "uint32",
-        "iotype": "in",
-        "min": 1,
-        "max": 4,
+        "min": 0.0,
+        "max": 2.0,
     }
 ]
 
-def behavioral(in_buffer, kernel, bias, stride):
-    output_size = (len(in_buffer) - len(kernel)) // stride + 1
+def behavioral(in_buffer, kernel, bias):
+    output_size = (len(in_buffer) - len(kernel)) // STRIDE + 1
     out_buffer = np.zeros(output_size, dtype=bfloat16)
     for i in range(output_size):
         acc = bfloat16(0.0)
         for j in range(len(kernel)):
-            prod = bfloat16(float(in_buffer[i * stride + j]) * float(kernel[j]))
+            prod = bfloat16(float(in_buffer[i * STRIDE + j]) * float(kernel[j]))
             acc = bfloat16(float(acc) + float(prod))
         acc = bfloat16(float(acc) + float(bias))
         if float(acc) < 0.0:

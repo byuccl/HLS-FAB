@@ -42,6 +42,14 @@ inputs_info = [
         "max": 10,
     },
     {
+        "name": "out_buffer",
+        "array_dimension": 1,
+        "shape": (OUTPUT_SIZE,),
+        "total_elements": OUTPUT_SIZE,
+        "dtype": "int16",
+        "iotype": "out",
+    },    
+    {
         "name": "bias",
         "array_dimension": 0,
         "shape": (),
@@ -50,14 +58,6 @@ inputs_info = [
         "iotype": "in",
         "min": -10,
         "max": 10,
-    },
-    {
-        "name": "out_buffer",
-        "array_dimension": 1,
-        "shape": (OUTPUT_SIZE,),
-        "total_elements": OUTPUT_SIZE,
-        "dtype": "int16",
-        "iotype": "out",
     }
 ]
 

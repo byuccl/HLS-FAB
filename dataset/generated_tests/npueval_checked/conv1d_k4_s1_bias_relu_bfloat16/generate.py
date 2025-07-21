@@ -56,8 +56,8 @@ inputs_info = [
         "total_elements": 1,
         "dtype": "bfloat16",
         "iotype": "in",
-        "min": -1.0,
-        "max": 1.0,
+        "min": 0.0,
+        "max": 2.0,
     }
 ]
 

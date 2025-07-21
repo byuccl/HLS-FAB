@@ -10,7 +10,7 @@ stride = 1
 output_rows = (input_rows - kernel_size) // stride + 1
 output_cols = (input_cols - kernel_size) // stride + 1
 
-function_signature = "void conv2d_bfloat16(ap_float<16,8> *input_matrix, ap_float<16,8> *kernel, ap_float<16,8> *output_matrix, uint32_t stride)"
+function_signature = "void conv2d_bfloat16(ap_float<16,8> *input_matrix, ap_float<16,8> *kernel, ap_float<16,8> *output_matrix)"
 
 description = f"""
 This HLS kernel performs a 2D convolution on a bfloat16 input matrix with a bfloat16 kernel and a runtime stride parameter.
@@ -52,10 +52,9 @@ inputs_info = [
     }
 ]
 
-def behavioral(input_matrix, kernel, stride):
-    input_rows = input_matrix.shape[0]
-    input_cols = input_matrix.shape[1]
-    kernel_size = kernel.shape[0]
+def behavioral(input_matrix, kernel):
+    input_matrix = input_matrix.reshape((input_rows, input_cols))
+    kernel = kernel.reshape((kernel_size, kernel_size))
     output_rows = (input_rows - kernel_size) // stride + 1
     output_cols = (input_cols - kernel_size) // stride + 1
 
@@ -66,7 +65,7 @@ def behavioral(input_matrix, kernel, stride):
             region = input_matrix[i*stride:i*stride+kernel_size, j*stride:j*stride+kernel_size].astype(np.float32)
             kv = kernel.astype(np.float32)
             output_matrix[i, j] = np.sum(region * kv)
-    return output_matrix.astype(bfloat16)
+    return output_matrix.astype(bfloat16).flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 
