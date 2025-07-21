@@ -727,7 +727,7 @@ def call_llm_api(coder, tools=None):
     if "claude" in coder.url.lower() or "gemini" in coder.url.lower(): # The Claude models needed a max_tokens value
         body["max_tokens"] = 8000
 
-    logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
+    # logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
     logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")  
 
     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
@@ -743,45 +743,45 @@ def call_llm_api(coder, tools=None):
         raise ValueError(f"Failed to decode JSON from API response: {response.text}")  
 
 # Convert function to OpenAI tool format with correct JSON Schema types  
-def function_to_tool(func):  
-    """Convert a Python function to OpenAI tool format"""  
-    sig = inspect.signature(func)  
-    parameters = {}  
+# def function_to_tool(func):  
+#     """Convert a Python function to OpenAI tool format"""  
+#     sig = inspect.signature(func)  
+#     parameters = {}  
       
-    for name, param in sig.parameters.items():  
-        annotation = param.annotation  
-        if annotation == inspect.Parameter.empty:  
-            type_str = "string"  
-        elif annotation == int or annotation == float:  
-            # Use "number" instead of "float" or "int" for JSON Schema compatibility  
-            type_str = "number"  
-        else:  
-            type_str = "string"  
+#     for name, param in sig.parameters.items():  
+#         annotation = param.annotation  
+#         if annotation == inspect.Parameter.empty:  
+#             type_str = "string"  
+#         elif annotation == int or annotation == float:  
+#             # Use "number" instead of "float" or "int" for JSON Schema compatibility  
+#             type_str = "number"  
+#         else:  
+#             type_str = "string"  
               
-        parameters[name] = {  
-            "type": type_str,  
-            "description": f"Parameter {name} for {func.__name__}"  
-        }  
+#         parameters[name] = {  
+#             "type": type_str,  
+#             "description": f"Parameter {name} for {func.__name__}"  
+#         }  
       
-    return {  
-        "type": "function",  
-        "function": {  
-            "name": func.__name__,  
-            "description": func.__doc__ or f"Function {func.__name__}",  
-            "parameters": {  
-                "type": "object",  
-                "properties": parameters,  
-                "required": list(parameters.keys())  
-            }  
-        }  
-    }  
+#     return {  
+#         "type": "function",  
+#         "function": {  
+#             "name": func.__name__,  
+#             "description": func.__doc__ or f"Function {func.__name__}",  
+#             "parameters": {  
+#                 "type": "object",  
+#                 "properties": parameters,  
+#                 "required": list(parameters.keys())  
+#             }  
+#         }  
+#     }  
 
-def format_node_content(node):  
-    content = node.get_content()  
-    # Detect if content is code and preserve formatting  
-    if content.strip().startswith(('def ', 'class ', '#include', '//')) or '{' in content:  
-        return f"```cpp\n{content}\n```"  
-    return content  
+# def format_node_content(node):  
+#     content = node.get_content()  
+#     # Detect if content is code and preserve formatting  
+#     if content.strip().startswith(('def ', 'class ', '#include', '//')) or '{' in content:  
+#         return f"```cpp\n{content}\n```"  
+#     return content  
 
 # Initialize the RAG components with appropriate embedding  
 def setup_rag():  
@@ -821,147 +821,147 @@ def setup_rag():
       
     return index, embed_model  
 
-# Create a RAG search function that directly queries the index  
-def search_documents(coder, query: str, index) -> str:  
-    """Useful for answering natural language questions."""  
-    # Since we can't use the standard query_engine with our custom LLM,  
-    # let's directly get the nodes and construct a response  
-    # Adjust retriever to get most relevant k examples  
-    retriever = index.as_retriever(similarity_top_k=3)  
-    nodes = retriever.retrieve(query)  
+# # Create a RAG search function that directly queries the index  
+# def search_documents(coder, query: str, index) -> str:  
+#     """Useful for answering natural language questions."""  
+#     # Since we can't use the standard query_engine with our custom LLM,  
+#     # let's directly get the nodes and construct a response  
+#     # Adjust retriever to get most relevant k examples  
+#     retriever = index.as_retriever(similarity_top_k=3)  
+#     nodes = retriever.retrieve(query)  
       
-    if not nodes:  
-        return "No relevant information found."  
+#     if not nodes:  
+#         return "No relevant information found."  
       
-    # Construct the prompt with retrieved content  
-    formatted_examples = []  
-    for i, node in enumerate(nodes):  
-        content = node.get_content()  
-        example_name = node.metadata.get('file_name', f'Example {i+1}')  
-        formatted_examples.append(f"### {example_name}\n```cpp\n{content}\n```")  
+#     # Construct the prompt with retrieved content  
+#     formatted_examples = []  
+#     for i, node in enumerate(nodes):  
+#         content = node.get_content()  
+#         example_name = node.metadata.get('file_name', f'Example {i+1}')  
+#         formatted_examples.append(f"### {example_name}\n```cpp\n{content}\n```")  
 
-    context = "\n\n".join(formatted_examples)  
+#     context = "\n\n".join(formatted_examples)  
 
 
-    prompt = f"""Write optimized HLS code using these examples as reference:  
+#     prompt = f"""Write optimized HLS code using these examples as reference:  
 
-    {context}  
+#     {context}  
 
-    Your task: {query}  
+#     Your task: {query}  
     
-    Follow the patterns in the examples, particularly the optimization techniques, pragma usage, and memory access patterns. Implement a complete, working solution.  
-    """        
-    # Call our API directly  
-    coder.messages.append({"role": "user", "content": prompt})  
-    response = call_llm_api(coder)  
+#     Follow the patterns in the examples, particularly the optimization techniques, pragma usage, and memory access patterns. Implement a complete, working solution.  
+#     """        
+#     # Call our API directly  
+#     coder.messages.append({"role": "user", "content": prompt})  
+#     response = call_llm_api(coder)  
       
-    if "response" in response and "error" in response["response"]:  
-        return f"Error: {response['response']['error']['message']}"  
+#     if "response" in response and "error" in response["response"]:  
+#         return f"Error: {response['response']['error']['message']}"  
       
-    if "choices" in response and len(response["choices"]) > 0:  
-        return response["choices"][0]["message"]["content"]  
-    elif "content" in api_response and isinstance(api_response["content"], list):
-            # Claude format
-            content_items = api_response["content"]
-            response_text = ""
-            for item in content_items:
-                if item.get("type") == "text":
-                    response_text += item["text"]
-            response = response_text
-    else:  
-        return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
+#     if "choices" in response and len(response["choices"]) > 0:  
+#         return response["choices"][0]["message"]["content"]  
+#     elif "content" in api_response and isinstance(api_response["content"], list):
+#             # Claude format
+#             content_items = api_response["content"]
+#             response_text = ""
+#             for item in content_items:
+#                 if item.get("type") == "text":
+#                     response_text += item["text"]
+#             response = response_text
+#     else:  
+#         return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
 
-# RAG agent implementation  
-def rag_agent(coder, index):  
-    """A RAG agent implementation using direct API calls"""  
+# # RAG agent implementation  
+# def rag_agent(coder, index):  
+#     """A RAG agent implementation using direct API calls"""  
       
-    # Create a wrapper for search_documents that includes the index  
-    def search_wrapper(query: str) -> str:  
-        return search_documents(coder, query, index)  
+#     # Create a wrapper for search_documents that includes the index  
+#     def search_wrapper(query: str) -> str:  
+#         return search_documents(coder, query, index)  
       
-    # First, get the LLM to decide what to do  
-    tools = [  
-        function_to_tool(search_wrapper)  
-    ]  
+#     # First, get the LLM to decide what to do  
+#     tools = [  
+#         function_to_tool(search_wrapper)  
+#     ]  
       
-    logger.info("Starting RAG agent interaction...")  
-    response = call_llm_api(coder, tools=tools)  
+#     logger.info("Starting RAG agent interaction...")  
+#     response = call_llm_api(coder, tools=tools)  
       
-    # Check if the response has the expected format  
-    if "response" in response and "error" in response["response"]:  
-        return f"Error: {response['response']['error']['message']}"  
+#     # Check if the response has the expected format  
+#     if "response" in response and "error" in response["response"]:  
+#         return f"Error: {response['response']['error']['message']}"  
       
-    if "choices" in response and len(response["choices"]) >= 0:  
+#     if "choices" in response and len(response["choices"]) >= 0:  
       
-        assistant_message = response["choices"][0]["message"]  
-    elif "content" in api_response and isinstance(api_response["content"], list):
-        # Claude format
-        content_items = api_response["content"]
-        response_text = ""
-        for item in content_items:
-            if item.get("type") == "text":
-                response_text += item["text"]
-        response = response_text
-    else:
-        return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
+#         assistant_message = response["choices"][0]["message"]  
+#     elif "content" in api_response and isinstance(api_response["content"], list):
+#         # Claude format
+#         content_items = api_response["content"]
+#         response_text = ""
+#         for item in content_items:
+#             if item.get("type") == "text":
+#                 response_text += item["text"]
+#         response = response_text
+#     else:
+#         return f"Error: Unable to get a proper response from the LLM API. Response: {response}"  
 
-    messages = coder.messages.copy()  # Start with the existing message history  
-    messages.append(assistant_message)  # Add the assistant's response        
+#     messages = coder.messages.copy()  # Start with the existing message history  
+#     messages.append(assistant_message)  # Add the assistant's response        
 
-    # If the LLM wants to use a tool  
-    if "tool_calls" in assistant_message:  
-        logger.info("LLM decided to use tools")  
-        for tool_call in assistant_message["tool_calls"]:  
-            function_name = tool_call["function"]["name"]  
-            arguments = json.loads(tool_call["function"]["arguments"])  
+#     # If the LLM wants to use a tool  
+#     if "tool_calls" in assistant_message:  
+#         logger.info("LLM decided to use tools")  
+#         for tool_call in assistant_message["tool_calls"]:  
+#             function_name = tool_call["function"]["name"]  
+#             arguments = json.loads(tool_call["function"]["arguments"])  
               
-            logger.info(f"Executing tool: {function_name} with arguments: {arguments}")  
+#             logger.info(f"Executing tool: {function_name} with arguments: {arguments}")  
               
-            # Execute the function   
-            if function_name == "search_wrapper":  
-                result = search_wrapper(**arguments)  
-            else:  
-                result = f"Unknown function: {function_name}"  
+#             # Execute the function   
+#             if function_name == "search_wrapper":  
+#                 result = search_wrapper(**arguments)  
+#             else:  
+#                 result = f"Unknown function: {function_name}"  
                   
-            logger.debug(f"Tool result: {result}")  
+#             logger.debug(f"Tool result: {result}")  
                   
-            # Add the function response to messages  
-            messages.append({  
-                "role": "tool",  
-                "tool_call_id": tool_call["id"],  
-                "content": str(result)  
-            })  
+#             # Add the function response to messages  
+#             messages.append({  
+#                 "role": "tool",  
+#                 "tool_call_id": tool_call["id"],  
+#                 "content": str(result)  
+#             })  
           
-        # Get the final response  
-        logger.debug(" Getting final response after tool calls...")  
-        temp_coder = HLSCoder(  
-            url=coder.url,  
-            workflow=coder.workflow,  
-            model=coder.model,  
-            temperature=coder.temperature,  
-            top_p=coder.top_p  
-        )  
-        temp_coder.messages = messages  
-        final_response = call_llm_api(temp_coder)  
+#         # Get the final response  
+#         logger.debug(" Getting final response after tool calls...")  
+#         temp_coder = HLSCoder(  
+#             url=coder.url,  
+#             workflow=coder.workflow,  
+#             model=coder.model,  
+#             temperature=coder.temperature,  
+#             top_p=coder.top_p  
+#         )  
+#         temp_coder.messages = messages  
+#         final_response = call_llm_api(temp_coder)  
           
-        if "response" in final_response and "error" in final_response["response"]:  
-            return f"Error: {final_response['response']['error']['message']}"  
+#         if "response" in final_response and "error" in final_response["response"]:  
+#             return f"Error: {final_response['response']['error']['message']}"  
           
-        if "choices" in final_response and len(final_response["choices"]) >= 0:  
+#         if "choices" in final_response and len(final_response["choices"]) >= 0:  
               
-            return final_response["choices"][0]["message"]["content"]  
-        elif "content" in api_response and isinstance(api_response["content"], list):
-            # Claude format
-            content_items = api_response["content"]
-            response_text = ""
-            for item in content_items:
-                if item.get("type") == "text":
-                    response_text += item["text"]
-            response = response_text
-        else:
-            return f"Error: Unable to get a proper final response from the LLM API. Response: {final_response}"  
+#             return final_response["choices"][0]["message"]["content"]  
+#         elif "content" in api_response and isinstance(api_response["content"], list):
+#             # Claude format
+#             content_items = api_response["content"]
+#             response_text = ""
+#             for item in content_items:
+#                 if item.get("type") == "text":
+#                     response_text += item["text"]
+#             response = response_text
+#         else:
+#             return f"Error: Unable to get a proper final response from the LLM API. Response: {final_response}"  
 
-    else:  
-        # LLM answered directly  
-        logger.info("LLM answered directly without using tools")  
-        return assistant_message["content"]  
+#     else:  
+#         # LLM answered directly  
+#         logger.info("LLM answered directly without using tools")  
+#         return assistant_message["content"]  

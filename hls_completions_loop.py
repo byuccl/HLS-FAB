@@ -1,5 +1,6 @@
 import logging
 from openai import OpenAI
+import os
 import json
 import pathlib
 import subprocess
@@ -26,12 +27,6 @@ Produce only the kernel function, no main, no additional examples or code.
 
 IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
 
-In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
-1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
-2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
-3. Optimal performance - Reduce the latency while trying to also keep resource usage low
-
-Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
 DYNARAPID_SYSTEM_PROMPT = """
@@ -45,12 +40,6 @@ The integer types you are allowed to use are int8_t, uint8_t, int16_t, uint16_t,
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 
-In cases where you are asked to improve existing code, Prioritize these goals to improve the code in the following order:
-1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed", "Failed to complete Synthesis" or "Function 'main' returns nonzero value")
-2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
-3. Optimal performance - Reduce the latency while trying to also keep resource usage low - Note: Unlike many other HLS tools, Dynamatic does not use pragmas to help with optimization. Code restructuring is the only way to better optimize kernels.
-
-Analyze the given feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
 def write_table_header(logfile):
@@ -106,23 +95,35 @@ def write_table_footer(logfile):
 
 def feedback_prompt(prev_code, feedback):
     return f"""
-        Here is my C HLS code:
+Here is my C HLS code:
 
-        {prev_code}
+{prev_code}
 
-        Here is some feedback from the synthesis report and the testbench:
+Here is some feedback from the synthesis report and the testbench:
 
-        {json.dumps(feedback, indent=2)}
+{json.dumps(feedback, indent=2)}
 
-        Please modify the code using the goals from the feedback as a guideline.
+Please modify the code using the goals from the feedback as a guideline.
 
-        Prioritize the goals to improve the code in the following order:
-        1. Running successfully - The code should successfully compile and run in both C Simulation and C Synthesis (look for phrases such as "Simulation Failed" or "Function 'main' returns nonzero value")
-        2. Functional correctness - The code should produce the desired output based on the C Simulation results (look for a series of "Expected" and "Actual" statements indicating that not every output value was correct. Also watch for the "percent_error" value. Anything above 0 is unacceptable.)
-        3. Optimal performance - Reduce the latency while trying to also keep resource usage low. If the latency says 0 then something is probably wrong with the code. Look at the warnings and errors in the synthesis report to guide your optimizations.
-        
-        Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
-        """
+Prioritize the goals to improve the code in the following order:
+TIER 1 - CRITICAL ERRORS (Must Fix First):
+- Compilation failures (status: failed)
+- Synthesis failures (latency: NULL, resources: NULL, errors: non-empty)  
+- Simulation mismatches (percent_error > 0%, match: mismatch)
+- Function returns non-zero
+
+TIER 2 - PERFORMANCE WARNINGS (Address if Tier 1 is clear):
+- II Violations → Memory port contention
+- Resource overflow → Exceeding FPGA limits (BRAM: 216, DSP: 216, FF: 74880 , LUT: 37440)
+- Timing violations → Clock frequency issues
+
+TIER 3 - OPTIMIZATION OPPORTUNITIES (Final stage):
+- Latency reduction
+- Resource efficiency
+- Throughput improvement
+
+Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
+"""
 
 byu_gpt_url2 = "https://api.openai.com/v1/completions"
 
@@ -136,12 +137,14 @@ amd_deepseek_r1_url = "https://llm-api.amd.com/api/OnPrem/openai/deployments/dee
 byu_antrhopic_url = "https://api.anthropic.com/v1/complete"
 byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
 amd_claude_3_5_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
+amd_claude_3_7_url = "https://llm-api.amd.com/claude3/Claude-3.7/chat/completions"
 amd_gemini_2_url = "https://llm-api.amd.com/vertex/gemini/deployments/gemini-2.0-flash-001/chat/completions"
 
 model_parameters = {
                         "gpt-4o": {"amd_url": amd_gpt_4o_url, "byu_url": byu_gpt_url},
                         "gpt-4.1": {"amd_url": amd_gpt_4_1_url, "byu_url": byu_gpt_url},
                         "Claude-3.5": {"amd_url": amd_claude_3_5_url, "byu_url": byu_anthropic_url2},
+                        "Claude-3.7": {"amd_url": amd_claude_3_7_url},
                         "Llama-3_2-11B": {"amd_url": amd_llama_3_2_url, "byu_url": byu_gpt_url},
                         "Deepseek-R1": {"amd_url": amd_deepseek_r1_url, "byu_url": byu_gpt_url},
                         "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
@@ -305,7 +308,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
                 synth_returncode = 1
         else:
             vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
-            vitis_feedback['csim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
+            vitis_feedback['sim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
 
@@ -334,16 +337,21 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
         dsim_end = datetime.now()
         csim_elapsed_time = dsim_end-dsim_begin
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, model, attempt=attempt+1, hls_flow=hls_flow)
+        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals)
     
 
-        returncode, stdout, dynamatic_elapsed_time = run_dynarapid(kernel_name, solutions_path)
+        returncode, stdout, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwrite)
 
         dynarapid_feedback['compile_feedback'] = {
             "returncode": returncode,
             "stdout": stdout,
         }
         out_data_path = f"{solutions_path}/{kernel_name}_data.json"
+        # try:
+        #     with open(f"{solutions_path}/{kernel_name}_test_data.json", "r") as f:
+        #         print(f"Found test data file for Dynarapid {solutions_path}/{kernel_name}_test_data.json")
+        # except FileNotFoundError:
+        #     print(f"Did not find test data file for Dynarapid {solutions_path}/{kernel_name}_test_data.json")
         hlseval.save_feedback_data(out_data_path, dynarapid_feedback)
         feedback = dynarapid_feedback
 
@@ -456,7 +464,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["gpt-4o", "gpt-4.1"]
+    models = ["Claude-3.7","gpt-4.1"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
@@ -483,6 +491,21 @@ if __name__ == "__main__":
                 process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals)
             
             write_table_footer(logfile)
+    # Delete the unecessary files after running the completions
+    try:
+        os.remove("kernel.json")
+        logger.debug(f"File 'kernel.json' deleted successfully.")
+    except FileNotFoundError:
+        logger.debug(f"Error: File 'kernel.json' not found.")
+    except Exception as e:
+        logger.debug(f"An error occurred: {e}")
+    try:
+        os.remove("vitis_config.cfg")
+        logger.debug(f"File 'vitis_config.cfg' deleted successfully.")
+    except FileNotFoundError:
+        logger.debug(f"Error: File 'vitis_config.cfg' not found.")
+    except Exception as e:
+        logger.debug(f"An error occurred: {e}")
 
 
 

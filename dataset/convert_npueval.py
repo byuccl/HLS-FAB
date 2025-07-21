@@ -126,9 +126,12 @@ The following is an example of the old 'canonical_scalar.cc' file for the 'avgpo
             rag=False
         )
 
-        if i == 10:
-            logger.info("Stopping after 5 tests for demonstration purposes.")
-            break
+        # if i < 47:
+        #     logger.info("Make the kernels after 10 tests for demonstration purposes.")
+        #     continue
+        # if i >= 52:
+        #     logger.info("Only make the first 20 kernels for demonstration purposes.")
+        #     break
         pathlib.Path(f"dataset/generated_tests/npueval/{desired_test}").mkdir(parents=True, exist_ok=True)
 
         # Get the kernel code
@@ -138,12 +141,12 @@ The following is an example of the old 'canonical_scalar.cc' file for the 'avgpo
         with open(f"{npueval_kernel_dir}/{desired_test}/canonical_scalar.cc", "r") as f:
             desired_test_canonical = f.read()
 
-        # # Check if the generate.py file already exists
-        # if os.path.exists(f"dataset/generated_tests/npueval/{desired_test}/generate.py"):
-        #     logger.info(
-        #         f"The file dataset/generated_tests/npueval/{desired_test}/generate.py already exists. Skipping file."
-        #     )
-        #     continue
+        # Check if the generate.py file already exists
+        if os.path.exists(f"dataset/generated_tests/npueval/{desired_test}/generate.py"):
+            logger.info(
+                f"The file dataset/generated_tests/npueval/{desired_test}/generate.py already exists. Skipping file."
+            )
+            continue
         
         generate_line = f"""
 Your task is to create a 'generate.py' script for the following test:\n{desired_test}

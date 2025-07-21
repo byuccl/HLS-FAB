@@ -29,6 +29,9 @@ C_TO_NUMPY_DTYPE = {
     "int64_t": "int64",
     "uint64_t": "uint64",
     "bfloat16": "bfloat16",
+    "ap_float<16,8>": "bfloat16",
+    "ap_float<32,8>": "float32",
+    "ap_float<64,11>": "float64",
     "float": "float32",
     "double": "float64",
 }
