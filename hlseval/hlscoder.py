@@ -88,6 +88,8 @@ def get_or_create_rag_components():
     return _RAG_INDEX, _EMBED_MODEL  
 
 api_key = os.environ["API_KEY"] # reads for the environment variable 'API_KEY'
+openrouter_api_key = os.environ["OPENROUTER_API_KEY"] # reads for the environment variable 'OPENROUTER_API_KEY'
+
 
 # The openAI has a different header format than the AMD API.
 byu_headers = { 
@@ -98,6 +100,10 @@ byu_headers = {
 amd_headers = { 
     "Ocp-Apim-Subscription-Key": api_key
 } 
+
+openrouter_headers={
+    "Authorization": f"Bearer {openrouter_api_key}",
+}
 
 
 class HLSCoder:
@@ -132,6 +138,8 @@ class HLSCoder:
             self.headers = byu_headers   
         elif self.workflow == "amd":  
             self.headers = amd_headers  
+        elif self.workflow == "openrouter":
+            self.headers = openrouter_headers
 
 
     def __call__(self, prompt):
@@ -548,6 +556,7 @@ void my_function(...) {
         logger.debug(f"Reduced context size from {total_tokens} to {new_tokens} tokens")  
 
     def generate_code(self):  
+
         """Lightweight wrapper to generate a response using OpenAI API with strict context management."""  
         # First try aggressive context window management  
         self.manage_context_window(max_tokens=60000)  # Adjust based on your model's limits  
@@ -730,7 +739,14 @@ def call_llm_api(coder, tools=None):
     # logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
     logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")  
 
-    response = requests.post(url=coder.url, json=body, headers=coder.headers)  
+    if coder.workflow != "openrouter":
+        response = requests.post(url=coder.url, json=body, headers=coder.headers)  
+    else:
+        data = json.dumps({
+            "model": coder.model, 
+            "messages": coder.messages
+        })
+        response = requests.post(url=coder.url, data=data, headers=coder.headers)  
       
     # Log the raw response for debugging  
     logger.debug(f"API Response status: {response.status_code}")  
