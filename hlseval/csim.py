@@ -18,11 +18,13 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()  
         elif isinstance(obj, np.integer):  
             return int(obj)  
+        if hasattr(obj, 'dtype') and str(obj.dtype) == 'bfloat16':
+            return float(obj) # Convert bfloat16 to a standard float
         elif isinstance(obj, np.floating):  
             return float(obj)  
         elif isinstance(obj, np.bool_):  
             return bool(obj)  
-        elif isinstance(obj, (np.void, np.complex_)):  
+        elif isinstance(obj, (np.void, np.complex128)):  
             return str(obj)  
         return json.JSONEncoder.default(self, obj) 
    
