@@ -327,12 +327,12 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
             testbench_code.append(f"\n        // Get expected values for {var_name}")
             testbench_code.append(f"        auto {var_name}_expected_json = test_case.at(\"expected_outputs\").at(\"{var_name}\");")
             
-            # Check for the outer-most dimension  ##This is outdated because we are not using nested arrays anymore
-            # if array_dimension > 0: # Only check for arrays
-            #     testbench_code.append(f"        if (!{var_name}_expected_json.is_array() || {var_name}_expected_json.size() < {shape[0]}) {{")
-            #     testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements expected: {shape[0]} has: \" << {var_name}_expected_json.size() << \").\" << std::endl;")
-            #     testbench_code.append(f"            return 1; // Or handle appropriately")
-            #     testbench_code.append("        }")
+            # Check for the outer-most dimension
+            if array_dimension > 0: # Only check for arrays
+                testbench_code.append(f"        if (!{var_name}_expected_json.is_array() || {var_name}_expected_json.size() < {shape[0]}) {{")
+                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements expected: {shape[0]} has: \" << {var_name}_expected_json.size() << \").\" << std::endl;")
+                testbench_code.append(f"            return 1; // Or handle appropriately")
+                testbench_code.append("        }")
                 
             if array_dimension == 0: # Scalar comparison
                 testbench_code.append(f"        {cpp_base_type} {var_name}_expected_val = {var_name}_expected_json.get<{cpp_base_type}>();")
