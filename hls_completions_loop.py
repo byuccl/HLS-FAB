@@ -250,30 +250,26 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
         llm_completion_end = datetime.now()
         llm_elapsed_time = llm_completion_end - llm_completion_begin
         logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
-        try:
-            with open(f"{solutions_path}/{kernel_name}.json", "x") as file:
-                json.dump(improved_code, file, indent=4)
-        except FileExistsError:
-            logger.info(f"{solutions_path}/{kernel_name}.json already exists. Skipping")
 
-        try:
-            with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
-                logger.debug("Writing to file")
-                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
-                if kernel_code == None:
-                        add_table_row(
-                            logfile,
-                            kernel_name, 
-                            llm_elapsed_time, 
-                            dynamatic_elapsed_time, 
-                            csim_elapsed_time, 
-                            csynth_elapsed_time
-                        )
-                        return 1, "Failed to produce kernel code"
-                else:
-                    file.write(kernel_code)
-        except FileExistsError:
-            logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
+        with open(f"{solutions_path}/{kernel_name}.json", "w") as file:
+            json.dump(improved_code, file, indent=4)
+
+
+        with open(f"{solutions_path}/{kernel_name}.cpp", "w") as file:
+            logger.debug("Writing to file")
+            kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+            if kernel_code == None:
+                    add_table_row(
+                        logfile,
+                        kernel_name, 
+                        llm_elapsed_time, 
+                        dynamatic_elapsed_time, 
+                        csim_elapsed_time, 
+                        csynth_elapsed_time
+                    )
+                    return 1, "Failed to produce kernel code"
+            else:
+                file.write(kernel_code)
     
     if hls_flow == "vitis":
         # Run CSIM    
@@ -474,7 +470,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["x-ai/grok-4", "openai/gpt-4.1", "anthropic/claude-sonnet-3.7"]
+    models = ["x-ai/grok-4", "openai/gpt-4.1", "anthropic/claude-sonnet-4", "google/gemini-2.5-pro"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
