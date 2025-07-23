@@ -28,8 +28,8 @@ inputs_info = [
     },  # Input buffer for the kernel
     {
         "name": "out_buffer",  # Name of the output buffer
-        "array_dimension": 1,  # Number of dimensions in the output buffer
-        "shape": (1,),  # Shape of the output buffer
+        "array_dimension": 0,  # Number of dimensions in the output buffer
+        "shape": (),  # Shape of the output buffer
         "total_elements": 1,  # Total number of elements in the output buffer
         "dtype": "bfloat16",
         "iotype": "out",  # Output buffer for the kernel
@@ -38,7 +38,7 @@ inputs_info = [
 
 def behavioral(input_buffer):
     abs_sum = np.sum(np.abs(input_buffer))
-    return np.array([abs_sum], dtype=bfloat16)
+    return abs_sum.astype(bfloat16)
 
 examples = generate_examples(inputs_info=inputs_info)
 

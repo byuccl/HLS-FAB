@@ -8,6 +8,7 @@ alpha_value = 0.01
 
 function_signature = "void leaky_relu_bfloat16(ap_float<16,8> *in_buffer, ap_float<16,8> *out_buffer)"
 
+short_description = f"This HLS kernel performs a Leaky ReLU activation with an alpha value of {alpha_value} on a bfloat16 input vector of size {num_elements}."
 description = f"""
 This HLS kernel performs a Leaky ReLU activation on a bfloat16 input vector of size {num_elements}.
 The Leaky ReLU function is defined as:
@@ -45,14 +46,12 @@ def behavioral(input_buffer):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")
