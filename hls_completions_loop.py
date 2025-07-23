@@ -139,6 +139,8 @@ byu_anthropic_url2 = "https://api.anthropic.com/v1/messages"
 amd_claude_3_5_url = "https://llm-api.amd.com/claude3/Claude-3.5/chat/completions"
 amd_claude_3_7_url = "https://llm-api.amd.com/claude3/Claude-3.7/chat/completions"
 amd_gemini_2_url = "https://llm-api.amd.com/vertex/gemini/deployments/gemini-2.0-flash-001/chat/completions"
+openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
+
 
 model_parameters = {
                         "gpt-4o": {"amd_url": amd_gpt_4o_url, "byu_url": byu_gpt_url},
@@ -165,7 +167,11 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
 
         context_string = "Reference vectorized code:\n"
         prompt_with_context = test["prompt"] + "\n" + context_string
-        url = (model_parameters[model])[f"{workflow}_url"]
+        if workflow == "openrouter":
+            # logger.debug("Setting openrouter url")
+            url = openrouter_url
+        else:
+            url = (model_parameters[model])[f"{workflow}_url"]
 
         llm_completion_begin = datetime.now()
 
@@ -225,7 +231,11 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
 
         new_prompt = feedback_prompt(prev_code=prev_code, feedback=prev_feedback)
         logger.debug(new_prompt)
-        url = (model_parameters[model])[f"{workflow}_url"]
+        if workflow == "openrouter":
+            # logger.debug("Setting openrouter url")
+            url = openrouter_url
+        else:
+            url = (model_parameters[model])[f"{workflow}_url"]
         improved_code = hlseval.generate_one_completion(
             new_prompt,
             workflow=workflow,
@@ -422,8 +432,8 @@ if __name__ == "__main__":
 
     parser.add_argument(
         'workflow', 
-        choices=['amd', 'byu'],  
-        help="Which workflow to follow for API calls ('amd' or 'byu')"
+        choices=['amd', 'byu', 'openrouter'],  
+        help="Which workflow to follow for API calls ('amd', 'byu', or 'openrouter')"
     )  
 
     parser.add_argument(
@@ -464,7 +474,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["Claude-3.7","gpt-4.1"]
+    models = ["x-ai/grok-4", "openai/gpt-4.1"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
@@ -479,9 +489,9 @@ if __name__ == "__main__":
 
 
     for model in models:
-        if model not in model_parameters:
-            logger.warning(f"Model {model} not recognized.")
-            continue
+        # if model not in model_parameters:
+        #     logger.warning(f"Model {model} not recognized.")
+        #     continue
 
         pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/logs/").mkdir(parents=True, exist_ok=True)
         with open (f"results/solutions/{args.hls_flow}/{model}/logs/timing.log", "w") as logfile:

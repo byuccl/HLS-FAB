@@ -203,14 +203,14 @@ exit
                 
                 if file_count == "0":
                     # Try to find where files might have been created instead - with correct capitalization
-                    find_files_cmd = f"docker exec dynarapid_container bash -c 'find /DynaRapid -type f -mmin -5 | grep -v \"\.class\"'"
+                    find_files_cmd = f"docker exec dynarapid_container bash -c 'find /DynaRapid -type f -mmin -5 | grep -v \".class\"'"
                     find_result = subprocess.run(find_files_cmd, shell=True, check=False, capture_output=True, text=True)
                     logger.debug(f"Recent files in /DynaRapid: {find_result.stdout}")
                     
                     # If files were found elsewhere, try to copy them to our target directory
                     if find_result.stdout.strip():
                         logger.info("Found files in a different location, copying to target directory")
-                        copy_cmd = f"docker exec dynarapid_container bash -c 'find /DynaRapid -type f -mmin -5 | grep -v \"\.class\" | xargs -I{{}} cp {{}} {attempt_dir}/'"
+                        copy_cmd = f"docker exec dynarapid_container bash -c 'find /DynaRapid -type f -mmin -5 | grep -v \".class\" | xargs -I{{}} cp {{}} {attempt_dir}/'"
                         subprocess.run(copy_cmd, shell=True, check=False)
                 
             except subprocess.TimeoutExpired:
