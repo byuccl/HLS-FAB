@@ -183,7 +183,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     try:
         generate_h_file(kernel_code, model_dir, kernel_name)
     except Exception as e:
-        logger.error(f"CSIM: Error writing C++ testbench file: {e}")
+        logger.error(f"Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
     
     # --- C++ Testbench Code Generation ---
@@ -676,7 +676,11 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
         except Exception as e:
             logger.error(f"An unexpected error occurred during CSIM: {e}")
             return e
-                
+    else: 
+        logger.warning("No Testbench file skipping to next kernel.")
+        #No Testebench was made skip this kernel. 
+        return 
+        
 # --- Main execution block for debugging purposes ---
 if __name__ == "__main__":
     # Ensure this path exists or is creatable

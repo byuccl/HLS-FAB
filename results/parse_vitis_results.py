@@ -45,15 +45,12 @@ def parse_timing_log(log_path):
 def create_csv(base_dir, output_file):
     """Process all data and create a CSV file."""
     # Define the models and kernels to process
-    models = ['gpt-4o', 'gpt-4.1', 'Claude-3.5', 'Gemini-2.0-Flash', 'Llama-3_2-11B']
-    kernels = [
-        'matrix_multiply_int32',
-        'relu_activation_float32',
-        'absolute_value_int8',
-        'affine_float32',
-        'dot_product_float32',
-        'conv2d_int16'
-    ]
+    with open("./dataset/llm_models.txt", "r") as f:
+        lines = f.readlines()
+    models = [line.strip() for line in lines]
+    with open("./dataset/kernel_list.txt", "r") as f:
+        kernels = f.readlines()
+    kernels = [kernel.strip() for kernel in kernels]
     
     # Map kernel directory names to kernel names used in the CSV
     kernel_dir_to_csv = {
@@ -200,6 +197,6 @@ def create_csv(base_dir, output_file):
     print(f"CSV file created successfully: {output_file}")
 
 # Execute the script
-base_directory = "./solutions/vitis"
+base_directory = "./results/solutions/vitis"
 output_csv = "results_summary.csv"
 create_csv(base_directory, output_csv)

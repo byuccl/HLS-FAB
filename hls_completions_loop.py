@@ -279,7 +279,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             logger.info("Starting Vitis Run")
             csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
             timeout_csim = False
-            sim_returncode = csim_output.returncode
+            sim_returncode = csim_output.returncode if (csim_output != None) else 1
         except hlseval.CsimTimeoutError as e:
             timeout_csim = True
             sim_returncode = 1
@@ -296,7 +296,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
                 vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
-                synth_returncode = synth_output.returncode
+                synth_returncode = synth_output.returncode 
                 csynth_end = datetime.now()
                 csynth_elapsed_time = csynth_end-csynth_begin
                 logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
@@ -335,7 +335,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             dsim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim", hls_flow=hls_flow)
             logger.debug(dsim_output)
             timeout_dsim = False
-            sim_returncode = dsim_output.returncode
+            sim_returncode = dsim_output.returncode if (dsim_output != None) else 1
         except hlseval.CsimTimeoutError as e:
             timeout_dsim = True
             sim_returncode = 1
@@ -483,6 +483,11 @@ if __name__ == "__main__":
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
 
+    with open("./dataset/llm_models.txt", "r") as f:
+        lines = f.readlines()
+    models = [line.strip() for line in lines]
+
+    print(models)
 
     for model in models:
         # if model not in model_parameters:

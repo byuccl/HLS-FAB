@@ -1,0 +1,17 @@
+model,kernel,attempts,status,match,errors,csim_time,synth_errors,fmax,latency,bram,dsp,ff,lut,csynth_time
+x-ai/grok-4,vectorsubtract_int32,1,,,-,-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+x-ai/grok-4,vectoradd_int32,1,,,-,-,-,7.3,273,6,0,2807,2646,-
+x-ai/grok-4,relu_int32,1,,,-,-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+x-ai/grok-4,reduce_add_relu_int32,1,,,-,-,-,7.3,145,4,0,1329,1353,-
+openai/gpt-4.1,vectorsubtract_int32,1,,,-,-,-,7.3,1039,4,0,35102,26522,-
+openai/gpt-4.1,vectoradd_int32,1,,,-,-,-,7.3,529,4,0,1460,1505,-
+openai/gpt-4.1,relu_int32,1,,,-,-,-,7.3,1041,4,0,1332,1209,-
+openai/gpt-4.1,reduce_add_relu_int32,1,,,-,-,-,7.3,145,4,0,1285,1247,-
+anthropic/claude-sonnet-4,vectorsubtract_int32,1,,,-,-,-,7.3,529,6,0,2778,2608,-
+anthropic/claude-sonnet-4,vectoradd_int32,1,,,-,-,-,7.3,273,6,0,2777,2606,-
+anthropic/claude-sonnet-4,relu_int32,1,,,-,-,-,7.3,1041,4,0,1972,1855,-
+anthropic/claude-sonnet-4,reduce_add_relu_int32,1,,,-,-,-,7.3,145,10,0,4650,4562,-
+google/gemini-2.5-pro,vectorsubtract_int32,1,,,-,-,-,7.3,529,6,0,2168,2002,-
+google/gemini-2.5-pro,vectoradd_int32,1,,,-,-,-,7.3,273,6,0,2771,2606,-
+google/gemini-2.5-pro,relu_int32,1,,,-,-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+google/gemini-2.5-pro,reduce_add_relu_int32,1,,,-,-,-,7.3,144,4,0,4181,7820,-
