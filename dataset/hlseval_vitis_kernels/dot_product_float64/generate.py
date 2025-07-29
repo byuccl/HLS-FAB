@@ -5,6 +5,8 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 1024
 
+function_signature = "void dot_product_float64(double *in_vector1, double *in_vector2, double *result)"
+
 description = f"""
 This HLS kernel implements a function to calculate the dot product of two input vectors containing {num_values} values of the 64-bit floating point values.
 Parameters to the function include three float64 pointers:
@@ -13,36 +15,45 @@ Parameters to the function include three float64 pointers:
 """
 source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
-# A function to return the inputs and types to the function. 
-# Inputs are determined by the parameters to the kernel found in the 'canonical_scalar.cc' file. 
-# Types are determined by the 'generate_types' function.
-def generate_inputs(seed=0):
-    if seed == -1: 
-        data = np.load('data.npz')  
-        input_vector1 = data["input_vector1"]
-        input_vector2 = data["input_vector2"]
-        output_value = data["output_value"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly
-        np.random.seed(seed)
-        
-        input_vector1 = np.random.rand(num_values).astype(np.float64)
-        input_vector2 = np.random.rand(num_values).astype(np.float64)
-        output_value = np.float64(0.0) # If a scalar output declare it like this according to the types in the kernel
-    inputs = [input_vector1, input_vector2, output_value]
-
-    types = generate_types(inputs)  
-    return {"inputs": inputs, "types": types}  
+inputs_info = [
+    {
+        "name": "in_vector1",  # Name of the input vector
+        "array_dimension": 1,  # Number of dimensions in the input vector
+        "shape": (num_values,),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "float64",
+        "iotype": "in",  # Input vector for the kernel
+        "min": -32000,  # Minimum value for the input vector
+        "max": 32000,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "in_vector2",  # Name of the input vector
+        "array_dimension": 1,  # Number of dimensions in the input vector
+        "shape": (num_values,),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "float64",
+        "iotype": "in",  # Input vector for the kernel
+        "min": -32000,  # Minimum value for the input vector
+        "max": 32000,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "result",  # Name of the result
+        "array_dimension": 0,  # Number of dimensions in the result
+        "shape": (),  # Shape of the result
+        "total_elements": 1,  # Total number of elements in the result
+        "dtype": "float64",
+        "iotype": "out",  # Output for the kernel
+    }  # Output for the kernel
+]
 
 # A function to generate a correct solution based on sample input vectors
 def behavioral(input_vector1, input_vector2):
     return np.dot(input_vector1, input_vector2)
 
-examples = generate_examples(generate_inputs)
+examples = generate_examples(inputs_info=inputs_info)
 
-# Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

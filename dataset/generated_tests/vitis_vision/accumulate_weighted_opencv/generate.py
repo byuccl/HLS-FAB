@@ -7,42 +7,64 @@ height = 128
 width = 128
 num_values = height * width
 
+function_signature = "void accumulate_weighted_opencv(ap_uint<8> *src1, ap_uint<8> *src2, ap_uint<16> *dst, float alpha)"
 
-function_signature = """void accumulate_weighted_opencv(ap_uint<8> *src1, ap_uint<8> *src2, uint16_t *dst, float alpha)"""
 
 description = f"""
 This HLS kernel implements a function to compute the weighted sum of two input images and store the result in an output image. 
-Parameters to the function include two ap_uint<8> pointers, one uint16_t pointer, and a float:
+Parameters to the function include two ap_uint<8> pointers, one ap_uint<16> pointer, and a float:
     The first pointer points to the start of a {num_values}-element array of ap_uint<8> values representing the first input image.
     The second pointer points to the start of a {num_values}-element array of ap_uint<8> values representing the second input image.
-    The third pointer points to the start of a {num_values}-element array of uint16_t values representing the output image.
+    The third pointer points to the start of a {num_values}-element array of ap_uint<16> values representing the output image.
     The fourth parameter is a float representing the weight alpha.
 """
+source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
-def generate_inputs(seed=0):
-    if seed == -1: 
-        data = np.load('data.npz')  
-        input_image1 = data["input_image1"]
-        input_image2 = data["input_image2"]
-        output_image = data["output_image"]
-        input_alpha = data["input_alpha"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly
-        np.random.seed(seed)
-
-        input_image1 = np.random.randint(0, 256, size=(num_values), dtype=np.uint8)
-        input_image2 = np.random.randint(0, 256, size=(num_values), dtype=np.uint8)
-        output_image = np.zeros(num_values, dtype=np.uint16)
-        input_alpha = np.random.default_rng().random(dtype="float32")
-    inputs = [input_image1, input_image2, output_image, input_alpha]
-
-    types = generate_types(inputs)  
-    return {"inputs": inputs, "types": types}  
+inputs_info = [
+    {
+        "name": "src1",  # Name of the input vector
+        "array_dimension": 2,  # Number of dimensions in the input vector
+        "shape": (height,width),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "uint8",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 127,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "src2",  # Name of the input vector
+        "array_dimension": 2,  # Number of dimensions in the input vector
+        "shape": (height,width),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "uint8",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 127,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "result",  # Name of the result
+        "array_dimension": 2,  # Number of dimensions in the result
+        "shape": (height,width),  # Shape of the result
+        "total_elements": num_values,  # Total number of elements in the result
+        "dtype": "uint16",
+        "iotype": "out",  # Output for the kernel
+    },  # Output for the kernel
+    {
+        "name": "alpha",  # Name of the input value
+        "array_dimension": 0,  # Number of dimensions in the input vector
+        "shape": (),  # Shape of the input vector
+        "total_elements": 1,  # Total number of elements in the input vector
+        "dtype": "float32",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 1,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+]
 
 def behavioral(input_image1, input_image2, alpha):
     return (alpha * input_image1 + (1 - alpha) * input_image2).astype(np.uint16)
 
-examples = generate_examples(generate_inputs)
+examples = generate_examples(inputs_info=inputs_info)
 
 pc = PromptConstructor(
     function_signature=function_signature,

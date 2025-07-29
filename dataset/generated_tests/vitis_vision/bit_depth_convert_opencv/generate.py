@@ -5,8 +5,10 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Image dimensions
 height = 128
 width = 128
+num_values = height * width
 
 function_signature = """void bit_depth_convert_opencv(ap_uint<8> *input_img, int shift, ap_uint<16> *output_img)"""
+
 description = f"""
 This HLS kernel implements a function to convert the bit depth of an input image from 8-bit to 16-bit. 
 Parameters to the function include two pointers and one integer:
@@ -15,24 +17,36 @@ Parameters to the function include two pointers and one integer:
     The third parameter is a pointer to the start of a {height * width}-element array of ap_uint<16> values representing the output image.
 """
 
-
-def generate_inputs(seed=0):
-    if seed == -1: 
-        data = np.load('data.npz')  
-        input_img = data["input_img"]
-        input_shift = data["input_shift"]
-        output_img = data["output_img"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly
-        np.random.seed(seed)
-
-        input_img = np.random.randint(0, 256, size=(height * width), dtype=np.uint8)
-        input_shift = np.random.randint(0, 8, dtype=int)  # Shift value between 0 and 7
-        output_img = np.zeros(height * width, dtype=np.uint16)
-    inputs = [input_img, input_shift, output_img]
-
-    types = generate_types(inputs)  
-    return {"inputs": inputs, "types": types}  
+inputs_info = [
+    {
+        "name": "input_img",  # Name of the input vector
+        "array_dimension": 2,  # Number of dimensions in the input vector
+        "shape": (height,width),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "uint8",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 127,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "shift",  # Name of the input value
+        "array_dimension": 0,  # Number of dimensions in the input vector
+        "shape": (),  # Shape of the input vector
+        "total_elements": 1,  # Total number of elements in the input vector
+        "dtype": "int32",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 1,  # Minimum value for the input vector
+        "max": 2,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "output_img",  # Name of the result
+        "array_dimension": 2,  # Number of dimensions in the result
+        "shape": (height,width),  # Shape of the result
+        "total_elements": num_values,  # Total number of elements in the result
+        "dtype": "uint16",
+        "iotype": "out",  # Output for the kernel
+    }  # Output for the kernel
+]
 
 def behavioral(input_img, shift):  
     # Instead of using numpy, let's work with raw Python types to avoid any format issues  
@@ -62,7 +76,7 @@ def behavioral(input_img, shift):
     # Convert to numpy array of proper type at the end  
     return np.array(output, dtype=np.uint16)   
 
-examples = generate_examples(generate_inputs)
+examples = generate_examples(inputs_info=inputs_info)
 
 pc = PromptConstructor(
     function_signature=function_signature,

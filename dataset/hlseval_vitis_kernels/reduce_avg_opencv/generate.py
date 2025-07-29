@@ -5,34 +5,50 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the dimensions of the image
 height = 128
 width = 128
+num_values = height * width
+
+function_signature = "void reduce_avg_opencv(ap_uint<8> *in_img, int dimension, ap_uint<8> *out_img)"
 
 description = f"""
 This HLS kernel implements a function to reduce a 128x128 image to a vector by calculating the mean of its rows or columns.
-Parameters to the function include two uint8_t pointers and an integer:
-    The first pointer points to the start of a {height}x{width} array of uint8_t values representing the input image.
+Parameters to the function include two ap_uint<8> pointers and an integer:
+    The first pointer points to the start of a {height}x{width} array of ap_uint<8> values representing the input image.
     The second parameter is an integer representing the dimension along which the reduction is performed (0 for rows, 1 for columns).
-    The third pointer points to the start of an array of uint8_t values representing the output vector.
+    The third pointer points to the start of an array of ap_uint<8> values representing the output vector.
 """
 
 source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
-def generate_inputs(seed=0):
-    if seed == -1:
-        data = np.load('data.npz')
-        input_image = data["input_image"]
-        dimension = data["dimension"]
-        output_vector = data["output_vector"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly
-        np.random.seed(seed)
-
-        input_image = np.random.randint(0, 256, size=(height, width), dtype=np.uint8)
-        dimension = np.random.choice([0, 1])
-        output_vector = np.zeros(height if dimension == 1 else width, dtype=np.uint8)
-
-    inputs = [input_image.flatten(), dimension, output_vector]
-    types = generate_types(inputs)
-    return {"inputs": inputs, "types": types}
+inputs_info = [
+    {
+        "name": "in_img",  # Name of the input vector
+        "array_dimension": 2,  # Number of dimensions in the input vector
+        "shape": (height,width),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "uint8",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 127,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "dimension",  # Name of the input value
+        "array_dimension": 0,  # Number of dimensions in the input vector
+        "shape": (),  # Shape of the input vector
+        "total_elements": 1,  # Total number of elements in the input vector
+        "dtype": "int32",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 1,  # Minimum value for the input vector
+        "max": 2,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "out_img",  # Name of the result
+        "array_dimension": 2,  # Number of dimensions in the result
+        "shape": (height,width),  # Shape of the result
+        "total_elements": num_values,  # Total number of elements in the result
+        "dtype": "uint16",
+        "iotype": "out",  # Output for the kernel
+    }  # Output for the kernel
+]
 
 def behavioral(input_image, dimension):
     input_image = input_image.reshape((height, width))
@@ -41,11 +57,10 @@ def behavioral(input_image, dimension):
     else:
         return np.mean(input_image, axis=1).astype(np.uint8)
 
-examples = generate_examples(generate_inputs)
+examples = generate_examples(inputs_info=inputs_info)
 
-# Create the prompt constructor.
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

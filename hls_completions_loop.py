@@ -287,6 +287,10 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             timeout_csim = True
             sim_returncode = 1
             logger.warning("Vitis timed out on Simulation")
+        except Exception as e:
+            timeout_csim = False
+            sim_returncode = 1
+            logger.warning(f"An error occurred: {e}") 
         csim_end = datetime.now()
         csim_elapsed_time = csim_end-csim_begin
         logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")

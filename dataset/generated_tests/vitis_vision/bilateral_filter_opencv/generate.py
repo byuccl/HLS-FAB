@@ -6,10 +6,12 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 height = 128
 width = 128
 filter_size = 3
+num_values = width * height
 
 function_signature = """void bilateral_filter_opencv(ap_uint<8> *input_image, double sigma_color, double sigma_space, ap_uint<8> *output_image)"""
+
 description = f"""
-This HLS kernel implements a bilateral filter on a 128x128 image. The bilateral filter smoothens the image while preserving edges by considering both spatial and intensity differences.
+This HLS kernel implements a bilateral filter on a 128x128 image. The bilateral filter smoothens the image while preserving edges by considering both spatial and intensity differences. The window size for this kernel is 3.
 Parameters to the function include two ap_uint<8> pointers and two double values:
     The first pointer points to the start of a {height * width}-element array of ap_uint<8> values representing the input image.
     The second parameter is a double value representing the sigma for color.
@@ -17,25 +19,46 @@ Parameters to the function include two ap_uint<8> pointers and two double values
     The fourth pointer points to the start of a {height * width}-element array of ap_uint<8> values representing the output image.
 """
 
-def generate_inputs(seed=0):
-    if seed == -1:
-        data = np.load('data.npz')
-        input_image = data["input_image"]
-        sigma_color = data["sigma_color"]
-        sigma_space = data["sigma_space"]
-        output_image = data["output_image"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly
-        np.random.seed(seed)
-
-        input_image = np.random.randint(0, 256, size=(height * width), dtype=np.uint8)
-        sigma_color = np.random.uniform(10.0, 50.0)
-        sigma_space = np.random.uniform(10.0, 50.0)
-        output_image = np.zeros(height * width, dtype=np.uint8)
-    inputs = [input_image, sigma_color, sigma_space, output_image]
-
-    types = generate_types(inputs)
-    return {"inputs": inputs, "types": types}
+inputs_info = [
+    {
+        "name": "input_image",  # Name of the input vector
+        "array_dimension": 2,  # Number of dimensions in the input vector
+        "shape": (height,width),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "uint8",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 127,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "sigma_color",  # Name of the result
+        "array_dimension": 0,  # Number of dimensions in the result
+        "shape": (),  # Shape of the result
+        "total_elements": 1,  # Total number of elements in the result
+        "dtype": "float64",
+        "iotype": "in",  # Input for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 1,  # Maximum value for the input vector
+    },  
+    {
+        "name": "sigma_space",  # Name of the result
+        "array_dimension": 0,  # Number of dimensions in the result
+        "shape": (),  # Shape of the result
+        "total_elements": 1,  # Total number of elements in the result
+        "dtype": "float64",
+        "iotype": "in",  # Input for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 1,  # Maximum value for the input vector
+    },  
+    {
+        "name": "output_image",  # Name of the result
+        "array_dimension": 2,  # Number of dimensions in the result
+        "shape": (height,width),  # Shape of the result
+        "total_elements": num_values,  # Total number of elements in the result
+        "dtype": "uint8",
+        "iotype": "out",  # Output for the kernel
+    }  # Output for the kernel
+]
 
 def behavioral(input_image, sigma_color, sigma_space):
     input_image_2d = input_image.reshape((height, width))
@@ -48,25 +71,34 @@ def behavioral(input_image, sigma_color, sigma_space):
         for x in range(width):
             sum_weights = 0.0
             sum_intensity = 0.0
-            center_pixel = input_image_2d[y, x]
+            center_pixel = float(input_image_2d[y, x])  # Convert to float to avoid overflow
 
             for fy in range(-half_filter, half_filter + 1):
                 for fx in range(-half_filter, half_filter + 1):
                     ny, nx = y + fy, x + fx
                     if 0 <= ny < height and 0 <= nx < width:
-                        neighbor_pixel = input_image_2d[ny, nx]
-                        color_diff = center_pixel - neighbor_pixel
-                        space_diff = fy * fy + fx * fx
+                        neighbor_pixel = float(input_image_2d[ny, nx])  # Convert to float
+                        color_diff = center_pixel - neighbor_pixel  # Now safe as floats
+                        space_diff = float(fy * fy + fx * fx)  # Ensure float calculation
 
-                        weight = np.exp(space_diff * space_coeff) * np.exp(color_diff * color_diff * color_coeff)
+                        # Calculate weights with careful exponentiation
+                        space_weight = np.exp(space_diff * space_coeff)
+                        color_weight = np.exp((color_diff * color_diff) * color_coeff)
+                        weight = space_weight * color_weight
+                        
                         sum_intensity += weight * neighbor_pixel
                         sum_weights += weight
 
-            output_image_2d[y, x] = np.clip(sum_intensity / sum_weights, 0, 255)
+            # Avoid division by zero
+            if sum_weights > 0:
+                output_image_2d[y, x] = np.clip(sum_intensity / sum_weights, 0, 255).astype(np.uint8)
+            else:
+                output_image_2d[y, x] = input_image_2d[y, x]
 
     return output_image_2d.flatten()
 
-examples = generate_examples(generate_inputs)
+
+examples = generate_examples(inputs_info=inputs_info)
 
 pc = PromptConstructor(
     function_signature=function_signature,
