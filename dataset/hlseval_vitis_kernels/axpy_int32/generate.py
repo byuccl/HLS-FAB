@@ -5,41 +5,59 @@ from hlseval import PromptConstructor, generate_types, generate_examples
 # Set the number of values in the array
 num_values = 4096
 
+function_signature = "void axpy_int32(ap_int<32> *x_vector, ap_int<32> alpha, ap_int<32> *y_vector)"
+
 description = f"""
 This HLS kernel implements the AXPY operation on two input vectors of 32-bit integers. 
 The operation is defined as Y = alpha * X + Y, where X and Y are vectors and alpha is a scalar.
-Parameters to the function include two int32_t pointers and one int32_t scalar:
+Parameters to the function include two ap_int<32> pointers and one ap_int<32> scalar:
     The first pointer points to an array containing {num_values} int32 values. This is the input vector X.
     The second parameter is an int32 scalar value, alpha.
     The third pointer points to an array containing {num_values} int32 values. This is the input/output vector Y.
 """
 source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
-def generate_inputs(seed=0):
-    if seed == -1: 
-        data = np.load('data.npz')  
-        input_x_vector = data["input_x_vector"]
-        input_alpha = data["input_alpha"]
-        inout_y_vector = data["inout_y_vector"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly
-        np.random.seed(seed)
+inputs_info = [
+    {
+        "name": "x_vector",  # Name of the input vector
+        "array_dimension": 1,  # Number of dimensions in the input vector
+        "shape": (num_values,),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "int32",
+        "iotype": "in",  # Input vector for the kernel
+        "min": -32000,  # Minimum value for the input vector
+        "max": 32000,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "alpha",  # Name of the input value
+        "array_dimension": 0,  # Number of dimensions in the input vector
+        "shape": (),  # Shape of the input vector
+        "total_elements": 1,  # Total number of elements in the input vector
+        "dtype": "int32",
+        "iotype": "in",  # Input vector for the kernel
+        "min": -32000,  # Minimum value for the input vector
+        "max": 32000,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "y_vector",  # Name of the result
+        "array_dimension": 1,  # Number of dimensions in the result
+        "shape": (num_values,),  # Shape of the result
+        "total_elements": num_values,  # Total number of elements in the result
+        "dtype": "int32",
+        "iotype": "inout",  # Output for the kernel
+        "min": -32000,  # Minimum value for the input vector
+        "max": 32000,  # Maximum value for the input vector
+    }  # Output for the kernel
 
-        input_x_vector = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
-        input_alpha = np.random.randint(-10, 10, dtype=np.int32)
-        inout_y_vector = np.random.randint(-1000, 1000, size=(num_values), dtype=np.int32)
-    inputs = [input_x_vector, input_alpha, inout_y_vector]
+]
 
-    types = generate_types(inputs)  
-    return {"inputs": inputs, "types": types}  
+def behavioral(input_x_vector, input_alpha, input_y_vector):
+    return input_alpha * input_x_vector + input_y_vector
 
-def behavioral(input_x_vector, input_alpha, inout_y_vector):
-    return input_alpha * input_x_vector + inout_y_vector
-
-examples = generate_examples(generate_inputs)
+examples = generate_examples(inputs_info=inputs_info)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

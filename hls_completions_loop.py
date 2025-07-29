@@ -286,6 +286,10 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             timeout_csim = True
             sim_returncode = 1
             logger.warning("Vitis timed out on Simulation")
+        except Exception as e:
+            timeout_csim = False
+            sim_returncode = 1
+            logger.warning(f"An error occurred: {e}") 
         csim_end = datetime.now()
         csim_elapsed_time = csim_end-csim_begin
         logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")
@@ -472,7 +476,7 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["x-ai/grok-4"]
+    models = ["openai/gpt-4o", "anthropic/claude-sonnet-4", "deepseek/deepseek-r1","x-ai/grok-4"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
