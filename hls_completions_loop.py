@@ -153,7 +153,7 @@ model_parameters = {
                         "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
                     }
     
-def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mode, prev_feedback=None, goals=None):
+def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mode, prev_feedback=None, goals=None):
     kernel_name = test["kernel_name"]
     llm_elapsed_time = None
     dynamatic_elapsed_time = None
@@ -185,7 +185,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
             temperature=0,
             top_p=1.0,
-            rag=True if hls_flow=="vitis" else False
+            rag=False if hls_flow=="vitis" else False
         )
         llm_completion_end = datetime.now()
         llm_elapsed_time = llm_completion_end - llm_completion_begin
@@ -247,7 +247,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
             temperature=0,
             top_p=1.0,
-            rag=True if hls_flow=="vitis" else False
+            rag=False if hls_flow=="vitis" else False
         )
         llm_completion_end = datetime.now()
         llm_elapsed_time = llm_completion_end - llm_completion_begin
@@ -353,7 +353,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
         dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals)
     
 
-        returncode, stdout, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwrite)
+        returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwright)
 
         dynarapid_feedback['compile_feedback'] = {
             "returncode": returncode,
@@ -382,7 +382,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
     return returncode, feedback
 
 
-def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=3, mode="optimization", goals=None):
+def process_kernel(model, test, workflow, hls_flow, logfile, rapidwright, passes=3, mode="optimization", goals=None):
     kernel_name = test["kernel_name"]
     prev_ret_code = -1
     testbench_status = "failure"
@@ -410,7 +410,7 @@ def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=
 
         # Pass `goals` only if in optimization mode
         current_goals = goals if mode == "optimization" else None
-        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwrite, feedback, goals=current_goals)
+        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwright, feedback, goals=current_goals)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -462,9 +462,9 @@ if __name__ == "__main__":
         help="List of goals for optimization mode (e.g., --goals 'maximize Fmax' 'reduce latency')"
     )
     parser.add_argument(
-        "--rapidwrite",
+        "--rapidwright",
         action='store_true',
-        help="Add this flag to enable RapidWrite"
+        help="Add this flag to enable RapidWright"
     ) 
 
 
@@ -478,15 +478,15 @@ if __name__ == "__main__":
     
     # Add any models you want completions run for to this list
     # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["x-ai/grok-4", "openai/gpt-4.1", "anthropic/claude-sonnet-4", "google/gemini-2.5-pro"]
+    models = ["openai/gpt-4.1-mini"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
-    if args.rapidwrite:
-        rapidwrite = True
+    if args.rapidwright:
+        rapidwright = True
     else:
-        rapidwrite = False
-    logger.debug(f"RapidWrite: {rapidwrite}")
+        rapidwright = False
+    logger.debug(f"RapidWright: {rapidwright}")
 
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
@@ -507,7 +507,7 @@ if __name__ == "__main__":
             write_table_header(logfile)
 
             for test in tests:
-                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals)
+                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals)
             
             write_table_footer(logfile)
     # Delete the unecessary files after running the completions

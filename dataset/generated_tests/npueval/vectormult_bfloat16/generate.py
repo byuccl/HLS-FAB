@@ -46,7 +46,17 @@ inputs_info = [
         "total_elements": vector_size,  # Total number of elements in the output buffer
         "dtype": "bfloat16",
         "iotype": "out",  # Output buffer for the kernel
-    }
+    },
+    {
+        "name": "vector_size",  
+        "array_dimension": 0,  
+        "shape": (),  
+        "total_elements": 1,  
+        "dtype": "int32",
+        "iotype": "in",  
+        "min": 64, 
+        "max": 65,  
+    },
 ]
 
 def behavioral(in_buffer1, in_buffer2, vector_size):

@@ -12,7 +12,7 @@ run_vitis_completions:
 	@echo "\n\nRunning HLS completions..."  
 	python hls_completions_loop.py $(WORKFLOW) --hls_flow vitis --goals "reduce latency" "minimize warnings" $(if $(LOG),--log $(LOG),) $(if $(ATTEMPTS),--attempts $(ATTEMPTS),)  
 run_dynarapid_completions:
-	python hls_completions_loop.py $(WORKFLOW) --hls_flow dynarapid --goals "reduce latency" "minimize warnings" $(if $(LOG),--log $(LOG),) $(if $(ATTEMPTS),--attempts $(ATTEMPTS),) $(if $(RAPIDWRITE),--rapidwrite)
+	python hls_completions_loop.py $(WORKFLOW) --hls_flow dynarapid --goals "reduce latency" "minimize warnings" $(if $(LOG),--log $(LOG),) $(if $(ATTEMPTS),--attempts $(ATTEMPTS),) $(if $(RAPIDWRIGHT),--rapidwright)
 test:   
 	@echo "\n\nRunning tests..."  
 	python3 results/testing/run_tests.py  
