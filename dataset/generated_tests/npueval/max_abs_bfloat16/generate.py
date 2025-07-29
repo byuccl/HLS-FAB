@@ -6,6 +6,7 @@ num_values = 256  # Length of the input vector
 
 function_signature = "void max_abs_bfloat16(ap_float<16,8> *input, ap_float<16,8> *output)"
 
+short_description = f"This HLS kernel finds the maximum absolute value in a bfloat16 input vector of size {num_values} and writes the result as a scalar bfloat16 in the output buffer."
 description = f"""
 This HLS kernel finds the maximum absolute value in a bfloat16 input vector of size {num_values} and writes the result as a scalar bfloat16 in the output buffer.
     First parameter: Pointer to the input buffer of {num_values} ap_float<16,8> values.
@@ -26,8 +27,8 @@ inputs_info = [
     },  # Input buffer for the kernel
     {
         "name": "output",  # Name of the output buffer
-        "array_dimension": 1,  # Number of dimensions in the output buffer
-        "shape": (1,),  # Shape of the output buffer
+        "array_dimension": 0,  # Number of dimensions in the output buffer
+        "shape": (),  # Shape of the output buffer
         "total_elements": 1,  # Total number of elements in the output buffer
         "dtype": "bfloat16",
         "iotype": "out",  # Output buffer for the kernel
@@ -36,7 +37,7 @@ inputs_info = [
 
 def behavioral(input_buffer):
     absmax = np.max(np.abs(input_buffer.astype(np.float32)))
-    return np.array([bfloat16(absmax)])
+    return bfloat16(absmax)
 
 examples = generate_examples(inputs_info)
 

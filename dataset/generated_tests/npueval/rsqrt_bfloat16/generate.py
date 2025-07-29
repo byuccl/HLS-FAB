@@ -6,6 +6,8 @@ num_values = 256  # Length of the input vector
 
 function_signature = "void rsqrt_bfloat16(ap_float<16,8> *input, ap_float<16,8> *output)"
 
+short_description = "This HLS kernel computes the reciprocal square root (1/sqrt(x)) for each element of the bfloat16 input vector of length 256, producing a bfloat16 output vector. Nonpositive inputs yield 0 by convention."
+
 description = f"""
 This HLS kernel computes the reciprocal square root (1/sqrt(x)) for each element of the bfloat16 input vector of length {num_values}, producing a bfloat16 output vector.
 The kernel takes two parameters:
@@ -43,14 +45,12 @@ def behavioral(input_buffer):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")

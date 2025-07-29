@@ -6,6 +6,8 @@ num_values = 512
 
 function_signature = "void vectorsubtract_int8(ap_int<8> *in_buffer1, ap_int<8> *in_buffer2, ap_int<8> *out_buffer)"
 
+short_description = "This is the implementation of an HLS kernel that performs a vector subtraction of 2 input vectors and stores the result in 1 output vector."
+
 description = f"""
 This HLS kernel performs a vector subtraction operation on two input vectors of 8-bit integer numbers.
 Parameters to the function include three ap_int<8> pointers:

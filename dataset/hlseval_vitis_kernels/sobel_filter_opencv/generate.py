@@ -6,6 +6,9 @@ import cv2
 # Image dimensions
 rows = 128
 cols = 128
+num_values = rows * cols
+
+function_signature = "void sobel_filter_opencv(ap_uint<8>* img_inp, ap_uint<8>* img_out1, ap_uint<8>* img_out2)"
 
 description = f"""
 This HLS kernel implements a Sobel filter to compute the gradients of an input image in both x and y directions. 
@@ -17,23 +20,35 @@ The border pixels are set to a constant 0.
 """
 source_path = os.path.join(os.path.dirname(__file__), "canonical_scalar.cc")
 
-def generate_inputs(seed=0):
-    if seed == -1: 
-        data = np.load('data.npz')  
-        input_image = data["input_image"]
-        output_image_x = data["output_image_x"]
-        output_image_y = data["output_image_y"]
-    else:
-        # Set a seed so the example inputs and outputs work correctly
-        np.random.seed(seed)
+inputs_info = [
+    {
+        "name": "img_inp",  # Name of the input vector
+        "array_dimension": 2,  # Number of dimensions in the input vector
+        "shape": (rows,cols),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "uint8",
+        "iotype": "in",  # Input vector for the kernel
+        "min": 0,  # Minimum value for the input vector
+        "max": 127,  # Maximum value for the input vector
+    },  # Input vector for the kernel
+    {
+        "name": "img_out1",  # Name of the input vector
+        "array_dimension": 2,  # Number of dimensions in the input vector
+        "shape": (rows,cols),  # Shape of the input vector
+        "total_elements": num_values,  # Total number of elements in the input vector
+        "dtype": "uint8",
+        "iotype": "out",  # Input vector for the kernel
+    },  # Input vector for the kernel
+    {
+        "name": "img_out2",  # Name of the result
+        "array_dimension": 2,  # Number of dimensions in the result
+        "shape": (rows,cols),  # Shape of the result
+        "total_elements": num_values,  # Total number of elements in the result
+        "dtype": "uint16",
+        "iotype": "out",  # Output for the kernel
+    }  # Output for the kernel
+]
 
-        input_image = np.random.randint(0, 256, size=(rows * cols), dtype=np.uint8)
-        output_image_x = np.zeros(rows * cols, dtype=np.uint8)
-        output_image_y = np.zeros(rows * cols, dtype=np.uint8)
-    inputs = [input_image, output_image_x, output_image_y]
-
-    types = generate_types(inputs)  
-    return {"inputs": inputs, "types": types}  
 
 def behavioral(input_image):
     input_image_2d = input_image.reshape((rows, cols))
@@ -43,10 +58,10 @@ def behavioral(input_image):
     abs_grad_y = cv2.convertScaleAbs(grad_y)
     return abs_grad_x.flatten(), abs_grad_y.flatten()
 
-examples = generate_examples(generate_inputs)
+examples = generate_examples(inputs_info=inputs_info)
 
 pc = PromptConstructor(
-    source_path=source_path,
+    function_signature=function_signature,
     description=description,
     behavioral=behavioral,
     examples=examples

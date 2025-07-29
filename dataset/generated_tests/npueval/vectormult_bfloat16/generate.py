@@ -6,6 +6,8 @@ vector_size = 64  # Number of elements in each input vector
 
 function_signature = "void vectormult_bfloat16(ap_float<16,8> *in_buffer1, ap_float<16,8> *in_buffer2, ap_float<16,8> *out_buffer, int32_t vector_size)"
 
+short_description = "This is the implementation of an HLS kernel that performs an elementwise vector multiplication of 2 input vectors and stores the result in 1 output vector."
+
 description = f"""
 This HLS kernel performs an elementwise vector multiplication of two input vectors, each containing {vector_size} elements of type ap_float<16,8>.
 The result of the multiplication is stored in an output vector of the same size.

@@ -234,7 +234,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
                     log.write(old_log)
                     log.write("\n\n")
         except FileNotFoundError:
-            logger.error(
+            logger.warning(
                 f"The file {solutions_path}{saved_log_file} does not exist."
             )
             old_log = None
@@ -252,10 +252,9 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
 
         except FileNotFoundError:
             synth_feedback = gather_feedback(old_log, goals=goals)
-
-        logger.warning(
-            f"The file {in_report_file} does not exist."
-        )
+            logger.warning(
+                f"The file {in_report_file} does not exist."
+            )
         final_feedback["synth_feedback"] = synth_feedback
     
     # Check if the simulation was successful then add the data to json

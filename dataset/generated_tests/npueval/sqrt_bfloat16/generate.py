@@ -6,6 +6,8 @@ num_values = 256  # Length of the input vector
 
 function_signature = "void sqrt_bfloat16(ap_float<16,8> *input, ap_float<16,8> *output)"
 
+short_description = "A kernel that computes the elementwise square root of a bfloat16 vector. Negative values are clamped to 0.0 in the output."
+
 description = f"""
 This HLS kernel computes the elementwise square root of a vector of bfloat16 values.
 Parameters to the function include two ap_float<16,8> pointers:
@@ -40,14 +42,12 @@ def behavioral(input_buffer):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")

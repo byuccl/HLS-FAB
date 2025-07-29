@@ -7,6 +7,8 @@ vector_size = 256
 
 function_signature = "void tanh_bfloat16(ap_float<16,8> *input_vector, ap_float<16,8> *output_vector)"
 
+short_description = "This HLS kernel implements the tanh activation function on a bfloat16 vector"
+
 description = f"""
 This HLS kernel implements the hyperbolic tangent (tanh) activation function on a vector of bfloat16 values.
 Parameters to the function include two ap_float<16,8> pointers:
@@ -23,8 +25,8 @@ inputs_info = [
         "total_elements": vector_size,  # Total number of elements in the input buffer
         "dtype": "bfloat16",
         "iotype": "in",  # Input buffer for the kernel
-        "min": -10,  # Minimum value for the input buffer
-        "max": 10.0,  # Maximum value for the input buffer
+        "min": -2,  # Minimum value for the input buffer
+        "max": 2.0,  # Maximum value for the input buffer
     },  # Input buffer for the kernel
     {
         "name": "output_vector",  # Name of the output buffer
@@ -41,14 +43,12 @@ def behavioral(input_vector):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")

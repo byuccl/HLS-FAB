@@ -7,7 +7,9 @@ pad_size = 2
 pad_value = 0
 padded_length = vector_size + 2 * pad_size
 
-function_signature = "void pad1d_int32(ap_int<32> *input_vector, ap_int<32> *padded_vector, uint32_t pad_size, ap_int<32> pad_value)"
+function_signature = "void pad1d_int32(ap_int<32> *input_vector, ap_int<32> *padded_vector)"
+
+short_description = "A kernel that performs a 1D padding operation on an input vector with given padding size and padding value as runtime parameters."
 
 description = f"""
 This HLS kernel performs a 1D padding operation on an input vector of 32-bit integers. 
@@ -40,7 +42,7 @@ inputs_info = [
     }
 ]
 
-def behavioral(input_vector, pad_size=pad_size, pad_value=pad_value):
+def behavioral(input_vector):
     padded_length = len(input_vector) + 2 * pad_size
     padded_vector = np.full(padded_length, pad_value, dtype=input_vector.dtype)
     padded_vector[pad_size:pad_size + len(input_vector)] = input_vector

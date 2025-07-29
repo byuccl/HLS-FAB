@@ -6,6 +6,11 @@ num_values = 256  # Length of the input vector
 
 function_signature = "void variance_bfloat16(ap_float<16,8> *input, ap_float<16,8> *output)"
 
+short_description = (
+    "This kernel computes the variance of a bfloat16 input vector (length 256) using the definition "
+    "Var(X) = E[X^2] - (E[X])^2, and writes the scalar (bfloat16) result to the output buffer (length 1)."
+)
+
 description = f"""
 This HLS kernel computes the variance of a bfloat16 input vector of length {num_values} using the definition:
     Var(X) = E[X^2] - (E[X])^2
@@ -30,8 +35,8 @@ inputs_info = [
     },  # Input buffer for the kernel
     {
         "name": "output",  # Name of the output buffer
-        "array_dimension": 1,  # Number of dimensions in the output buffer
-        "shape": (1,),  # Shape of the output buffer
+        "array_dimension": 0,  # Number of dimensions in the output buffer
+        "shape": (),  # Shape of the output buffer
         "total_elements": 1,  # Total number of elements in the output buffer
         "dtype": "bfloat16",
         "iotype": "out",  # Output buffer for the kernel
@@ -45,7 +50,7 @@ def behavioral(input_buffer):
     var = mean_sq - mean ** 2
     if var < 0:
         var = 0.0
-    return np.array([bfloat16(var)])
+    return bfloat16(var)
 
 examples = generate_examples(inputs_info)
 

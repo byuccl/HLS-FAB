@@ -8,6 +8,8 @@ output_length = (num_values - window_size) // stride + 1
 
 function_signature = "void maxpool1d_uint8(ap_int<8> *in_buffer, ap_int<8> *out_buffer)"
 
+short_description = f"A kernel that performs a 1D maxpool operation on an input vector with window_size and stride as runtime parameters."
+
 description = f"""
 An HLS kernel that performs a 1D max pooling operation on an input vector with window_size and stride as runtime parameters.
     First parameter: Pointer to the input buffer of {num_values} ap_int<8> values.

@@ -8,7 +8,7 @@ import re
 import numpy as np
 import json
 
-logger = logging.getLogger("_PROMPT CONSTRUCTOR")
+logger = logging.getLogger("PROMPT CONSTRUCTOR")
 
 C_TO_NUMPY_DTYPE = {
     "int": "int",
@@ -278,22 +278,22 @@ class PromptConstructor:
         dataflow = self._construct_dataflow(test_vectors)
         
         # Some edge case kernels may fail to generate examples, we'll just skip for those
-        try:
-            examples = self._construct_examples(behavioral, test_vectors_list=test_vectors_list, num_examples=len(test_vectors_list), slice_size=8)
-        except:
-            logger.warning(f"PROMPT CONSTRUCTOR: The kernel {self.name} prompt won't have examples")
-            examples = None
+        # try:
+        #     examples = self._construct_examples(behavioral, test_vectors_list=test_vectors_list, num_examples=len(test_vectors_list), slice_size=8)
+        # except Exception as e:
+        #     logger.warning(f"The kernel {self.name} prompt won't have examples: {e}")
+        #     examples = None
         
-        if examples:
-            prompt = f"""/*
-{description}
-{examples}
-{dataflow}
-*/
-{function_signature} {{
-"""
-        else:
-            prompt = f"""/*
+#         if examples:
+#             prompt = f"""/*
+# {description}
+# {examples}
+# {dataflow}
+# */
+# {function_signature} {{
+# """
+#         else:
+        prompt = f"""/*
 {description}
 {dataflow}
 Use the following function signature to implement the kernel:

@@ -24,36 +24,33 @@ def parse_timing_log(log_path):
         
         # Extract attempt number from kernel name if present
         kernel_parts = kernel.split('_')
-        if kernel_parts[-2] == "attempts" and kernel_parts[-1].isdigit():
+        if kernel_parts[-2] == "attempt" and kernel_parts[-1].isdigit():
             attempt = int(kernel_parts[-1])
             kernel_name = "_".join(kernel_parts[:-2])
             key = f"{kernel_name}_{attempt}"
         else:
             # Use the kernel name directly if no attempt is in the name
             key = kernel
-        
+        llm_time = row[1].strip() if len(row) > 2 else '-'
         csim_time = row[3].strip() if len(row) > 3 else '-'
         csynth_time = row[4].strip() if len(row) > 4 else '-'
         
         timing_data[key] = {
-            'csim_time': csim_time,
+            'llm_time'   : llm_time,
+            'csim_time'  : csim_time,
             'csynth_time': csynth_time
         }
-    
     return timing_data
 
 def create_csv(base_dir, output_file):
     """Process all data and create a CSV file."""
     # Define the models and kernels to process
-    models = ['gpt-4o', 'gpt-4.1', 'Claude-3.5', 'Gemini-2.0-Flash', 'Llama-3_2-11B']
-    kernels = [
-        'matrix_multiply_int32',
-        'relu_activation_float32',
-        'absolute_value_int8',
-        'affine_float32',
-        'dot_product_float32',
-        'conv2d_int16'
-    ]
+    with open("./dataset/llm_models.txt", "r") as f:
+        lines = f.readlines()
+    models = [line.strip() for line in lines]
+    with open("./dataset/kernel_list.txt", "r") as f:
+        kernels = f.readlines()
+    kernels = [kernel.strip() for kernel in kernels]
     
     # Map kernel directory names to kernel names used in the CSV
     kernel_dir_to_csv = {
@@ -67,7 +64,7 @@ def create_csv(base_dir, output_file):
     
     # Define CSV headers
     headers = [
-        'model', 'kernel', 'attempts', 'status', 'match', 'errors', 'csim_time',
+        'model', 'kernel', 'attempts','llm_time' , 'status', 'match', 'errors', 'csim_time',
         'synth_errors', 'fmax', 'latency', 'bram', 'dsp', 'ff', 'lut', 'csynth_time'
     ]
     
@@ -119,24 +116,24 @@ def create_csv(base_dir, output_file):
                     print(f"    Processing attempt: {attempt}")
                     
                     data_file = attempt_dir / f"{kernel_dir}_data.json"
-                    if not data_file.exists():
-                        print(f"      Skipping data file (not found): {data_file}")
-                        continue
-                    
+
                     # Parse JSON data
                     try:
                         with open(data_file, 'r') as f:
                             data = json.load(f)
+                    except FileNotFoundError:
+                        print(f"      Skipping data file (not found): {data_file}")
+                        data = {}
                     except json.JSONDecodeError as e:
                         print(f"      ERROR: Failed to parse JSON in {data_file}: {e}")
                         continue
                     
                     # Extract data
-                    status = data.get('csim_feedback', {}).get('status', '')
-                    match = data.get('csim_feedback', {}).get('match', '')
+                    status = data.get('sim_feedback', {}).get('status', '')
+                    match = data.get('sim_feedback', {}).get('match', '')
                     
                     # Extract errors as string
-                    csim_errors = data.get('csim_feedback', {}).get('errors', [])
+                    csim_errors = data.get('sim_feedback', {}).get('errors', [])
                     if csim_errors and isinstance(csim_errors, list) and len(csim_errors) > 0:
                         errors = f'"{csim_errors[0]}"'
                     else:
@@ -151,11 +148,12 @@ def create_csv(base_dir, output_file):
                     
                     # Extract timing data
                     timing_key = f"{kernel_dir}_{attempt}"
+                    llm_time = timing_data.get(timing_key, {}).get('llm_time', '-')
                     csim_time = timing_data.get(timing_key, {}).get('csim_time', '-')
                     csynth_time = timing_data.get(timing_key, {}).get('csynth_time', '-')
                     
                     # Extract synthesis data
-                    fmax = data.get('synth_feedback', {}).get('fmax', 'null')
+                    fmax = data.get('synth_feedback', {}).get('fmax', '-')
                     
                     latency_data = data.get('synth_feedback', {}).get('latency', {})
                     if latency_data and isinstance(latency_data, dict):
@@ -167,16 +165,17 @@ def create_csv(base_dir, output_file):
                         latency = 'null'
                     
                     resources = data.get('synth_feedback', {}).get('resources', {})
-                    bram = resources.get('bram', 'null')
-                    dsp = resources.get('dsp', 'null')
-                    ff = resources.get('ff', 'null')
-                    lut = resources.get('lut', 'null')
+                    bram = resources.get('bram', '-')
+                    dsp = resources.get('dsp', '-')
+                    ff = resources.get('ff', '-')
+                    lut = resources.get('lut', '-')
                     
                     # Create row for CSV
                     row = [
-                        model if attempt == 1 else '',  # Only show model name for first attempt
+                        model,  # Only show model name for first attempt
                         kernel_csv_name,
                         attempt,
+                        llm_time,
                         status,
                         match,
                         errors,
@@ -200,6 +199,6 @@ def create_csv(base_dir, output_file):
     print(f"CSV file created successfully: {output_file}")
 
 # Execute the script
-base_directory = "./solutions/vitis"
+base_directory = "./results/solutions/vitis"
 output_csv = "results_summary.csv"
 create_csv(base_directory, output_csv)

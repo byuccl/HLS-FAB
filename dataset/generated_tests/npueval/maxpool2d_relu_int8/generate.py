@@ -11,6 +11,11 @@ output_cols = input_cols // stride
 
 function_signature = "void maxpool2d_relu_int8(ap_int<8> *input, ap_int<8> *output)"
 
+short_description = (
+    "This HLS kernel performs 2D max pooling with a 2x2 window and stride=2 on a 16x16 input int8 tensor. "
+    "After max-pooling, ReLU is applied (all negative values are set to zero). "
+    "The result is written to a 8x8 output tensor."
+)
 description = f"""
 This HLS kernel performs a 2D max pooling operation followed by a ReLU activation on an input tensor of 8-bit integers.
 The kernel uses a {window_size}x{window_size} window with a stride of {stride} on a {input_rows}x{input_cols} input tensor.
@@ -43,14 +48,14 @@ inputs_info = [
 ]
 
 def behavioral(input_tensor):
-    rows, cols = input_tensor.shape
-    pooled = np.zeros((rows // 2, cols // 2), dtype=input_tensor.dtype)
-    for i in range(0, rows, 2):
-        for j in range(0, cols, 2):
+    input_tensor = input_tensor.reshape((input_rows, input_cols))
+    pooled = np.zeros((input_rows // 2, input_cols // 2), dtype=input_tensor.dtype)
+    for i in range(0, input_rows, 2):
+        for j in range(0, input_cols, 2):
             window = input_tensor[i:i+2, j:j+2]
             max_val = np.max(window)
             pooled[i//2, j//2] = max(max_val, 0)
-    return pooled
+    return pooled.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 

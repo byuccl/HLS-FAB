@@ -11,8 +11,9 @@ function_signature = """
 void scale_matrix_3d_int8(ap_int<8> *input, ap_int<8> scale_factor, ap_int<8> *output)
 // input,        [MATRIX_HEIGHT][MATRIX_WIDTH][MATRIX_DEPTH] // 3D input matrix  
 // output        [MATRIX_HEIGHT][MATRIX_WIDTH][MATRIX_DEPTH] // 3D output matrix  
-
 """
+
+short_description = "This HLS Kernel implements a scale matrix function with a given scale factor on 3D arrays of 8 bit integers."
 
 description = f"""
 This HLS kernel implements a function scale a given three dimensional matrix of int8 values by a given value (also int8). The scaling is done by multiplying each element by the scale factor.

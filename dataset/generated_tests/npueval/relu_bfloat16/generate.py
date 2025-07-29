@@ -6,6 +6,8 @@ num_values = 256  # Length of the input vector
 
 function_signature = "void relu_bfloat16(ap_float<16,8> *in_buffer, ap_float<16,8>* out_buffer)"
 
+short_description = "This HLS kernel performs a ReLU activation on a bfloat16 input vector of fixed size."
+
 description = f"""
 This HLS kernel performs a ReLU (Rectified Linear Unit) activation on a bfloat16 input vector of fixed size.
 Parameters to the function include two ap_float<16,8> pointers:
@@ -40,14 +42,12 @@ def behavioral(input_buffer):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")

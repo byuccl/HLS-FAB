@@ -12,6 +12,8 @@ OUTPUT_COLS = COLS // STRIDE
 
 function_signature = "void maxpool2d_bfloat16(ap_float<16,8>* input, ap_float<16,8>* output)"
 
+short_description = f"A kernel that performs a two dimension max pooling on an input matrix ({ROWS}x{COLS}), buffer_in, with a {WINDOW_SIZE}x{WINDOW_SIZE} kernel and stride of two. The output is written to buffer_out."
+
 description = f"""
 This HLS kernel performs a 2D max pooling operation on a 32x32 input matrix of ap_float<16,8> values.
 The kernel uses a 2x2 window and a stride of 2 to compute the maximum value within each window.
@@ -43,13 +45,13 @@ inputs_info = [
 ]
 
 def behavioral(input_matrix):
-    rows, cols = input_matrix.shape
-    output_matrix = np.zeros((rows // 2, cols // 2), dtype=input_matrix.dtype)
-    for i in range(0, rows, 2):
-        for j in range(0, cols, 2):
+    input_matrix = input_matrix.reshape((ROWS,COLS))
+    output_matrix = np.zeros((ROWS // 2, COLS // 2), dtype=bfloat16)
+    for i in range(0, ROWS, 2):
+        for j in range(0, COLS, 2):
             window = input_matrix[i:i+2, j:j+2]
             output_matrix[i//2, j//2] = np.max(window)
-    return output_matrix
+    return output_matrix.flatten()
 
 examples = generate_examples(inputs_info)
 

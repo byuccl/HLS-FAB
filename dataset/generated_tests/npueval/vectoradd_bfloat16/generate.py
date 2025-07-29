@@ -6,6 +6,7 @@ num_values = 256  # Length of the input vectors
 
 function_signature = "void vectoradd_bfloat16(ap_float<16,8> *in0, ap_float<16,8> *in1, ap_float<16,8> *out)"
 
+short_description = "This HLS kernel computes the elementwise addition of two bfloat16 input vectors of size 256, writing the result to an output bfloat16 vector."
 description = f"""
 This HLS kernel computes the elementwise addition of two input vectors of bfloat16 values.
 Parameters to the function include three ap_float<16,8> pointers:

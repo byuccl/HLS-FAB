@@ -6,6 +6,8 @@ num_values = 256  # Length of the input vector
 
 function_signature = "void mish_bfloat16(ap_float<16,8> *input_buffer, ap_float<16,8> *output_buffer)"
 
+short_description = "This HLS kernel computes the elementwise Mish activation, Mish(x) = x * tanh(ln(1 + exp(x))), for a bfloat16 input vector of length 256, storing results in the bfloat16 output buffer."
+
 description = f"""
 This HLS kernel computes the elementwise Mish activation function for a bfloat16 input vector of length {num_values}.
 The Mish activation is defined as Mish(x) = x * tanh(ln(1 + exp(x))).
@@ -43,14 +45,12 @@ def behavioral(input_buffer):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")

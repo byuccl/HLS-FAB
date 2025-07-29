@@ -6,6 +6,8 @@ num_elements = 1024
 
 function_signature = "void relu_int8(ap_int<8> *in_buffer, ap_int<8>* out_buffer)"
 
+short_description = "This HLS kernel performs a ReLU activation on an int8 input vector of size num_elements."
+
 description = f"""
 This HLS kernel performs a ReLU (Rectified Linear Unit) activation on an input vector of 8-bit integer numbers.
 Parameters to the function include two ap_int<8> pointers:

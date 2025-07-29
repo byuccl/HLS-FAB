@@ -5,6 +5,7 @@ from hlseval import PromptConstructor, generate_examples
 vector_size = 256
 
 function_signature = "void vectoradd_int16(ap_int<16> *in_buffer1, ap_int<16> *in_buffer2, ap_int<16> *out_buffer)"
+short_description = "This is the implementation of an HLS kernel that performs a vector addition of 2 input vectors and stores the result in 1 output vector."
 
 description = f"""
 This HLS kernel performs a vector addition of two input vectors of 16-bit integer numbers and stores the result in an output vector.

@@ -6,6 +6,8 @@ num_elements = 128
 
 function_signature = "void reduce_add_relu_int8(ap_int<8> *in_buffer, ap_int<8>* out_buffer)"
 
+short_description = "This HLS kernel sums all 128 elements of an int8_t input buffer, applies a ReLU (sets negative sums to zero), and outputs the saturated result as a single int8_t to out_buffer."
+
 description = f"""
 This HLS kernel performs a reduction operation by summing all {num_elements} elements of an 8-bit integer input buffer.
 The sum is then passed through a ReLU activation function, which sets any negative sums to zero.

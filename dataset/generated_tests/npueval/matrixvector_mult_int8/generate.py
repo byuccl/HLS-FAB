@@ -7,9 +7,10 @@ COLS = 16
 
 function_signature = "void matrixvector_mult_int8(ap_int<8>* matrix, ap_int<8>* vector, ap_int<32>* result)"
 
+short_description = f"A kernel that computes the matrix-vector multiplication of an int8 matrix ({ROWS}x{COLS}, row-major) and an int8 vector (length {ROWS}). Result is an int32 vector of length {COLS}."
 description = f"""
 This HLS kernel performs a matrix-vector multiplication where the matrix is a {ROWS}x{COLS} matrix of 8-bit integers (ap_int<8>), 
-and the vector is a 16-element vector of 8-bit integers (ap_int<8>). The result is a 16-element vector of 32-bit integers (ap_int<32>).
+and the vector is a {ROWS}-element vector of 8-bit integers (ap_int<8>). The result is a {COLS}-element vector of 32-bit integers (ap_int<32>).
 The matrix is stored in a row-major format, and the output vector is computed as the dot product of each row of the matrix with the input vector.
 """
 

@@ -8,6 +8,8 @@ exp_low = -87.3362626647949
 
 function_signature = "void sigmoid_bfloat16(ap_float<16,8> *input_vector, ap_float<16,8> *output_vector)"
 
+short_description = "This HLS kernel implements the sigmoid activation function on a bfloat16 vector"
+
 description = f"""
 This HLS kernel implements the sigmoid activation function on a vector of bfloat16 values.
 Parameters to the function include two ap_float<16,8> pointers:
@@ -42,14 +44,12 @@ def behavioral(input_vector):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.03, "rtol": 0.03}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")

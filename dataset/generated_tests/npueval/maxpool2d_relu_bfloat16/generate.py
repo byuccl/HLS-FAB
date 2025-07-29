@@ -12,6 +12,11 @@ output_cols = input_cols // stride
 
 function_signature = "void maxpool2d_relu_bfloat16(ap_float<16,8>* input, ap_float<16,8>* output)"
 
+short_description = (
+    "A kernel that performs 2D max pooling and applies ReLU on an input bfloat16 matrix (32x32), "
+    "using a 2x2 window and stride of 2. The output is a 16x16 matrix in the output buffer where "
+    "each element is the maximum of each 2x2 patch with ReLU applied."
+)
 description = f"""
 This HLS kernel performs a 2D max pooling operation followed by a ReLU activation on an input matrix of bfloat16 values.
 The input is a {input_rows}x{input_cols} matrix, and the operation uses a {window_size}x{window_size} window with a stride of {stride}.
@@ -41,17 +46,17 @@ inputs_info = [
 ]
 
 def behavioral(input_matrix):
-    rows, cols = input_matrix.shape
-    out_rows = rows // 2
-    out_cols = cols // 2
+    input_matrix = input_matrix.reshape((input_rows, input_cols))
+    out_rows = input_rows // 2
+    out_cols = input_cols // 2
     output_matrix = np.zeros((out_rows, out_cols), dtype=bfloat16)
-    for i in range(0, rows, 2):
-        for j in range(0, cols, 2):
+    for i in range(0, input_rows, 2):
+        for j in range(0, input_cols, 2):
             window = input_matrix[i:i+2, j:j+2]
             maxval = np.max(window).astype(np.float32)
             relu = max(maxval, 0.0)
             output_matrix[i//2, j//2] = bfloat16(relu)
-    return output_matrix
+    return output_matrix.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 

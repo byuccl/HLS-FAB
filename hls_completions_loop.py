@@ -46,7 +46,7 @@ def write_table_header(logfile):
     """Write the header of the ASCII table to the logfile."""
     # Define headers and column widths
     headers = ["Kernel", "LLM Time", "Dynamatic time", "Vitis CSIM time", "Vitis CSYNTH time"]
-    col_widths = [30, 20, 20, 20, 20]
+    col_widths = [45, 20, 20, 20, 20]
     
     # Create top border
     border = "+"
@@ -64,12 +64,13 @@ def write_table_header(logfile):
     logfile.write(border + "\n")
     logfile.flush()
 
-def add_table_row(logfile, kernel, llm_time = "-", dynamatic_time = "-", vitis_csim_time = "-", vitis_csynth_time = "-"):
+def add_table_row(logfile, kernel, attempt=1, llm_time = "-", dynamatic_time = "-", vitis_csim_time = "-", vitis_csynth_time = "-"):
     """Add a row to the ASCII table in the logfile."""
-    col_widths = [30, 20, 20, 20, 20]
+    col_widths = [45, 20, 20, 20, 20]
     
     # Prepare the data
-    data = [kernel, llm_time, dynamatic_time, vitis_csim_time, vitis_csynth_time]
+    kernel_attempt = f"{kernel}_attempt_{attempt}"
+    data = [kernel_attempt, llm_time, dynamatic_time, vitis_csim_time, vitis_csynth_time]
     
     # Create the data row
     data_row = "|"
@@ -83,7 +84,7 @@ def add_table_row(logfile, kernel, llm_time = "-", dynamatic_time = "-", vitis_c
 
 def write_table_footer(logfile):
     """Write the footer (bottom border) of the ASCII table to the logfile."""
-    col_widths = [30, 20, 20, 20, 20]
+    col_widths = [45, 20, 20, 20, 20]
     
     # Create bottom border
     border = "+"
@@ -205,6 +206,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
                         add_table_row(
                             logfile,
                             kernel_name, 
+                            attempt,
                             llm_elapsed_time, 
                             dynamatic_elapsed_time, 
                             csim_elapsed_time, 
@@ -262,6 +264,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
                     add_table_row(
                         logfile,
                         kernel_name, 
+                        attempt,
                         llm_elapsed_time, 
                         dynamatic_elapsed_time, 
                         csim_elapsed_time, 
@@ -279,11 +282,15 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             logger.info("Starting Vitis Run")
             csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
             timeout_csim = False
-            sim_returncode = csim_output.returncode
+            sim_returncode = csim_output.returncode if (csim_output != None) else 1
         except hlseval.CsimTimeoutError as e:
             timeout_csim = True
             sim_returncode = 1
             logger.warning("Vitis timed out on Simulation")
+        except Exception as e:
+            timeout_csim = False
+            sim_returncode = 1
+            logger.warning(f"An error occurred: {e}") 
         csim_end = datetime.now()
         csim_elapsed_time = csim_end-csim_begin
         logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")
@@ -296,7 +303,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
                 vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
-                synth_returncode = synth_output.returncode
+                synth_returncode = synth_output.returncode 
                 csynth_end = datetime.now()
                 csynth_elapsed_time = csynth_end-csynth_begin
                 logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
@@ -335,7 +342,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
             dsim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim", hls_flow=hls_flow)
             logger.debug(dsim_output)
             timeout_dsim = False
-            sim_returncode = dsim_output.returncode
+            sim_returncode = dsim_output.returncode if (dsim_output != None) else 1
         except hlseval.CsimTimeoutError as e:
             timeout_dsim = True
             sim_returncode = 1
@@ -366,6 +373,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
     add_table_row(
         logfile,
         kernel_name, 
+        attempt,
         llm_elapsed_time, 
         dynamatic_elapsed_time, 
         csim_elapsed_time, 
@@ -483,6 +491,11 @@ if __name__ == "__main__":
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
 
+    with open("./dataset/llm_models.txt", "r") as f:
+        lines = f.readlines()
+    models = [line.strip() for line in lines]
+
+    print(models)
 
     for model in models:
         # if model not in model_parameters:

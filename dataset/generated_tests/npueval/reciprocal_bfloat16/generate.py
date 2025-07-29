@@ -7,6 +7,8 @@ vector_size = 256
 
 function_signature = "void reciprocal_bfloat16(ap_float<16,8> *input_vector, ap_float<16,8> *output_vector)"
 
+short_description = "This HLS kernel computes the elementwise reciprocal (1/x) of a bfloat16 input vector of size 256, writing the result to an output buffer."
+
 description = f"""
 This HLS kernel computes the elementwise reciprocal (1/x) of a bfloat16 input vector of size {vector_size}, writing the result to an output buffer.
     First parameter: Pointer to the input buffer of {vector_size} ap_float<16,8> values.
@@ -44,14 +46,12 @@ def behavioral(input_vector):
 
 examples = generate_examples(inputs_info=inputs_info)
 
-tolerances = {"atol": 0.02, "rtol": 0.02}
 
 pc = PromptConstructor(
     function_signature=function_signature,
     description=description,
     behavioral=behavioral,
-    examples=examples,
-    tolerances=tolerances
+    examples=examples
 )
 
 pc.write_json("kernel.json")

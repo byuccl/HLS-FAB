@@ -7,34 +7,33 @@ def search_files(base_dir):
     Search for .dot and _routed.dcp files in the given directory structure
     and return information about their existence.
     """
-    models = ['Claude-3.5', 'Gemini-2.0-Flash', 'gpt-4.1', 'gpt-4o', 'Llama-3_2-11B']
-    kernels = [
-        'absolute_value_int8',
-        'affine_float32',
-        'conv2d_int16',
-        'dot_product_float32',
-        'matrix_multiply_int32',
-        'relu_activation_float32'
-    ]
+    with open("./dataset/llm_models.txt", "r") as f:
+        lines = f.readlines()
+    models = [line.strip() for line in lines]
+    with open("./dataset/kernel_list.txt", "r") as f:
+        kernels = f.readlines()
+    kernels = [kernel.strip() for kernel in kernels]
     
     results = []
     
     for model in models:
-        model_path = Path(base_dir) / model / 'dcp_designs'
+        base_path = Path(base_dir)
+        model_path = base_path / 'results/dcp_designs' / model 
         if not model_path.exists():
-            print(f"Warning: Path does not exist: {model_path}")
+            print(f"Warning 1: Path does not exist: {model_path}")
             continue
             
         for kernel in kernels:
             kernel_path = model_path / kernel
             if not kernel_path.exists():
-                print(f"Warning: Path does not exist: {kernel_path}")
+                print(f"Warning 2: Path does not exist: {kernel_path}")
                 continue
                 
-            for attempt in range(4):  # 0 to 3
-                attempt_path = kernel_path / f"attempt_{attempt}"
+            for attempt in range(2):  # 0 to 3
+                attempt_path = kernel_path / f"attempts_{attempt+1}"
+                print(attempt_path)
                 if not attempt_path.exists():
-                    print(f"Warning: Path does not exist: {attempt_path}")
+                    print(f"Warning 3: Path does not exist: {attempt_path}")
                     continue
                 
                 # Check for kernel subdirectory
