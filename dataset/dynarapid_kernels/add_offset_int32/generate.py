@@ -4,14 +4,14 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 num_values = 256
 
-function_signature = "void add_offset_int32(ap_int<32>* in_buffer, ap_int<32>* out_buffer, ap_int<32> offset)"
+function_signature = "void add_offset_int32(int32_t* in_buffer, int32_t* out_buffer, int32_t offset)"
 
 description = f"""
 This HLS kernel adds a scalar 32-bit integer offset to every element of the input vector of 32-bit integers.
 Parameters to the function include:
-    - A pointer to the input buffer of {num_values} ap_int<32> values.
-    - A pointer to the output buffer of {num_values} ap_int<32> values.
-    - An ap_int<32> scalar offset value.
+    - A pointer to the input buffer of {num_values} int32_t values.
+    - A pointer to the output buffer of {num_values} int32_t values.
+    - An int32_t scalar offset value.
 The kernel computes the sum of each element in the input buffer with the offset and stores the result in the output buffer.
 The output values are clipped to the range of -1232 to 127 to fit within the 32-bit integer range.
 """

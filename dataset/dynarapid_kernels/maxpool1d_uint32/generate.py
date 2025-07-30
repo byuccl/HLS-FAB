@@ -12,12 +12,12 @@ short_description = f"A kernel that performs a 1D maxpool operation on an input 
 
 description = f"""
 An HLS kernel that performs a 1D max pooling operation on an input vector with window_size and stride as runtime parameters.
-    First parameter: Pointer to the input buffer of {num_values} ap_int<32> values.
-    Second parameter: Pointer to the output buffer of ap_int<32> values.
+    First parameter: Pointer to the input buffer of {num_values} int32_t values.
+    Second parameter: Pointer to the output buffer of int32_t values.
 The kernel computes the maximum value of each window of size {window_size} in the input buffer,
 with a stride of {stride}, and stores the result in the output buffer.
 The output buffer will have a length of (input_length - window_size) // stride + 1.
-The input buffer is expected to be at least {num_values} ap_int<32> values.
+The input buffer is expected to be at least {num_values} int32_t values.
 """
 
 inputs_info = [

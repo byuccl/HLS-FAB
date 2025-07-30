@@ -7,14 +7,14 @@ kernel_size = 3
 stride = 1
 output_size = (vector_size - kernel_size) // stride + 1
 
-function_signature = "void conv1d_int32(ap_int<32> *in_buffer, ap_int<32> *kernel, ap_int<32> *out_buffer)"
+function_signature = "void conv1d_int32(int32_t *in_buffer, int32_t *kernel, int32_t *out_buffer)"
 
 description = f"""
 This HLS kernel performs a 1D convolution operation on an input vector using a specified kernel and stride.
 Parameters to the function include:
-    - A pointer to the input buffer of {vector_size} ap_int<32> values.
-    - A pointer to the kernel buffer of {kernel_size} ap_int<32> values.
-    - A pointer to the output buffer of ap_int<32> values.
+    - A pointer to the input buffer of {vector_size} int32_t values.
+    - A pointer to the kernel buffer of {kernel_size} int32_t values.
+    - A pointer to the output buffer of int32_t values.
 The kernel computes the convolution of the input buffer with the kernel, using the specified stride, and stores the result in the output buffer.
 The output buffer will have a length of (input_length - kernel_size) // stride + 1.
 """

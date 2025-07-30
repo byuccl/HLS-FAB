@@ -4,7 +4,7 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 num_elements = 128
 
-function_signature = "void reduce_add_relu_int32(ap_int<32> *in_buffer, ap_int<32>* out_buffer)"
+function_signature = "void reduce_add_relu_int32(int32_t *in_buffer, int32_t* out_buffer)"
 
 short_description = "This HLS kernel sums all 128 elements of an int32_t input buffer, applies a ReLU (sets negative sums to zero), and outputs the saturated result as a single int32_t to out_buffer."
 
@@ -13,8 +13,8 @@ This HLS kernel performs a reduction operation by summing all {num_elements} ele
 The sum is then passed through a ReLU activation function, which sets any negative sums to zero.
 Finally, the result is saturated to fit within the range of an 32-bit integer and stored in the output buffer.
 Parameters to the function include:
-    - A pointer to the input buffer of {num_elements} ap_int<32> values.
-    - A pointer to a single ap_int<32> value to store the output.
+    - A pointer to the input buffer of {num_elements} int32_t values.
+    - A pointer to a single int32_t value to store the output.
 """
 
 inputs_info = [

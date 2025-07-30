@@ -14,12 +14,6 @@ saved_log_file = "/logs/hls_compile.log"
 saved_sim_log_file = "/logs/hls_run_csim.log"
 timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-
-models = {
-    "gpt-4o",
-}
-
-
 # #open the kernels list to get the names of the kernels
 # with open("./dataset/hlseval.jsonl", "r") as f:
 #     tests = [json.loads(line) for line in f]
@@ -201,7 +195,7 @@ def parse_sim_report(file_path=None):
     
     return feedback
 
-def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=None):
+def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=None, iter=0):
     f""" 
         Send in the  kernel name and the model and attempt and it will search the solutions for the specific
         file where to parse data from.
@@ -211,7 +205,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
     """
     logger.info(f"Gathering parsed data for kernel: {kernel_name}, model: {model}, attempt: {attempt}")
     #Create all the files needed if not already created
-    solutions_path = f"{file_path_begin}{hls_flow}/{model}/{kernel_name}/attempts_{attempt}"
+    solutions_path = f"{file_path_begin}{hls_flow}/{model}/{iter+1}/{kernel_name}/attempts_{attempt}"
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
     
     in_report_file = f"{solutions_path}{in_file_path_mid}{kernel_name}{rpt_file_end}"

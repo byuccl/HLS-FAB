@@ -4,13 +4,13 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 num_values = 256
 
-function_signature = "void compare_gt_int32(ap_int<32> *in_buffer0, ap_int<32> *in_buffer1, ap_int<32> *out_buffer)"
+function_signature = "void compare_gt_int32(int32_t *in_buffer0, int32_t *in_buffer1, int32_t *out_buffer)"
 
 description = f"""
 This HLS kernel compares two input vectors of 32-bit integers, each of length {num_values}, and produces an output vector of the same length.
 For each element in the input vectors, the kernel checks if the element in the first input vector is greater than the corresponding element in the second input vector.
 If the condition is true, the corresponding element in the output vector is set to 1; otherwise, it is set to 0.
-The input and output vectors are represented using ap_int<32> data types.
+The input and output vectors are represented using int32_t data types.
 """
 
 inputs_info = [

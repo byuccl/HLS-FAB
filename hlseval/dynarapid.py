@@ -193,7 +193,7 @@ exit
                 logger.debug(f"Java command elapsed time: {java_elapsed_time}")
                 
                 # Append java output to previous output
-                stdout += "\n\n--- GenerateDesign Output ---\n" + java_stdout
+                stdout += "\n\n--- Generate Design Output ---\n" + java_stdout
                 
                 # Check if files were actually created
                 check_files_cmd = f"docker exec dynarapid_container bash -c 'find {attempt_dir} -type f | wc -l'"

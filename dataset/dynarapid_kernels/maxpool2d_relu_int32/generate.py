@@ -9,7 +9,7 @@ stride = 2
 output_rows = input_rows // stride
 output_cols = input_cols // stride
 
-function_signature = "void maxpool2d_relu_int32(ap_int<32> *input, ap_int<32> *output)"
+function_signature = "void maxpool2d_relu_int32(int32_t *input, int32_t *output)"
 
 short_description = (
     "This HLS kernel performs 2D max pooling with a 2x2 window and stride=2 on a 16x16 input int32 tensor. "
@@ -22,8 +22,8 @@ The kernel uses a {window_size}x{window_size} window with a stride of {stride} o
 After max pooling, the ReLU activation is applied, setting all negative values to zero.
 The result is stored in an {output_rows}x{output_cols} output tensor.
 Parameters:
-    - First parameter: Pointer to the input buffer of {input_rows}x{input_cols} ap_int<32> values.
-    - Second parameter: Pointer to the output buffer of {output_rows}x{output_cols} ap_int<32> values.
+    - First parameter: Pointer to the input buffer of {input_rows}x{input_cols} int32_t values.
+    - Second parameter: Pointer to the output buffer of {output_rows}x{output_cols} int32_t values.
 """
 
 inputs_info = [

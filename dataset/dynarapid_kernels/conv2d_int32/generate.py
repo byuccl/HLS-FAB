@@ -9,13 +9,13 @@ stride = 1
 output_rows = (input_rows - kernel_size) // stride + 1
 output_cols = (input_cols - kernel_size) // stride + 1
 
-function_signature = "void conv2d_int32(ap_int<32> *input_matrix, ap_int<32>* kernel, ap_int<32>* output_matrix)"
+function_signature = "void conv2d_int32(int32_t *input_matrix, int32_t* kernel, int32_t* output_matrix)"
 
 description = f"""
 This HLS kernel performs a 2D convolution operation on an input matrix using a specified kernel and stride.
 Parameters to the function include:
-    - A pointer to the input matrix of size {input_rows}x{input_cols} with ap_int<32> values.
-    - A pointer to the kernel matrix of size {kernel_size}x{kernel_size} with ap_int<32> values.
+    - A pointer to the input matrix of size {input_rows}x{input_cols} with int32_t values.
+    - A pointer to the kernel matrix of size {kernel_size}x{kernel_size} with int32_t values.
     - A pointer to the output matrix which will store the result of the convolution operation.
     - A stride value that determines the step size for the convolution operation.
 The output matrix will have dimensions of {output_rows}x{output_cols}.

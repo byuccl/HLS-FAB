@@ -4,13 +4,13 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 vector_size = 256
 
-function_signature = "void argmax_int32(ap_int<32> *input_vector, ap_uint<32> *result)"
+function_signature = "void argmax_int32(int32_t *input_vector, uint32_t *result)"
 
 description = f"""
 This HLS kernel calculates the argmax, which is the index of the largest element, of a given int32 vector of length {vector_size}.
 Parameters to the function include:
-    - A pointer to the input vector of {vector_size} ap_int<32> values.
-    - A pointer to a single ap_uint<32> element that will store the result, which is the index of the maximum value in the input vector.
+    - A pointer to the input vector of {vector_size} int32_t values.
+    - A pointer to a single uint32_t element that will store the result, which is the index of the maximum value in the input vector.
 The kernel iterates through the input vector to find the maximum value and its corresponding index, storing the index in the result.
 """
 

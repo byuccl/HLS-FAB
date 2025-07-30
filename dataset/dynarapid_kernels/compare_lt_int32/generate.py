@@ -4,16 +4,16 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 num_elements = 256
 
-function_signature = "void compare_lt_int32(ap_int<32>* input_a, ap_int<32>* input_b, ap_int<32>* output)"
+function_signature = "void compare_lt_int32(int32_t* input_a, int32_t* input_b, int32_t* output)"
 
 description = f"""
 This HLS kernel performs an element-wise comparison between two input vectors of 32-bit integers, each of length {num_elements}. 
 For each index i, the kernel outputs 1 if input_a[i] is less than input_b[i], otherwise it outputs 0. 
 The output is stored in a third vector of 32-bit integers.
 Parameters:
-    - First parameter: Pointer to the first input buffer of {num_elements} ap_int<32> values.
-    - Second parameter: Pointer to the second input buffer of {num_elements} ap_int<32> values.
-    - Third parameter: Pointer to the output buffer of {num_elements} ap_int<32> values, where the comparison results are stored.
+    - First parameter: Pointer to the first input buffer of {num_elements} int32_t values.
+    - Second parameter: Pointer to the second input buffer of {num_elements} int32_t values.
+    - Third parameter: Pointer to the output buffer of {num_elements} int32_t values, where the comparison results are stored.
 """
 
 inputs_info = [

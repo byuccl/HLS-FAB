@@ -5,12 +5,12 @@ from hlseval import PromptConstructor, generate_examples
 ROWS = 16
 COLS = 16
 
-function_signature = "void matrixvector_mult_int32(ap_int<32>* matrix, ap_int<32>* vector, ap_int<32>* result)"
+function_signature = "void matrixvector_mult_int32(int32_t* matrix, int32_t* vector, int32_t* result)"
 
 short_description = f"A kernel that computes the matrix-vector multiplication of an int32 matrix ({ROWS}x{COLS}, row-major) and an int32 vector (length {ROWS}). Result is an int32 vector of length {COLS}."
 description = f"""
-This HLS kernel performs a matrix-vector multiplication where the matrix is a {ROWS}x{COLS} matrix of 32-bit integers (ap_int<32>), 
-and the vector is a {ROWS}-element vector of 32-bit integers (ap_int<32>). The result is a {COLS}-element vector of 32-bit integers (ap_int<32>).
+This HLS kernel performs a matrix-vector multiplication where the matrix is a {ROWS}x{COLS} matrix of 32-bit integers (int32_t), 
+and the vector is a {ROWS}-element vector of 32-bit integers (int32_t). The result is a {COLS}-element vector of 32-bit integers (int32_t).
 The matrix is stored in a row-major format, and the output vector is computed as the dot product of each row of the matrix with the input vector.
 """
 

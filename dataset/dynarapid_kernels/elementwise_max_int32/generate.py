@@ -4,14 +4,14 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 VECTOR_SIZE = 512
 
-function_signature = "void elementwise_max_int32(ap_int<32> *in_buffer1, ap_int<32> *in_buffer2, ap_int<32> *out_buffer)"
+function_signature = "void elementwise_max_int32(int32_t *in_buffer1, int32_t *in_buffer2, int32_t *out_buffer)"
 
 description = f"""
 This HLS kernel computes the elementwise maximum between two vectors of 32-bit integer numbers.
-Parameters to the function include three ap_int<32> pointers:
-    The first pointer points to the start of a {VECTOR_SIZE}-element array of ap_int<32> values to be used as the first input vector.
-    The second pointer points to the start of a {VECTOR_SIZE}-element array of ap_int<32> values to be used as the second input vector.
-    The third pointer points to the start of a {VECTOR_SIZE}-element array of ap_int<32> values to be modified and viewed as the output vector.
+Parameters to the function include three int32_t pointers:
+    The first pointer points to the start of a {VECTOR_SIZE}-element array of int32_t values to be used as the first input vector.
+    The second pointer points to the start of a {VECTOR_SIZE}-element array of int32_t values to be used as the second input vector.
+    The third pointer points to the start of a {VECTOR_SIZE}-element array of int32_t values to be modified and viewed as the output vector.
 The kernel compares each element of the two input vectors and stores the maximum value in the corresponding position of the output vector.
 """
 

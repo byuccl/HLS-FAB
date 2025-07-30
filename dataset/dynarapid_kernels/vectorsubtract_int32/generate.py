@@ -4,16 +4,16 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 num_values = 512
 
-function_signature = "void vectorsubtract_int32(ap_int<32> *in_buffer1, ap_int<32> *in_buffer2, ap_int<32> *out_buffer)"
+function_signature = "void vectorsubtract_int32(int32_t *in_buffer1, int32_t *in_buffer2, int32_t *out_buffer)"
 
 short_description = "This is the implementation of an HLS kernel that performs a vector subtraction of 2 input vectors and stores the result in 1 output vector."
 
 description = f"""
 This HLS kernel performs a vector subtraction operation on two input vectors of 32-bit integer numbers.
-Parameters to the function include three ap_int<32> pointers:
-    The first pointer points to the start of a {num_values}-element array of ap_int<32> values to be used as the first input vector.
-    The second pointer points to the start of a {num_values}-element array of ap_int<32> values to be used as the second input vector.
-    The third pointer points to the start of a {num_values}-element array of ap_int<32> values to store the result of the subtraction.
+Parameters to the function include three int32_t pointers:
+    The first pointer points to the start of a {num_values}-element array of int32_t values to be used as the first input vector.
+    The second pointer points to the start of a {num_values}-element array of int32_t values to be used as the second input vector.
+    The third pointer points to the start of a {num_values}-element array of int32_t values to store the result of the subtraction.
 The kernel computes the element-wise subtraction of the second input vector from the first input vector and stores the result in the output vector.
 """
 

@@ -12,7 +12,7 @@ from hlseval import run_dynarapid
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.INFO)
 
 VITIS_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
 Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
@@ -69,7 +69,7 @@ def add_table_row(logfile, kernel, attempt=1, llm_time = "-", dynamatic_time = "
     col_widths = [45, 20, 20, 20, 20]
     
     # Prepare the data
-    kernel_attempt = f"{kernel}_attempt_{attempt}"
+    kernel_attempt = f"{kernel}_attempt_{attempt+1}"
     data = [kernel_attempt, llm_time, dynamatic_time, vitis_csim_time, vitis_csynth_time]
     
     # Create the data row
@@ -153,13 +153,13 @@ model_parameters = {
                         "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
                     }
     
-def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mode, prev_feedback=None, goals=None):
+def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mode, prev_feedback=None, goals=None, iter=0):
     kernel_name = test["kernel_name"]
     llm_elapsed_time = None
     dynamatic_elapsed_time = None
     csim_elapsed_time = None
     csynth_elapsed_time = None
-    solutions_path = f"./results/solutions/{hls_flow}/{model}/{kernel_name}/attempts_{attempt+1}"
+    solutions_path = f"./results/solutions/{hls_flow}/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}"
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
 
 
@@ -224,7 +224,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
 
         elif mode == "optimization":
             logger.debug(f"Optimizing {kernel_name}")
-        prev_solutions_path = f"./results/solutions/{hls_flow}/{model}/{kernel_name}/attempts_{attempt}"
+        prev_solutions_path = f"./results/solutions/{hls_flow}/{model}/{iter+1}/{kernel_name}/attempts_{attempt}"
 
         with open(f"{prev_solutions_path}/{kernel_name}.cpp", "r") as f:
             prev_code = f.read()
@@ -302,14 +302,14 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
                 csynth_begin = datetime.now()
 
                 synth_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csynth")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals, iter=iter)
                 synth_returncode = synth_output.returncode 
                 csynth_end = datetime.now()
                 csynth_elapsed_time = csynth_end-csynth_begin
                 logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
             except hlseval.CsynthTimeoutError as e:
                 logger.warning(" Vitis timed out")
-                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
+                vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals, iter=iter)
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
@@ -320,7 +320,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
                 logger.debug("vitis Feedback before Adding new Errors")
                 synth_returncode = 1
         else:
-            vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals)
+            vitis_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow, model, attempt=attempt+1, goals=goals, iter=iter)
             vitis_feedback['sim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
@@ -350,7 +350,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
         dsim_end = datetime.now()
         csim_elapsed_time = dsim_end-dsim_begin
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals)
+        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals, iter=iter)
     
 
         returncode, stdout, dynamatic_elapsed_time, rapidwrite_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwrite)
@@ -382,7 +382,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwrite, mod
     return returncode, feedback
 
 
-def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=3, mode="optimization", goals=None):
+def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=3, mode="optimization", goals=None, iter=0):
     kernel_name = test["kernel_name"]
     prev_ret_code = -1
     testbench_status = "failure"
@@ -395,7 +395,7 @@ def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=
     for attempt in range(passes):
         logger.debug(f"[{model}] Attempt {attempt+1} for kernel {kernel_name} in mode: {mode}")
 
-        dir_path = pathlib.Path(f"./results/solutions/{hls_flow}/{model}/{kernel_name}/attempts_{attempt+1}")
+        dir_path = pathlib.Path(f"./results/solutions/{hls_flow}/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}")
         if dir_path.exists() and mode == "correction" and attempt == 0:
             logger.debug(f"{kernel_name} already tested and exists. Skipping...\n")
             return
@@ -410,7 +410,7 @@ def process_kernel(model, test, workflow, hls_flow, logfile, rapidwrite, passes=
 
         # Pass `goals` only if in optimization mode
         current_goals = goals if mode == "optimization" else None
-        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwrite, feedback, goals=current_goals)
+        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwrite, feedback, goals=current_goals, iter=iter)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -467,6 +467,14 @@ if __name__ == "__main__":
         help="Add this flag to enable RapidWrite"
     ) 
 
+    parser.add_argument(
+        "-k",
+        type=int,
+        default=1,
+        dest="k",
+        help="pass@k with k number of attempts"
+    )
+
 
 
     args = parser.parse_args()  
@@ -476,9 +484,6 @@ if __name__ == "__main__":
         raise ValueError('Invalid log level: %s' % args.loglevel)
     logging.basicConfig(level=numeric_level)
     
-    # Add any models you want completions run for to this list
-    # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["x-ai/grok-4", "openai/gpt-4.1", "anthropic/claude-sonnet-4", "google/gemini-2.5-pro"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
@@ -491,25 +496,24 @@ if __name__ == "__main__":
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
 
+    # Add any models you want completions run for to the file dataset/llm_models.txt
     with open("./dataset/llm_models.txt", "r") as f:
         lines = f.readlines()
     models = [line.strip() for line in lines]
 
-    print(models)
-
     for model in models:
-        # if model not in model_parameters:
-        #     logger.warning(f"Model {model} not recognized.")
-        #     continue
+        for iter in range(args.k):
+            logger.info(f"Beginning Pass {iter+1}")
+            pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
+            with open (f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
+                write_table_header(logfile)
 
-        pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/logs/").mkdir(parents=True, exist_ok=True)
-        with open (f"results/solutions/{args.hls_flow}/{model}/logs/timing.log", "w") as logfile:
-            write_table_header(logfile)
+                for test in tests:
+                    process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals, iter=iter)
+                
+                write_table_footer(logfile)
 
-            for test in tests:
-                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwrite=rapidwrite, passes=passes, mode=mode, goals=goals)
-            
-            write_table_footer(logfile)
+
     # Delete the unecessary files after running the completions
     try:
         os.remove("kernel.json")

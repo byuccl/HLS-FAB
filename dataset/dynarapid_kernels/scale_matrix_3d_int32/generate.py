@@ -8,7 +8,7 @@ matrix_width = 24
 matrix_depth = 64
 
 function_signature = """
-void scale_matrix_3d_int32(ap_int<32> *input, ap_int<32> scale_factor, ap_int<32> *output)
+void scale_matrix_3d_int32(int32_t *input, int32_t scale_factor, int32_t *output)
 // input,        [MATRIX_HEIGHT][MATRIX_WIDTH][MATRIX_DEPTH] // 3D input matrix  
 // output        [MATRIX_HEIGHT][MATRIX_WIDTH][MATRIX_DEPTH] // 3D output matrix  
 

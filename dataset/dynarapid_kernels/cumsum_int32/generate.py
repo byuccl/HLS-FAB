@@ -3,13 +3,13 @@ from hlseval import PromptConstructor, generate_examples
 
 num_values = 256  # Length of the input vector
 
-function_signature = "void cumsum_int32(ap_int<32> *in_buffer, ap_int<32> *out_buffer)"
+function_signature = "void cumsum_int32(int32_t *in_buffer, int32_t *out_buffer)"
 
 description = f"""
 This HLS kernel computes the cumulative sum (cumsum) of a {num_values}-element vector of 32-bit integer numbers.
-Parameters to the function include two ap_int<32> pointers:
-    The first pointer points to the start of a {num_values}-element array of ap_int<32> values to be used as input data.
-    The second pointer also points to the start of a {num_values}-element array of ap_int<32> values to be modified and viewed as the output to the function.
+Parameters to the function include two int32_t pointers:
+    The first pointer points to the start of a {num_values}-element array of int32_t values to be used as input data.
+    The second pointer also points to the start of a {num_values}-element array of int32_t values to be modified and viewed as the output to the function.
 The cumulative sum is calculated with saturation to the int32_t range on overflow.
 """
 

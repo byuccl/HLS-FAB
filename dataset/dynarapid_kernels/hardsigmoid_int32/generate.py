@@ -4,15 +4,15 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 VECTOR_SIZE = 256
 
-function_signature = "void hardsigmoid_int32(ap_int<32> *input_vector, ap_int<32> *output_vector)"
+function_signature = "void hardsigmoid_int32(int32_t *input_vector, int32_t *output_vector)"
 
 description = f"""
 This HLS kernel applies the hardsigmoid activation function on a vector of 32-bit integer values.
 The hardsigmoid is computed as: y = max(0, min(1, x/6 + 0.5)), where x is the input value.
 The result is then rescaled and quantized into an 32-bit integer output with the range [0, 65535].
-Parameters to the function include two ap_int<32> pointers:
-    The first pointer points to the start of a {VECTOR_SIZE}-element array of ap_int<32> values to be used as input data.
-    The second pointer points to the start of a {VECTOR_SIZE}-element array of ap_int<32> values to be modified and viewed as the output of the function.
+Parameters to the function include two int32_t pointers:
+    The first pointer points to the start of a {VECTOR_SIZE}-element array of int32_t values to be used as input data.
+    The second pointer points to the start of a {VECTOR_SIZE}-element array of int32_t values to be modified and viewed as the output of the function.
 """
 
 inputs_info = [
