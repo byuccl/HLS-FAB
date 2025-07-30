@@ -42,29 +42,29 @@ def parse_timing_log(log_path):
         }
     return timing_data
 
+def get_all_kernel_dirs(base_path, model):
+    """Get all kernel directories within a model directory."""
+    model_dir = base_path / model
+    if not model_dir.exists():
+        return []
+    
+    kernel_dirs = []
+    for item in model_dir.iterdir():
+        if item.is_dir() and "attempts_" not in item.name and "logs" != item.name:
+            kernel_dirs.append(item.name)
+    
+    return kernel_dirs
+
 def create_csv(base_dir, output_file):
     """Process all data and create a CSV file."""
-    # Define the models and kernels to process
+    # Define the models to process
     with open("./dataset/llm_models.txt", "r") as f:
         lines = f.readlines()
     models = [line.strip() for line in lines]
-    with open("./dataset/kernel_list.txt", "r") as f:
-        kernels = f.readlines()
-    kernels = [kernel.strip() for kernel in kernels]
-    
-    # Map kernel directory names to kernel names used in the CSV
-    kernel_dir_to_csv = {
-        'matrix_multiply_int32': 'matrix_multiply_int32',
-        'relu_activation_float32': 'relu_activation_float32',
-        'absolute_value_int8': 'abs_int8',
-        'affine_float32': 'affine_float',
-        'dot_product_float32': 'dot_product_float32',
-        'conv2d_int16': 'conv2d_int16'
-    }
     
     # Define CSV headers
     headers = [
-        'model', 'kernel', 'attempts','llm_time' , 'status', 'match', 'errors', 'csim_time',
+        'model', 'kernel', 'attempts', 'llm_time', 'status', 'match', 'errors', 'csim_time',
         'synth_errors', 'fmax', 'latency', 'bram', 'dsp', 'ff', 'lut', 'csynth_time'
     ]
     
@@ -94,20 +94,22 @@ def create_csv(base_dir, output_file):
             timing_log_path = model_dir / 'logs' / 'timing.log'
             timing_data = parse_timing_log(str(timing_log_path))
             
+            # Get all kernel directories for this model
+            kernel_dirs = get_all_kernel_dirs(base_path, model)
+            
             # Process each kernel
-            for kernel_dir in kernels:
+            for kernel_dir in kernel_dirs:
                 kernel_path = model_dir / kernel_dir
                 
                 if not kernel_path.exists():
                     print(f"Skipping kernel directory (not found): {kernel_path}")
                     continue
                 
-                kernel_csv_name = kernel_dir_to_csv.get(kernel_dir, kernel_dir)
-                print(f"  Processing kernel: {kernel_dir} (CSV name: {kernel_csv_name})")
+                print(f"  Processing kernel: {kernel_dir}")
                 
                 # Process each attempt
                 rows_for_kernel = []
-                for attempt in range(1, 5):
+                for attempt in range(1, 2):
                     attempt_dir = kernel_path / f"attempts_{attempt}"
                     if not attempt_dir.exists():
                         print(f"    Skipping attempt directory (not found): {attempt_dir}")
@@ -172,8 +174,8 @@ def create_csv(base_dir, output_file):
                     
                     # Create row for CSV
                     row = [
-                        model,  # Only show model name for first attempt
-                        kernel_csv_name,
+                        model,
+                        kernel_dir,
                         attempt,
                         llm_time,
                         status,
