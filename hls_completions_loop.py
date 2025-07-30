@@ -516,11 +516,10 @@ if __name__ == "__main__":
             pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
             with open (f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
                 write_table_header(logfile)
-
-            for test in tests:
-                process_kernel(model, test, workflow="openrouter", hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals, iter=iter)
-            
-            write_table_footer(logfile)
+                for test in tests:
+                    process_kernel(model, test, workflow="openrouter", hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals, iter=iter)
+                
+                write_table_footer(logfile)
     # Delete the unecessary files after running the completions
     try:
         os.remove("kernel.json")
