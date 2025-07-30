@@ -4,9 +4,8 @@
 - Have docker installed (used when running DynaRapid)
 - Have python 3.10 or newer
 - Have Vitis installed and sourced (We use version 2024.2)
-- Set environment variables:
-  - `export WORKFLOW=openrouter`
-  - `export OPENROUTER_API_KEY=<Add API Key>`
+- Set api_key environment variable:
+`export OPENROUTER_API_KEY=<Add API Key>`
 
 ### Clone and prepare the repo 
 ```
@@ -15,8 +14,6 @@ python -m venv venv
 source venv/bin/activate
 cd hlseval
 pip install -e .
-mkdir dataset/kernels
-mkdir results/logs # With some cleanup, this line probably wouldn't be needed
 bash build_rag_dir.sh
 ```
 
