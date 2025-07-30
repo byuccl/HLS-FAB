@@ -183,7 +183,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             model=model,
             url=url,
             system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
-            temperature=0,
+            temperature=0.5,
             top_p=1.0,
             rag=False if hls_flow=="vitis" else False
         )
@@ -245,7 +245,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             model=model,
             url=url,
             system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
-            temperature=0,
+            temperature=0.5,
             top_p=1.0,
             rag=False if hls_flow=="vitis" else False
         )
