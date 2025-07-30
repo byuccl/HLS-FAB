@@ -152,216 +152,229 @@ def parse_function_signature(signature):
     
 class PromptConstructor:
     def __init__(self, function_signature, description, behavioral, examples, tolerances=None): 
-        #type is a list of types for the input buffers, has 2 parts: the dimension and the io direction. If it has 0 as Dimension, it is an RTP
-        # --- Parse source + function ---
-        # with open(source_path, "r") as f:
-        #     source_code = f.read()
-        # parsedcpp = CppHeader(function_signature, argType='string')
-
-        # if len(parsedcpp.functions) > 1:
-        #     raise RuntimeError("There should be only 1 function in the source code.")
-
-        # func = parsedcpp.functions[0]
-        # Parse the function signature  
-        result = parse_function_signature(function_signature)  
-          
-        # Correctly assign the values from the dictionary  
-        self.name = result['name']  
-        self.parameters = result['parameters']  
-        self.buffers = result['buffers']  
-        self.rtps = result['rtps']
-        self.examples = examples
-        # self.buffers = [p for p in func['parameters'] if self._is_buffer(p)]
-        # self.call = self._construct_call()
-
-        # --- Extract canonical solution and signature---
-        # with open(source_path, "r") as f:
-        #     src = f.read()
-        # canonical_solution = extract_canonical(src)
-        # self.signature = self._construct_signature(src)
-
-        # --- Generate test_vectors for each example --- 
-        test_vectors_list = []
-
-        for ex in self.examples:
-            arrays = ex["inputs"]
-            types = ex["types"]
-            # --- Generate test_vectors for one example --- 
-            test_vectors = {"inputs": [], "outputs": [], "rtps": []}
-            output_indices = []
-            input_arrays = []
-            in_out_arrays = []
-            rtp_values = []
-            # Loop through saving the inputs and rtps and the index for the outputs in order to generate the test vectors
-            for i, arr in enumerate(arrays):
-                meta = types[i]
-                in_out = meta["iotype"]
-                array_dim = meta["array_dimension"]
-                # Check if the array is an RTP or a buffer
-                if in_out == "in":
-                    if array_dim == 0:
-                        # It's a scalar RTP
-                        c_type = self.rtps[len(rtp_values)]["type"]
-                        try:
-                            np_type = C_TO_NUMPY_DTYPE[c_type]
-                        except KeyError:
-                            raise ValueError(f"Unsupported rtp type '{c_type}' in kernel '{self.name}'")
-                        test_vectors["rtps"].append({
-                            self.rtps[len(rtp_values)]["name"]: float(arr),
-                            "dtype": np_type
-                        })
-                        rtp_values.append(arr)
-                    # Check if the array is a buffer and input
-                    else:
-                        buf_name = self.buffers[len(input_arrays)]["name"]
-                        test_vectors["inputs"].append({
-                            buf_name: arr.tolist(),
-                            "dtype": str(arr.dtype)
-                        })
-                        input_arrays.append(arr)
-                elif in_out == "out":
-                    # It's a buffer output
-                    output_indices.append(i)  # Save the position; will generate later
-                elif in_out == "inout": # Handle the case when it is both an input and an output
-                    output_indices.append(i)  # Save the position; will generate later
-                    if array_dim == 0:
-                        # It's a scalar RTP
-                        c_type = self.rtps[len(rtp_values)]["type"]
-                        try:
-                            np_type = C_TO_NUMPY_DTYPE[c_type]
-                        except KeyError:
-                            raise ValueError(f"Unsupported rtp type '{c_type}' in kernel '{self.name}'")
-                        test_vectors["rtps"].append({
-                            self.rtps[len(rtp_values)]["name"]: float(arr),
-                            "dtype": np_type
-                        })
-                        rtp_values.append(arr)
-                    # Check if the array is a buffer and input
-                    else:
-                        buf_name = self.buffers[len(input_arrays)]["name"]
-                        test_vectors["inputs"].append({
-                            buf_name: arr.tolist(),
-                            "dtype": str(arr.dtype)
-                        })
-                        in_out_arrays.append(arr)
-
-                else:
-                    raise ValueError(f"Unknown in_out value '{in_out}' at index {i}")
-                
-            #Using the output indices, we can generate the outputs
-            # logger.debug(input_arrays)
-            args = [*input_arrays]
-
-            if rtp_values:
-                args.extend(rtp_values)
-
-            if in_out_arrays:
-                args.extend(in_out_arrays)
-
-            outputs = behavioral(*args)
-            # logger.debug(outputs)
-            if not isinstance(outputs, tuple):
-                outputs = (outputs,)
-                
-            for i, arr in enumerate(outputs):
-                # Offset from input buffers
-                buf_index = (len(input_arrays) + i) if (len(in_out_arrays) == 0) else (len(self.buffers) - len(in_out_arrays) + i) # The outputs are always last in the buffers so the indexes start after inputs. They overlap if they are inout so we need to take the length of inout_arrays from the end to start
-                buf_name = self.buffers[buf_index]["name"]
-                test_vectors["outputs"].append({
-                    buf_name: arr.tolist(),
-                    "dtype": str(arr.dtype)
-                })
-            # logger.debug(test_vectors["outputs"])
-            test_vectors_list.append(test_vectors)
-
-        # program_code = self._construct_wrapper()
-        dataflow = self._construct_dataflow(test_vectors)
-        
-        # Some edge case kernels may fail to generate examples, we'll just skip for those
-        # try:
-        #     examples = self._construct_examples(behavioral, test_vectors_list=test_vectors_list, num_examples=len(test_vectors_list), slice_size=8)
-        # except Exception as e:
-        #     logger.warning(f"The kernel {self.name} prompt won't have examples: {e}")
-        #     examples = None
-        
-#         if examples:
-#             prompt = f"""/*
-# {description}
-# {examples}
-# {dataflow}
-# */
-# {function_signature} {{
-# """
-#         else:
-        prompt = f"""/*
-{description}
-{dataflow}
-Use the following function signature to implement the kernel:
-*/
-{function_signature} {{
-"""
-
-        self.sample = {
+        if behavioral is None:
+            result = parse_function_signature(function_signature)  
+            self.name = result['name']  
+            prompt = f"""/*
+                {description}
+                Use the following function signature to implement the kernel:
+                */
+                {function_signature} {{
+                """
+            self.sample = {
             "kernel_name": self.name,
             "prompt": prompt,
             # "canonical_solution": canonical_solution, #FIXME: Find out what these are used for and if we need them
             # "program_code": program_code,
             # "test_vectors": test_vectors,
-        }
+            }
+        else:
+            #type is a list of types for the input buffers, has 2 parts: the dimension and the io direction. If it has 0 as Dimension, it is an RTP
+            # --- Parse source + function ---
+            # with open(source_path, "r") as f:
+            #     source_code = f.read()
+            # parsedcpp = CppHeader(function_signature, argType='string')
 
-        if tolerances:
-            self.sample['tolerances'] = tolerances
+            # if len(parsedcpp.functions) > 1:
+            #     raise RuntimeError("There should be only 1 function in the source code.")
 
-    def write_json(self, filepath):
-        logger.info(f"Writing JSON to {filepath}")
-        with open(filepath, "w") as f:
-            json.dump(self.sample, f)
+            # func = parsedcpp.functions[0]
+            # Parse the function signature  
+            result = parse_function_signature(function_signature)  
             
-    def _is_buffer(self, p):
-        # Include pointer types or array declarations
-        return p.get('pointer') or p.get('array', False) or '[]' in p.get('type', '')
+            # Correctly assign the values from the dictionary  
+            self.name = result['name']  
+            self.parameters = result['parameters']  
+            self.buffers = result['buffers']  
+            self.rtps = result['rtps']
+            self.examples = examples
+            # self.buffers = [p for p in func['parameters'] if self._is_buffer(p)]
+            # self.call = self._construct_call()
 
-    # Internal methods
-    def _construct_signature(self, src):
-        before_brace = src.split('{', 1)[0]
-        return before_brace.strip()
+            # --- Extract canonical solution and signature---
+            # with open(source_path, "r") as f:
+            #     src = f.read()
+            # canonical_solution = extract_canonical(src)
+            # self.signature = self._construct_signature(src)
 
-    def _construct_call(self):
-        buf = ", ".join([b['name'] for b in self.buffers])
-        rtp = ", ".join([r['name'] for r in self.rtps])
-        return f"{self.name}({buf}{', ' + rtp if rtp else ''})"
+            # --- Generate test_vectors for each example --- 
+            test_vectors_list = []
 
-#     def _construct_wrapper(self):  #FIXME Do We need this?
-#         buf = ", ".join([f"{b['type']}{b['name']}" for b in self.buffers])
-#         rtp = ", ".join([f"{r['type']} {r['name']}" for r in self.rtps])
-#         params = buf if not self.rtps else f"{buf}, {rtp}"
-#         return f"""extern "C" {{
-#     void {self.name}_wrapper({params}) {{
-#         ::aie::set_rounding(aie::rounding_mode::positive_inf);
-#         event0();
-#         {self.call};
-#         event1();
-#     }}
-# }}"""
+            
+            for ex in self.examples:
+                arrays = ex["inputs"]
+                types = ex["types"]
+                # --- Generate test_vectors for one example --- 
+                test_vectors = {"inputs": [], "outputs": [], "rtps": []}
+                output_indices = []
+                input_arrays = []
+                in_out_arrays = []
+                rtp_values = []
+                # Loop through saving the inputs and rtps and the index for the outputs in order to generate the test vectors
+                for i, arr in enumerate(arrays):
+                    meta = types[i]
+                    in_out = meta["iotype"]
+                    array_dim = meta["array_dimension"]
+                    # Check if the array is an RTP or a buffer
+                    if in_out == "in":
+                        if array_dim == 0:
+                            # It's a scalar RTP
+                            c_type = self.rtps[len(rtp_values)]["type"]
+                            try:
+                                np_type = C_TO_NUMPY_DTYPE[c_type]
+                            except KeyError:
+                                raise ValueError(f"Unsupported rtp type '{c_type}' in kernel '{self.name}'")
+                            test_vectors["rtps"].append({
+                                self.rtps[len(rtp_values)]["name"]: float(arr),
+                                "dtype": np_type
+                            })
+                            rtp_values.append(arr)
+                        # Check if the array is a buffer and input
+                        else:
+                            buf_name = self.buffers[len(input_arrays)]["name"]
+                            test_vectors["inputs"].append({
+                                buf_name: arr.tolist(),
+                                "dtype": str(arr.dtype)
+                            })
+                            input_arrays.append(arr)
+                    elif in_out == "out":
+                        # It's a buffer output
+                        output_indices.append(i)  # Save the position; will generate later
+                    elif in_out == "inout": # Handle the case when it is both an input and an output
+                        output_indices.append(i)  # Save the position; will generate later
+                        if array_dim == 0:
+                            # It's a scalar RTP
+                            c_type = self.rtps[len(rtp_values)]["type"]
+                            try:
+                                np_type = C_TO_NUMPY_DTYPE[c_type]
+                            except KeyError:
+                                raise ValueError(f"Unsupported rtp type '{c_type}' in kernel '{self.name}'")
+                            test_vectors["rtps"].append({
+                                self.rtps[len(rtp_values)]["name"]: float(arr),
+                                "dtype": np_type
+                            })
+                            rtp_values.append(arr)
+                        # Check if the array is a buffer and input
+                        else:
+                            buf_name = self.buffers[len(input_arrays)]["name"]
+                            test_vectors["inputs"].append({
+                                buf_name: arr.tolist(),
+                                "dtype": str(arr.dtype)
+                            })
+                            in_out_arrays.append(arr)
 
-    def _construct_dataflow(self, test_vectors):
-        df = ""
-        for d in test_vectors["inputs"]:
-            for k, v in d.items():
-                if k != "dtype":
-                    df += f"{k} size: {np.size(v)}\n"
-                    break
-        for d in test_vectors["outputs"]:
-            for k, v in d.items():
-                if k != "dtype":
-                    df += f"{k} size: {np.size(v)}\n"
-                    break
-        if "rtps" in test_vectors:
-            for i, d in enumerate(test_vectors["rtps"]):
+                    else:
+                        raise ValueError(f"Unknown in_out value '{in_out}' at index {i}")
+                    
+                #Using the output indices, we can generate the outputs
+                # logger.debug(input_arrays)
+                args = [*input_arrays]
+
+                if rtp_values:
+                    args.extend(rtp_values)
+
+                if in_out_arrays:
+                    args.extend(in_out_arrays)
+
+                outputs = behavioral(*args)
+                # logger.debug(outputs)
+                if not isinstance(outputs, tuple):
+                    outputs = (outputs,)
+                    
+                for i, arr in enumerate(outputs):
+                    # Offset from input buffers
+                    buf_index = (len(input_arrays) + i) if (len(in_out_arrays) == 0) else (len(self.buffers) - len(in_out_arrays) + i) # The outputs are always last in the buffers so the indexes start after inputs. They overlap if they are inout so we need to take the length of inout_arrays from the end to start
+                    buf_name = self.buffers[buf_index]["name"]
+                    test_vectors["outputs"].append({
+                        buf_name: arr.tolist(),
+                        "dtype": str(arr.dtype)
+                    })
+                # logger.debug(test_vectors["outputs"])
+                test_vectors_list.append(test_vectors)
+
+            # program_code = self._construct_wrapper()
+            dataflow = self._construct_dataflow(test_vectors)
+            
+            # Some edge case kernels may fail to generate examples, we'll just skip for those
+            # try:
+            #     examples = self._construct_examples(behavioral, test_vectors_list=test_vectors_list, num_examples=len(test_vectors_list), slice_size=8)
+            # except Exception as e:
+            #     logger.warning(f"The kernel {self.name} prompt won't have examples: {e}")
+            #     examples = None
+            
+    #         if examples:
+    #             prompt = f"""/*
+    # {description}
+    # {examples}
+    # {dataflow}
+    # */
+    # {function_signature} {{
+    # """
+    #         else:
+            prompt = f"""/*
+    {description}
+    {dataflow}
+    Use the following function signature to implement the kernel:
+    */
+    {function_signature} {{
+    """
+
+            self.sample = {
+                "kernel_name": self.name,
+                "prompt": prompt,
+                # "canonical_solution": canonical_solution, #FIXME: Find out what these are used for and if we need them
+                # "program_code": program_code,
+                # "test_vectors": test_vectors,
+            }
+
+            if tolerances:
+                self.sample['tolerances'] = tolerances
+                
+        def _is_buffer(self, p):
+            # Include pointer types or array declarations
+            return p.get('pointer') or p.get('array', False) or '[]' in p.get('type', '')
+
+        # Internal methods
+        def _construct_signature(self, src):
+            before_brace = src.split('{', 1)[0]
+            return before_brace.strip()
+
+        def _construct_call(self):
+            buf = ", ".join([b['name'] for b in self.buffers])
+            rtp = ", ".join([r['name'] for r in self.rtps])
+            return f"{self.name}({buf}{', ' + rtp if rtp else ''})"
+
+    #     def _construct_wrapper(self):  #FIXME Do We need this?
+    #         buf = ", ".join([f"{b['type']}{b['name']}" for b in self.buffers])
+    #         rtp = ", ".join([f"{r['type']} {r['name']}" for r in self.rtps])
+    #         params = buf if not self.rtps else f"{buf}, {rtp}"
+    #         return f"""extern "C" {{
+    #     void {self.name}_wrapper({params}) {{
+    #         ::aie::set_rounding(aie::rounding_mode::positive_inf);
+    #         event0();
+    #         {self.call};
+    #         event1();
+    #     }}
+    # }}"""
+
+        def _construct_dataflow(self, test_vectors):
+            df = ""
+            for d in test_vectors["inputs"]:
                 for k, v in d.items():
                     if k != "dtype":
-                        df += f"{k}: {v}\n"
-        return f"This kernel should be optimized for the following input/output buffer shapes and parameters:\n{df.strip()}"
+                        df += f"{k} size: {np.size(v)}\n"
+                        break
+            for d in test_vectors["outputs"]:
+                for k, v in d.items():
+                    if k != "dtype":
+                        df += f"{k} size: {np.size(v)}\n"
+                        break
+            if "rtps" in test_vectors:
+                for i, d in enumerate(test_vectors["rtps"]):
+                    for k, v in d.items():
+                        if k != "dtype":
+                            df += f"{k}: {v}\n"
+            return f"This kernel should be optimized for the following input/output buffer shapes and parameters:\n{df.strip()}"
 
     # def _construct_examples(self, behavioral, input_arrays, rtp_values=None, num_examples=1, slice_size=8):
     #     examples = []
@@ -376,6 +389,11 @@ Use the following function signature to implement the kernel:
     #         examples.append(f">>> {self.name}({inputs_str}{rtp_str})\n{out.tolist()}")
     #     return "\n".join(examples)
     
+    def write_json(self, filepath):
+        logger.info(f"Writing JSON to {filepath}")
+        with open(filepath, "w") as f:
+            json.dump(self.sample, f)
+
     def _construct_examples(self, behavioral, test_vectors_list, num_examples=1, slice_size=8):
         examples = []
 

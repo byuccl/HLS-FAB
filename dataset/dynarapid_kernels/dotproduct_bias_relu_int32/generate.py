@@ -4,7 +4,7 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 num_values = 256
 
-function_signature = "void dotproduct_bias_relu_int32(ap_int<32>* in0, ap_int<32>* in1, ap_int<32>* out, ap_int<32> bias)"
+function_signature = "void dotproduct_bias_relu_int32(int32_t* in0, int32_t* in1, int32_t* out, int32_t bias)"
 
 description = f"""
 This HLS kernel computes the dot product of two vectors of 32-bit integer numbers, each of length {num_values}. 
@@ -12,9 +12,9 @@ The result is then added to a scalar 32-bit integer bias.
 After adding the bias, a ReLU (Rectified Linear Unit) operation is applied, which sets any negative result to zero. 
 Finally, the result is clamped to fit within the range of an 32-bit integer and written to a single-element output buffer.
 Parameters to the function include:
-    - Two input pointers, each pointing to the start of a {num_values}-element array of ap_int<32> values.
-    - A scalar ap_int<32> bias value.
-    - An output pointer to a single ap_int<32> value where the result will be stored.
+    - Two input pointers, each pointing to the start of a {num_values}-element array of int32_t values.
+    - A scalar int32_t bias value.
+    - An output pointer to a single int32_t value where the result will be stored.
 """
 
 inputs_info = [

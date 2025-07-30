@@ -5,14 +5,14 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 vector_size = 256
 
-function_signature = "void compare_equal_bfloat16(ap_float<16,8> *input_a, ap_float<16,8> *input_b, ap_int<8> *output_mask)"
+function_signature = "void compare_equal_bfloat16(ap_float<16,8> *input_a, ap_float<16,8> *input_b, ap_uint<8> *output_mask)"
 
 description = f"""
 This HLS kernel compares two vectors of bfloat16 values elementwise for equality and writes the result to an output mask of uint8_t values.
 Parameters to the function include:
     - First parameter: Pointer to the first input buffer of {vector_size} ap_float<16,8> values.
     - Second parameter: Pointer to the second input buffer of {vector_size} ap_float<16,8> values.
-    - Third parameter: Pointer to the output buffer of {vector_size} ap_int<8> values, where each element is set to 1 if the corresponding elements of the input buffers are equal, and 0 otherwise.
+    - Third parameter: Pointer to the output buffer of {vector_size} ap_uint<8> values, where each element is set to 1 if the corresponding elements of the input buffers are equal, and 0 otherwise.
 """
 
 inputs_info = [

@@ -4,13 +4,13 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 vector_size = 256
 
-function_signature = "void bitcount_uint32(ap_uint<32> *input_vector, ap_uint<32> *output_vector)"
+function_signature = "void bitcount_uint32(uint32_t *input_vector, uint32_t *output_vector)"
 
 description = f"""
 This HLS kernel counts the number of set bits (population count) for each entry in a vector of 32-bit unsigned integers.
-Parameters to the function include two ap_uint<32> pointers:
-    The first pointer points to the start of a {vector_size}-element array of ap_uint<32> values to be used as input data.
-    The second pointer also points to the start of a {vector_size}-element array of ap_uint<32> values to be modified and viewed as the output to the function.
+Parameters to the function include two uint32_t pointers:
+    The first pointer points to the start of a {vector_size}-element array of uint32_t values to be used as input data.
+    The second pointer also points to the start of a {vector_size}-element array of uint32_t values to be modified and viewed as the output to the function.
 The output vector will contain the bit counts per element from the input vector.
 """
 

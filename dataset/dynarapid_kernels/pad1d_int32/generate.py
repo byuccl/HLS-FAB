@@ -7,15 +7,15 @@ pad_size = 2
 pad_value = 0
 padded_length = vector_size + 2 * pad_size
 
-function_signature = "void pad1d_int32(ap_int<32> *input_vector, ap_int<32> *padded_vector)"
+function_signature = "void pad1d_int32(int32_t *input_vector, int32_t *padded_vector)"
 
 short_description = "A kernel that performs a 1D padding operation on an input vector with given padding size and padding value as runtime parameters."
 
 description = f"""
 This HLS kernel performs a 1D padding operation on an input vector of 32-bit integers. 
 Parameters to the function include:
-    - A pointer to the input vector of {vector_size} ap_int<32> values.
-    - A pointer to the output padded vector of ap_int<32> values.
+    - A pointer to the input vector of {vector_size} int32_t values.
+    - A pointer to the output padded vector of int32_t values.
     - An integer pad_size indicating the number of padding elements to add on each side of the input vector.
     - An integer pad_value specifying the value to use for padding.
 The output padded vector will have a length of {padded_length}, with the input vector centered and surrounded by pad_value.

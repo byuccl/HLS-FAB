@@ -4,13 +4,13 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 vector_size = 256
 
-function_signature = "void negate_int32(ap_int<32> *input_vector, ap_int<32> *output_vector)"
+function_signature = "void negate_int32(int32_t *input_vector, int32_t *output_vector)"
 
 description = f"""
 This HLS kernel negates each element in a vector of 32-bit integer numbers. 
-Parameters to the function include two ap_int<32> pointers:
-    The first pointer points to the start of a {vector_size}-element array of ap_int<32> values to be used as input data. 
-    The second pointer also points to the start of a {vector_size}-element array of ap_int<32> values to be modified and viewed as the output to the function.
+Parameters to the function include two int32_t pointers:
+    The first pointer points to the start of a {vector_size}-element array of int32_t values to be used as input data. 
+    The second pointer also points to the start of a {vector_size}-element array of int32_t values to be modified and viewed as the output to the function.
 The kernel iterates over each element in the input vector, negates it, and stores the result in the corresponding position in the output vector.
 """
 

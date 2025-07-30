@@ -4,13 +4,13 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 num_values = 1024
 
-function_signature = "void abs_int32(ap_int<32> *in_buffer, ap_int<32>* out_buffer)"
+function_signature = "void abs_int32(int32_t *in_buffer, int32_t* out_buffer)"
 
 description = f"""
 This HLS kernel implements a function to calculate the absolute value of a vector of 32-bit integer numbers.
-Parameters to the function include two ap_int<32> pointers:
-    The first pointer points to the start of a {num_values}-element array of ap_int<32> values to be used as input data.
-    The second pointer also points to the start of a {num_values}-element array of ap_int<32> values to be modified and viewed as the output to the function.
+Parameters to the function include two int32_t pointers:
+    The first pointer points to the start of a {num_values}-element array of int32_t values to be used as input data.
+    The second pointer also points to the start of a {num_values}-element array of int32_t values to be modified and viewed as the output to the function.
 The kernel processes each element of the input buffer, computes its absolute value, and stores the result in the corresponding position of the output buffer.
 """
 

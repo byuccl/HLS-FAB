@@ -4,10 +4,10 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 matrix_size = 16
 
-function_signature = "void matmul_16x16_int32(ap_int<32>* a, ap_int<32>* b, ap_int<32>* out)"
+function_signature = "void matmul_16x16_int32(int32_t* a, int32_t* b, int32_t* out)"
 
 description = f"""
-This HLS kernel performs matrix multiplication between two 16x16 matrices of 32-bit integers (ap_int<32>).
+This HLS kernel performs matrix multiplication between two 16x16 matrices of 32-bit integers (int32_t).
 The matrices are provided in row-major order. The function takes three parameters:
     1. A pointer to the first input matrix 'a' of size {matrix_size}x{matrix_size}.
     2. A pointer to the second input matrix 'b' of size {matrix_size}x{matrix_size}.

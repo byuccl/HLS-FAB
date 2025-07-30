@@ -8,7 +8,7 @@ pad_size = 2
 pad_value = 0
 
 # Function signature for the HLS kernel
-function_signature = "void pad2d_int32(ap_int<32> *input_matrix, ap_int<32> *padded_matrix)"
+function_signature = "void pad2d_int32(int32_t *input_matrix, int32_t *padded_matrix)"
 
 # Detailed description of the kernel
 description = f"""

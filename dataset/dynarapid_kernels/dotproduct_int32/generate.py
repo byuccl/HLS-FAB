@@ -4,14 +4,14 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 vector_size = 256
 
-function_signature = "void dotproduct_int32(ap_int<32> *vector1, ap_int<32> *vector2, ap_int<32> *result)"
+function_signature = "void dotproduct_int32(int32_t *vector1, int32_t *vector2, int32_t *result)"
 
 description = f"""
 This HLS kernel performs a dot product operation on two input vectors of 32-bit integers.
 Parameters to the function include:
-    - The first parameter is a pointer to the first input vector of {vector_size} ap_int<32> values.
-    - The second parameter is a pointer to the second input vector of {vector_size} ap_int<32> values.
-    - The third parameter is a pointer to a single ap_int<32> value where the result of the dot product will be stored.
+    - The first parameter is a pointer to the first input vector of {vector_size} int32_t values.
+    - The second parameter is a pointer to the second input vector of {vector_size} int32_t values.
+    - The third parameter is a pointer to a single int32_t value where the result of the dot product will be stored.
 The kernel computes the sum of the products of corresponding elements from the two input vectors and stores the result in the provided result pointer.
 """
 

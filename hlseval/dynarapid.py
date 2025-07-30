@@ -8,7 +8,7 @@ import hlseval
 
 logger = logging.getLogger("DYNARAPID")
 
-def run_dynarapid(kernel_name, solutions_path, attempt_num, model, rapidwrite=False):
+def run_dynarapid(kernel_name, solutions_path, attempt_num, model, rapidwright=False):
     dynamatic_elapsed_time = None
     java_elapsed_time = None
     # Extract the relevant part of the path
@@ -117,8 +117,8 @@ exit
                 logger.error("Synthesis process failed")
                 return 1, "Synthesis process failed", dynamatic_elapsed_time, java_elapsed_time
 
-            # If rapidwrite is False, return after dynamatic synthesis
-            if not rapidwrite:
+            # If rapidwright is False, return after dynamatic synthesis
+            if not rapidwright:
                 # Instead of chmod, use Docker to set permissions from inside the container
                 fix_perm_cmd = f"docker exec dynarapid_container bash -c 'chmod -R a+rwx {container_path}'"
                 try:
@@ -130,7 +130,7 @@ exit
                 # Return after dynamatic synthesis
                 return 0, stdout, dynamatic_elapsed_time, java_elapsed_time
 
-            # Only run the Java command if rapidwrite is True
+            # Only run the Java command if rapidwright is True
             logger.info("Running Java GenerateDesign command...")
             
             # Define the target directory for this attempt with new structure
@@ -193,7 +193,7 @@ exit
                 logger.debug(f"Java command elapsed time: {java_elapsed_time}")
                 
                 # Append java output to previous output
-                stdout += "\n\n--- GenerateDesign Output ---\n" + java_stdout
+                stdout += "\n\n--- Generate Design Output ---\n" + java_stdout
                 
                 # Check if files were actually created
                 check_files_cmd = f"docker exec dynarapid_container bash -c 'find {attempt_dir} -type f | wc -l'"
