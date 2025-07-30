@@ -357,24 +357,24 @@ class PromptConstructor:
     #     }}
     # }}"""
 
-        def _construct_dataflow(self, test_vectors):
-            df = ""
-            for d in test_vectors["inputs"]:
+    def _construct_dataflow(self, test_vectors):
+        df = ""
+        for d in test_vectors["inputs"]:
+            for k, v in d.items():
+                if k != "dtype":
+                    df += f"{k} size: {np.size(v)}\n"
+                    break
+        for d in test_vectors["outputs"]:
+            for k, v in d.items():
+                if k != "dtype":
+                    df += f"{k} size: {np.size(v)}\n"
+                    break
+        if "rtps" in test_vectors:
+            for i, d in enumerate(test_vectors["rtps"]):
                 for k, v in d.items():
                     if k != "dtype":
-                        df += f"{k} size: {np.size(v)}\n"
-                        break
-            for d in test_vectors["outputs"]:
-                for k, v in d.items():
-                    if k != "dtype":
-                        df += f"{k} size: {np.size(v)}\n"
-                        break
-            if "rtps" in test_vectors:
-                for i, d in enumerate(test_vectors["rtps"]):
-                    for k, v in d.items():
-                        if k != "dtype":
-                            df += f"{k}: {v}\n"
-            return f"This kernel should be optimized for the following input/output buffer shapes and parameters:\n{df.strip()}"
+                        df += f"{k}: {v}\n"
+        return f"This kernel should be optimized for the following input/output buffer shapes and parameters:\n{df.strip()}"
 
     # def _construct_examples(self, behavioral, input_arrays, rtp_values=None, num_examples=1, slice_size=8):
     #     examples = []
