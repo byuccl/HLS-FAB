@@ -26,8 +26,7 @@ bash generate_kernels.sh
 python generate_hlseval
 cd ..
 ```
-To set which LLM models to use, edit the `hls_completions_loop` file.\
-Edit the list on the line that begins with `models = [` (currently line 479) to contain the openrouter id strings for any model you wish to use
+To set which LLM models to use, edit the `dataset/llm_models.txt` file.\
 
 ### Run Vitis Completions
 Sample of run command:\

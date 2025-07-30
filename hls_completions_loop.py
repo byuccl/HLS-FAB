@@ -153,7 +153,7 @@ model_parameters = {
                         "Gemini-2.0-Flash": {"amd_url": amd_gemini_2_url, "byu_url": byu_gpt_url}
                     }
     
-def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mode, prev_feedback=None, goals=None):
+def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mode, prev_feedback=None, goals=None, skip_behavioral=False):
     kernel_name = test["kernel_name"]
     llm_elapsed_time = None
     dynamatic_elapsed_time = None
@@ -275,25 +275,28 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
                 file.write(kernel_code)
     
     if hls_flow == "vitis":
-        # Run CSIM    
-        csim_begin = datetime.now()
+        if skip_behavioral:
+            sim_returncode = 0 # report that csim was successful
+        else:
+            # Run CSIM    
+            csim_begin = datetime.now()
 
-        try:
-            logger.info("Starting Vitis Run")
-            csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
-            timeout_csim = False
-            sim_returncode = csim_output.returncode if (csim_output != None) else 1
-        except hlseval.CsimTimeoutError as e:
-            timeout_csim = True
-            sim_returncode = 1
-            logger.warning("Vitis timed out on Simulation")
-        except Exception as e:
-            timeout_csim = False
-            sim_returncode = 1
-            logger.warning(f"An error occurred: {e}") 
-        csim_end = datetime.now()
-        csim_elapsed_time = csim_end-csim_begin
-        logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")
+            try:
+                logger.info("Starting Vitis Run")
+                csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
+                timeout_csim = False
+                sim_returncode = csim_output.returncode if (csim_output != None) else 1
+            except hlseval.CsimTimeoutError as e:
+                timeout_csim = True
+                sim_returncode = 1
+                logger.warning("Vitis timed out on Simulation")
+            except Exception as e:
+                timeout_csim = False
+                sim_returncode = 1
+                logger.warning(f"An error occurred: {e}") 
+            csim_end = datetime.now()
+            csim_elapsed_time = csim_end-csim_begin
+            logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")
 
         if sim_returncode == 0:
         # Run Synthesis only if CSIM was successful
@@ -334,24 +337,27 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         feedback = vitis_feedback
     elif hls_flow == "dynarapid":
+        if skip_behavioral:
+            sim_returncode = 0
+        else:
         # Run CSIM    
-        dsim_begin = datetime.now()
+            dsim_begin = datetime.now()
 
-        try:
-            logger.info("Starting Dynarapid Simulation")
-            dsim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim", hls_flow=hls_flow)
-            logger.debug(dsim_output)
-            timeout_dsim = False
-            sim_returncode = dsim_output.returncode if (dsim_output != None) else 1
-        except hlseval.CsimTimeoutError as e:
-            timeout_dsim = True
-            sim_returncode = 1
-            logger.warning("Vitis timed out on Simulation")
-        dsim_end = datetime.now()
-        csim_elapsed_time = dsim_end-dsim_begin
-        logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals)
-    
+            try:
+                logger.info("Starting Dynarapid Simulation")
+                dsim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim", hls_flow=hls_flow)
+                logger.debug(dsim_output)
+                timeout_dsim = False
+                sim_returncode = dsim_output.returncode if (dsim_output != None) else 1
+            except hlseval.CsimTimeoutError as e:
+                timeout_dsim = True
+                sim_returncode = 1
+                logger.warning("Vitis timed out on Simulation")
+            dsim_end = datetime.now()
+            csim_elapsed_time = dsim_end-dsim_begin
+            logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
+            dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals)
+        
 
         returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwright)
 
@@ -382,7 +388,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
     return returncode, feedback
 
 
-def process_kernel(model, test, workflow, hls_flow, logfile, rapidwright, passes=3, mode="optimization", goals=None):
+def process_kernel(model, test, workflow, hls_flow, logfile, rapidwright, passes=3, mode="optimization", goals=None, skip_behavioral=False):
     kernel_name = test["kernel_name"]
     prev_ret_code = -1
     testbench_status = "failure"
@@ -410,7 +416,7 @@ def process_kernel(model, test, workflow, hls_flow, logfile, rapidwright, passes
 
         # Pass `goals` only if in optimization mode
         current_goals = goals if mode == "optimization" else None
-        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwright, feedback, goals=current_goals)
+        prev_ret_code, feedback = run_kernel_attempt(model, test, attempt, workflow, hls_flow, mode, rapidwright, feedback, goals=current_goals, skip_behavioral=skip_behavioral)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -433,12 +439,6 @@ if __name__ == "__main__":
 
     parser.add_argument("--attempts", dest='attempts', help="Number of results to generate", default=1)
 
-
-    parser.add_argument(
-        'workflow', 
-        choices=['amd', 'byu', 'openrouter'],  
-        help="Which workflow to follow for API calls ('amd', 'byu', or 'openrouter')"
-    )  
 
     parser.add_argument(
         "--hls_flow",
@@ -466,7 +466,11 @@ if __name__ == "__main__":
         action='store_true',
         help="Add this flag to enable RapidWright"
     ) 
-
+    parser.add_argument(
+        "--skip_behavioral",
+        action='store_true',
+        help="Add this flag skip Csim, "
+    ) 
 
 
     args = parser.parse_args()  
@@ -476,9 +480,6 @@ if __name__ == "__main__":
         raise ValueError('Invalid log level: %s' % args.loglevel)
     logging.basicConfig(level=numeric_level)
     
-    # Add any models you want completions run for to this list
-    # models = ["gpt-4o", "gpt-4.1", "Llama-3_2-11B", "Claude-3.5", "Gemini-2.0-Flash", "Deepseek-R1" (Context window so small it is unusable) ]
-    models = ["openai/gpt-4.1-mini"]
     passes = int(args.attempts)
     mode = args.mode # Passed in on command line with --mode flag
     goals = args.goals  # Will be None if not provided
@@ -487,6 +488,12 @@ if __name__ == "__main__":
     else:
         rapidwright = False
     logger.debug(f"RapidWright: {rapidwright}")
+
+    if args.skip_behavioral:
+        skip_behavioral = True
+    else:
+        skip_behavioral = False
+    logger.debug(f"skip_behavioral: {skip_behavioral}")
 
     with open("./dataset/hlseval.jsonl", "r") as f:
         tests = [json.loads(line) for line in f]
@@ -498,16 +505,12 @@ if __name__ == "__main__":
     print(models)
 
     for model in models:
-        # if model not in model_parameters:
-        #     logger.warning(f"Model {model} not recognized.")
-        #     continue
-
         pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/logs/").mkdir(parents=True, exist_ok=True)
         with open (f"results/solutions/{args.hls_flow}/{model}/logs/timing.log", "w") as logfile:
             write_table_header(logfile)
 
             for test in tests:
-                process_kernel(model, test, workflow=args.workflow, hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals)
+                process_kernel(model, test, workflow="openrouter", hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals, skip_behavioral=skip_behavioral)
             
             write_table_footer(logfile)
     # Delete the unecessary files after running the completions
