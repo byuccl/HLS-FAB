@@ -11,7 +11,7 @@ endif
 
 generate_tests:  
 	@echo "Generating tests..."  
-	python3 dataset/generate_tests.py $(WORKFLOW) $(if $(LOG),--log $(LOG),)  
+	python3 dataset/generate_tests.py $(if $(LOG),--log $(LOG),)  
 dataset:  
 	@echo "Building kernels dataset..."  
 	make -C dataset/ all   
