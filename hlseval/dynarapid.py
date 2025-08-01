@@ -8,7 +8,7 @@ import hlseval
 
 logger = logging.getLogger("DYNARAPID")
 
-def run_dynarapid(kernel_name, solutions_path, attempt_num, model, rapidwright=False):
+def run_dynarapid(kernel_name, solutions_path, attempt_num, model, rapidwright=False, iter=0):
     dynamatic_elapsed_time = None
     java_elapsed_time = None
     # Extract the relevant part of the path
@@ -134,7 +134,7 @@ exit
             logger.info("Running Java GenerateDesign command...")
             
             # Define the target directory for this attempt with new structure
-            attempt_dir = f"/mount/results/dcp_designs/{model}/{kernel_name}/attempts_{attempt_num+1}"
+            attempt_dir = f"/mount/results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt_num+1}/dcp_designs"
             
             # Create the target directory
             mkdir_cmd = f"docker exec dynarapid_container bash -c 'mkdir -p {attempt_dir}'"
@@ -154,7 +154,7 @@ exit
                 logger.error(f"Error debugging DynaRapid directory: {e}")
             
             # Remove any existing symbolic link - with correct capitalization
-            rm_link_cmd = f"docker exec dynarapid_container bash -c 'rm -f /DynaRapid/designs'"
+            rm_link_cmd = f"docker exec dynarapid_container bash -c 'rm -rf /DynaRapid/designs'"
             try:
                 subprocess.run(rm_link_cmd, shell=True, check=True, timeout=30)
                 logger.debug("Removed existing symbolic link if any")

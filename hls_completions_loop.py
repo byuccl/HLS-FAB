@@ -28,6 +28,20 @@ Produce only the kernel function, no main, no additional examples or code.
 IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
 
 """
+VITIS_LIBRARY_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
+Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
+The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
+Do not use size as a function argument, instead use a constant defined at the top of the file or function.
+Produce only the C++ code for the requested kernel including any required headers and imports. 
+Most kernels are dependent on the standard integer library for HLS (<stdint.h>). As such, that header almost always needs to be added.
+Some data types are represented as these arbitrary precision integers or floating point numbers, for example, a bfloat16 is represented with the type `ap_float<16,8>`.
+Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
+Make sure the C++ code is complete and self contained in a single code block.
+Produce only the kernel function, no main, no additional examples or code.
+
+IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
+
+"""
 
 DYNARAPID_SYSTEM_PROMPT = """
 You are a part of a code generation system for HLS (High Level Synthesis).
@@ -359,7 +373,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals, iter=iter)
         
 
-        returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwright)
+        returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwright, iter=iter)
 
         dynarapid_feedback['compile_feedback'] = {
             "returncode": returncode,

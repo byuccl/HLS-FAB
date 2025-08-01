@@ -18,54 +18,59 @@ def search_files(base_dir):
     
     for model in models:
         base_path = Path(base_dir)
-        model_path = base_path / 'results/dcp_designs' / model 
+        model_path = base_path / 'results/solutions/dynarapid' / model 
         if not model_path.exists():
             print(f"Warning 1: Path does not exist: {model_path}")
             continue
-            
-        for kernel in kernels:
-            kernel_path = model_path / kernel
-            if not kernel_path.exists():
-                print(f"Warning 2: Path does not exist: {kernel_path}")
+        for p in range(10):
+            p_path = model_path / f"{p+1}"
+            if not model_path.exists():
+                print(f"Warning 2: Path does not exist: {model_path}")
                 continue
-                
-            for attempt in range(2):  # 0 to 3
-                attempt_path = kernel_path / f"attempts_{attempt+1}"
-                print(attempt_path)
-                if not attempt_path.exists():
-                    print(f"Warning 3: Path does not exist: {attempt_path}")
+            for kernel in kernels:
+                kernel_path = p_path / kernel
+                if not kernel_path.exists():
+                    print(f"Warning 3: Path does not exist: {kernel_path}")
                     continue
-                
-                # Check for kernel subdirectory
-                kernel_subdir = attempt_path / kernel
-                if kernel_subdir.exists():
-                    search_path = kernel_subdir
-                else:
-                    search_path = attempt_path
-                
-                # Look for the .dot file
-                dot_file = search_path / f"{kernel}.dot"
-                has_dot = dot_file.exists()
-                
-                # Look for the .dcp file
-                dcp_file = search_path / f"{kernel}_routed.dcp"
-                has_dcp = dcp_file.exists()
-                
-                # Record the result
-                results.append({
-                    'model': model,
-                    'kernel': kernel,
-                    'attempt': attempt,
-                    'has_dot': has_dot,
-                    'has_dcp': has_dcp
-                })
+                    
+                for attempt in range(1):  # 0 to 3
+                    attempt_path = kernel_path / f"attempts_{attempt+1}" / "dcp_designs"
+                    print(attempt_path)
+                    if not attempt_path.exists():
+                        print(f"Warning 4: Path does not exist: {attempt_path}")
+                        continue
+                    
+                    # Check for kernel subdirectory
+                    kernel_subdir = attempt_path / kernel
+                    if kernel_subdir.exists():
+                        search_path = kernel_subdir
+                    else:
+                        search_path = attempt_path
+                    
+                    # Look for the .dot file
+                    dot_file = search_path / f"{kernel}.dot"
+                    has_dot = dot_file.exists()
+                    
+                    # Look for the .dcp file
+                    dcp_file = search_path / f"{kernel}_routed.dcp"
+                    has_dcp = dcp_file.exists()
+                    
+                    # Record the result
+                    results.append({
+                        'model': model,
+                        'kernel': kernel,
+                        'attempt': attempt,
+                        'has_dot': has_dot,
+                        'has_dcp': has_dcp,
+                        'pass@k': p+1
+                    })
     
     return results
 
 def write_csv(results, output_file):
     """Write the results to a CSV file."""
     with open(output_file, 'w', newline='') as csvfile:
-        fieldnames = ['model', 'kernel', 'attempt', 'has_dot', 'has_dcp']
+        fieldnames = ['model', 'kernel', 'attempt', 'has_dot', 'has_dcp', 'pass@k']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
