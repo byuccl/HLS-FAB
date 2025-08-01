@@ -42,14 +42,25 @@ def parse_timing_log(log_path):
         }
     return timing_data
 
-def get_all_kernel_dirs(base_path, model):
-    """Get all kernel directories within a model directory."""
-    model_dir = base_path / model
+def get_iterations(model_dir):
+    """Get all iteration directories within a model directory."""
     if not model_dir.exists():
         return []
     
-    kernel_dirs = []
+    iterations = []
     for item in model_dir.iterdir():
+        if item.is_dir() and item.name != "logs":
+            iterations.append(item.name)
+    
+    return iterations
+
+def get_all_kernel_dirs(iteration_dir):
+    """Get all kernel directories within an iteration directory."""
+    if not iteration_dir.exists():
+        return []
+    
+    kernel_dirs = []
+    for item in iteration_dir.iterdir():
         if item.is_dir() and "attempts_" not in item.name and "logs" != item.name:
             kernel_dirs.append(item.name)
     
@@ -64,7 +75,7 @@ def create_csv(base_dir, output_file):
     
     # Define CSV headers
     headers = [
-        'model', 'kernel', 'attempts', 'llm_time', 'status', 'match', 'errors', 'csim_time',
+        'model', 'iteration', 'kernel', 'attempts', 'llm_time', 'status', 'match', 'errors', 'csim_time',
         'synth_errors', 'fmax', 'latency', 'bram', 'dsp', 'ff', 'lut', 'csynth_time'
     ]
     
@@ -89,114 +100,129 @@ def create_csv(base_dir, output_file):
                 continue
             
             print(f"Processing model: {model}")
-                
-            # Parse timing log
-            timing_log_path = model_dir / 'logs' / 'timing.log'
-            timing_data = parse_timing_log(str(timing_log_path))
             
-            # Get all kernel directories for this model
-            kernel_dirs = get_all_kernel_dirs(base_path, model)
+            # Parse timing log (now might be in different locations depending on structure)
+            model_timing_log_path = model_dir / 'logs' / 'timing.log'
+            model_timing_data = parse_timing_log(str(model_timing_log_path))
             
-            # Process each kernel
-            for kernel_dir in kernel_dirs:
-                kernel_path = model_dir / kernel_dir
+            # Get all iteration directories for this model
+            iterations = get_iterations(model_dir)
+            
+            # Process each iteration
+            for iteration in iterations:
+                iteration_dir = model_dir / iteration
                 
-                if not kernel_path.exists():
-                    print(f"Skipping kernel directory (not found): {kernel_path}")
-                    continue
+                # Iteration might have its own timing log
+                iteration_timing_log_path = iteration_dir / 'logs' / 'timing.log'
+                iteration_timing_data = parse_timing_log(str(iteration_timing_log_path))
                 
-                print(f"  Processing kernel: {kernel_dir}")
+                # Combine timing data, with iteration data taking precedence
+                timing_data = {**model_timing_data, **iteration_timing_data}
                 
-                # Process each attempt
-                rows_for_kernel = []
-                for attempt in range(1, 2):
-                    attempt_dir = kernel_path / f"attempts_{attempt}"
-                    if not attempt_dir.exists():
-                        print(f"    Skipping attempt directory (not found): {attempt_dir}")
+                # Get all kernel directories for this iteration
+                kernel_dirs = get_all_kernel_dirs(iteration_dir)
+                
+                # Process each kernel
+                for kernel_dir in kernel_dirs:
+                    kernel_path = iteration_dir / kernel_dir
+                    
+                    if not kernel_path.exists():
+                        print(f"Skipping kernel directory (not found): {kernel_path}")
                         continue
                     
-                    print(f"    Processing attempt: {attempt}")
+                    print(f"  Processing iteration: {iteration}, kernel: {kernel_dir}")
                     
-                    data_file = attempt_dir / f"{kernel_dir}_data.json"
+                    # Process each attempt
+                    rows_for_kernel = []
+                    for attempt in range(1, 2):
+                        attempt_dir = kernel_path / f"attempts_{attempt}"
+                        if not attempt_dir.exists():
+                            print(f"    Skipping attempt directory (not found): {attempt_dir}")
+                            continue
+                        
+                        print(f"    Processing attempt: {attempt}")
+                        
+                        data_file = attempt_dir / f"{kernel_dir}_data.json"
 
-                    # Parse JSON data
-                    try:
-                        with open(data_file, 'r') as f:
-                            data = json.load(f)
-                    except FileNotFoundError:
-                        print(f"      Skipping data file (not found): {data_file}")
-                        data = {}
-                    except json.JSONDecodeError as e:
-                        print(f"      ERROR: Failed to parse JSON in {data_file}: {e}")
-                        continue
-                    
-                    # Extract data
-                    status = data.get('sim_feedback', {}).get('status', '')
-                    match = data.get('sim_feedback', {}).get('match', '')
-                    
-                    # Extract errors as string
-                    csim_errors = data.get('sim_feedback', {}).get('errors', [])
-                    if csim_errors and isinstance(csim_errors, list) and len(csim_errors) > 0:
-                        errors = f'"{csim_errors[0]}"'
-                    else:
-                        errors = '-'
-                    
-                    # Extract synthesis errors
-                    synth_errors = data.get('synth_feedback', {}).get('errors', [])
-                    if synth_errors and isinstance(synth_errors, list) and len(synth_errors) > 0:
-                        synth_errors_str = f'"{synth_errors[0]}"'
-                    else:
-                        synth_errors_str = '-'
-                    
-                    # Extract timing data
-                    timing_key = f"{kernel_dir}_{attempt}"
-                    llm_time = timing_data.get(timing_key, {}).get('llm_time', '-')
-                    csim_time = timing_data.get(timing_key, {}).get('csim_time', '-')
-                    csynth_time = timing_data.get(timing_key, {}).get('csynth_time', '-')
-                    
-                    # Extract synthesis data
-                    fmax = data.get('synth_feedback', {}).get('fmax', '-')
-                    
-                    latency_data = data.get('synth_feedback', {}).get('latency', {})
-                    if latency_data and isinstance(latency_data, dict):
-                        if 'max' in latency_data and latency_data['max'] is not None:
-                            latency = latency_data['max']
+                        # Parse JSON data
+                        try:
+                            with open(data_file, 'r') as f:
+                                data = json.load(f)
+                        except FileNotFoundError:
+                            print(f"      Skipping data file (not found): {data_file}")
+                            data = {}
+                        except json.JSONDecodeError as e:
+                            print(f"      ERROR: Failed to parse JSON in {data_file}: {e}")
+                            continue
+                        
+                        # Extract data
+                        status = data.get('sim_feedback', {}).get('status', '')
+                        match = data.get('sim_feedback', {}).get('match', '')
+                        
+                        # Extract errors as string
+                        csim_errors = data.get('sim_feedback', {}).get('errors', [])
+                        if csim_errors and isinstance(csim_errors, list) and len(csim_errors) > 0:
+                            errors = f'"{csim_errors[0]}"'
                         else:
-                            latency = '-'
-                    else:
-                        latency = 'null'
+                            errors = '-'
+                        
+                        # Extract synthesis errors
+                        synth_errors = data.get('synth_feedback', {}).get('errors', [])
+                        if synth_errors and isinstance(synth_errors, list) and len(synth_errors) > 0:
+                            synth_errors_str = f'"{synth_errors[0]}"'
+                        else:
+                            synth_errors_str = '-'
+                        
+                        # Extract timing data
+                        timing_key = f"{kernel_dir}_{attempt}"
+                        llm_time = timing_data.get(timing_key, {}).get('llm_time', '-')
+                        csim_time = timing_data.get(timing_key, {}).get('csim_time', '-')
+                        csynth_time = timing_data.get(timing_key, {}).get('csynth_time', '-')
+                        
+                        # Extract synthesis data
+                        fmax = data.get('synth_feedback', {}).get('fmax', '-')
+                        
+                        latency_data = data.get('synth_feedback', {}).get('latency', {})
+                        if latency_data and isinstance(latency_data, dict):
+                            if 'max' in latency_data and latency_data['max'] is not None:
+                                latency = latency_data['max']
+                            else:
+                                latency = '-'
+                        else:
+                            latency = 'null'
+                        
+                        resources = data.get('synth_feedback', {}).get('resources', {})
+                        bram = resources.get('bram', '-')
+                        dsp = resources.get('dsp', '-')
+                        ff = resources.get('ff', '-')
+                        lut = resources.get('lut', '-')
+                        
+                        # Create row for CSV
+                        row = [
+                            model,
+                            iteration,
+                            kernel_dir,
+                            attempt,
+                            llm_time,
+                            status,
+                            match,
+                            errors,
+                            csim_time,
+                            synth_errors_str,
+                            fmax,
+                            latency,
+                            bram,
+                            dsp,
+                            ff,
+                            lut,
+                            csynth_time
+                        ]
+                        
+                        rows_for_kernel.append(row)
                     
-                    resources = data.get('synth_feedback', {}).get('resources', {})
-                    bram = resources.get('bram', '-')
-                    dsp = resources.get('dsp', '-')
-                    ff = resources.get('ff', '-')
-                    lut = resources.get('lut', '-')
-                    
-                    # Create row for CSV
-                    row = [
-                        model,
-                        kernel_dir,
-                        attempt,
-                        llm_time,
-                        status,
-                        match,
-                        errors,
-                        csim_time,
-                        synth_errors_str,
-                        fmax,
-                        latency,
-                        bram,
-                        dsp,
-                        ff,
-                        lut,
-                        csynth_time
-                    ]
-                    
-                    rows_for_kernel.append(row)
-                
-                # Write all rows for this kernel
-                for row in rows_for_kernel:
-                    writer.writerow(row)
+                    # Write all rows for this kernel
+                    for row in rows_for_kernel:
+                        writer.writerow(row)
     
     print(f"CSV file created successfully: {output_file}")
 
