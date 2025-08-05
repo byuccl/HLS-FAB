@@ -12,7 +12,7 @@ from hlseval import run_dynarapid
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
 
 VITIS_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
 Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
@@ -53,6 +53,7 @@ Dynamatic does not support arbitrary precision integers (from the <ap_int.h> lib
 The integer types you are allowed to use are int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
+Dynarapid does not use or recognize any #pragma HLS lines so do not include them. 
 
 """
 
@@ -108,7 +109,7 @@ def write_table_footer(logfile):
     logfile.write(border + "\n")
     logfile.flush()
 
-def feedback_prompt(prev_code, feedback):
+def feedback_prompt_vitis(prev_code, feedback):
     return f"""
 Here is my C HLS code:
 
@@ -140,6 +141,27 @@ TIER 3 - OPTIMIZATION OPPORTUNITIES (Final stage):
 Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
+def feedback_prompt_dyarapid(prev_code, feedback):
+    return f"""
+Here is my C HLS code:
+
+{prev_code}
+
+Here is some feedback from the simulation and dynarapid run:
+
+{json.dumps(feedback, indent=2)}
+
+Please modify the code with the following Goals in mind. 
+
+Create dot and dcp files:
+- Each run should have a kernel_name.dot in its directories. This is necessary in order to create the next step kernel_name_routed.dcp.
+- Each run should also have a kernel_name_routed.dcp which is for the implementation stage. If it does not have one then edit the code to correctly create one.
+
+Optimize the logic:
+- We always want to make our hardware faster and dynarapid is based on Dataflow logic. Make the code work better for Dataflow. 
+
+
+"""
 byu_gpt_url2 = "https://api.openai.com/v1/completions"
 
 
@@ -245,7 +267,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
 
         llm_completion_begin = datetime.now()
 
-        new_prompt = feedback_prompt(prev_code=prev_code, feedback=prev_feedback)
+        new_prompt = feedback_prompt_vitis(prev_code=prev_code, feedback=prev_feedback) if hls_flow == "vitis" else feedback_prompt_dyarapid(prev_code=prev_code, feedback=prev_feedback)
         logger.debug(new_prompt)
         if workflow == "openrouter":
             # logger.debug("Setting openrouter url")
@@ -375,10 +397,37 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
 
         returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwright, iter=iter)
 
-        dynarapid_feedback['compile_feedback'] = {
-            "returncode": returncode,
-            "stdout": stdout,
-        }
+        # Check if the dcp and dot exist
+        dot_path = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}.dot"
+        dot_path2 = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}/{kernel_name}.dot"
+        dcp_path = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}_routed.dcp"
+        dcp_path2 = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}/{kernel_name}_routed.dcp"
+
+        check_path_dot1 = pathlib.Path(dot_path)
+        check_path_dot1 = check_path_dot1.resolve()
+        check_path_dot2 = pathlib.Path(dot_path2)
+        check_path_dot2 = check_path_dot2.resolve()
+        check_path_dcp1 = pathlib.Path(dcp_path)
+        check_path_dcp1 = check_path_dcp1.resolve()
+        check_path_dcp2 = pathlib.Path(dcp_path2)
+        check_path_dcp2 = check_path_dcp2.resolve()
+
+        dynarapid_feedback['compile_feedback'] = {}
+        logger.info(dot_path)
+        logger.info(check_path_dot1.exists())
+        logger.info(dot_path2)
+        logger.info(check_path_dot2.exists())
+        logger.info(dcp_path)
+        logger.info(check_path_dcp1.exists())
+        logger.info(dcp_path2)
+        logger.info(check_path_dcp2.exists())
+
+        dynarapid_feedback['compile_feedback']["has_dot"] = True if check_path_dot1.exists() or check_path_dot2.exists() else False
+        dynarapid_feedback['compile_feedback']["has_dcp"] = True if check_path_dcp1.exists() or check_path_dcp2.exists() else False
+
+        dynarapid_feedback['compile_feedback']["returncode"] = returncode
+        # dynarapid_feedback['compile_feedback']["stdout"] = stdout
+
         out_data_path = f"{solutions_path}/{kernel_name}_data.json"
         # try:
         #     with open(f"{solutions_path}/{kernel_name}_test_data.json", "r") as f:

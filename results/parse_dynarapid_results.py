@@ -22,7 +22,7 @@ def search_files(base_dir):
         if not model_path.exists():
             print(f"Warning 1: Path does not exist: {model_path}")
             continue
-        for p in range(10):
+        for p in range(1):
             p_path = model_path / f"{p+1}"
             if not model_path.exists():
                 print(f"Warning 2: Path does not exist: {model_path}")
@@ -33,7 +33,7 @@ def search_files(base_dir):
                     print(f"Warning 3: Path does not exist: {kernel_path}")
                     continue
                     
-                for attempt in range(1):  # 0 to 3
+                for attempt in range(10):  # 0 to 3
                     attempt_path = kernel_path / f"attempts_{attempt+1}" / "dcp_designs"
                     print(attempt_path)
                     if not attempt_path.exists():
