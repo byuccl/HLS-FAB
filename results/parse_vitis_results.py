@@ -72,6 +72,9 @@ def create_csv(base_dir, output_file):
     with open("./dataset/llm_models.txt", "r") as f:
         lines = f.readlines()
     models = [line.strip() for line in lines]
+    with open("./dataset/kernel_list.txt", "r") as f:
+        kernels = f.readlines()
+    kernels = [kernel.strip() for kernel in kernels]
     
     # Define CSV headers
     headers = [
@@ -120,7 +123,7 @@ def create_csv(base_dir, output_file):
                 timing_data = {**model_timing_data, **iteration_timing_data}
                 
                 # Get all kernel directories for this iteration
-                kernel_dirs = get_all_kernel_dirs(iteration_dir)
+                kernel_dirs = kernels
                 
                 # Process each kernel
                 for kernel_dir in kernel_dirs:
@@ -134,7 +137,7 @@ def create_csv(base_dir, output_file):
                     
                     # Process each attempt
                     rows_for_kernel = []
-                    for attempt in range(1, 2):
+                    for attempt in range(1, 4):
                         attempt_dir = kernel_path / f"attempts_{attempt}"
                         if not attempt_dir.exists():
                             print(f"    Skipping attempt directory (not found): {attempt_dir}")

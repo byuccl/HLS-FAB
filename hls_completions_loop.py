@@ -218,7 +218,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             hls_flow=hls_flow,
             model=model,
             url=url,
-            system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
+            system_prompt= DYNARAPID_SYSTEM_PROMPT if (hls_flow=="dynarapid") else (VITIS_LIBRARY_SYSTEM_PROMPT if skip_behavioral else VITIS_SYSTEM_PROMPT),
             temperature=0.5,
             top_p=1.0,
             rag=False if hls_flow=="vitis" else False
@@ -227,32 +227,30 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
         llm_elapsed_time = llm_completion_end - llm_completion_begin
         logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
 
-        try:
-            with open(f"{solutions_path}/{kernel_name}.json", "x") as file:
-                json.dump(response, file, indent=4)
-        except FileExistsError:
-            logger.info(f"{solutions_path}/{kernel_name}.json already exists. Skipping")
+
+        with open(f"{solutions_path}/{kernel_name}.json", "w") as file:
+            json.dump(response, file, indent=4)
+
             
 
-        try:
-            with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
-                logger.debug("Writing to file")
-                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
-                if kernel_code == None:
-                        add_table_row(
-                            logfile,
-                            kernel_name, 
-                            attempt,
-                            llm_elapsed_time, 
-                            dynamatic_elapsed_time, 
-                            csim_elapsed_time, 
-                            csynth_elapsed_time
-                        )
-                        return 1, "Failed to produce kernel code"
-                else:
-                    file.write(kernel_code)
-        except FileExistsError:
-            logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
+        
+        with open(f"{solutions_path}/{kernel_name}.cpp", "w") as file:
+            logger.debug("Writing to file")
+            kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+            if kernel_code == None:
+                    add_table_row(
+                        logfile,
+                        kernel_name, 
+                        attempt,
+                        llm_elapsed_time, 
+                        dynamatic_elapsed_time, 
+                        csim_elapsed_time, 
+                        csynth_elapsed_time
+                    )
+                    return 1, "Failed to produce kernel code"
+            else:
+                file.write(kernel_code)
+
 
     else:
         if mode == "correction":
@@ -280,7 +278,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             hls_flow=hls_flow,
             model=model,
             url=url,
-            system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
+            system_prompt= DYNARAPID_SYSTEM_PROMPT if (hls_flow=="dynarapid") else (VITIS_LIBRARY_SYSTEM_PROMPT if skip_behavioral else VITIS_SYSTEM_PROMPT),
             temperature=0.5,
             top_p=1.0,
             rag=False if hls_flow=="vitis" else False
@@ -312,6 +310,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
     
     if hls_flow == "vitis":
         if skip_behavioral:
+            logger.info("Skipping CSIM")
             sim_returncode = 0 # report that csim was successful
         else:
             # Run CSIM    
@@ -320,14 +319,11 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             try:
                 logger.info("Starting Vitis Run")
                 csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
-                timeout_csim = False
                 sim_returncode = csim_output.returncode if (csim_output != None) else 1
             except hlseval.CsimTimeoutError as e:
-                timeout_csim = True
                 sim_returncode = 1
                 logger.warning("Vitis timed out on Simulation")
             except Exception as e:
-                timeout_csim = False
                 sim_returncode = 1
                 logger.warning(f"An error occurred: {e}") 
             csim_end = datetime.now()
@@ -580,7 +576,7 @@ if __name__ == "__main__":
             with open (f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
                 write_table_header(logfile)
                 for test in tests:
-                    process_kernel(model, test, workflow="openrouter", hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals, iter=iter)
+                    process_kernel(model, test, workflow="openrouter", hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals, skip_behavioral=skip_behavioral, iter=iter)
                 
                 write_table_footer(logfile)
     # Delete the unecessary files after running the completions
