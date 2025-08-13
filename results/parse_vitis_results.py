@@ -112,8 +112,8 @@ def create_csv(base_dir, output_file):
             iterations = get_iterations(model_dir)
             
             # Process each iteration
-            for iteration in iterations:
-                iteration_dir = model_dir / iteration
+            for iteration in range(1,4):
+                iteration_dir = model_dir / str(iteration)
                 
                 # Iteration might have its own timing log
                 iteration_timing_log_path = iteration_dir / 'logs' / 'timing.log'
