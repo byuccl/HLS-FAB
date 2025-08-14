@@ -23,4 +23,3 @@ storage/**
 results/tests_wo_rag/*
 **.log
 results/dcp_designs/
-*.csv
