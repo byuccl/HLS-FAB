@@ -11,10 +11,8 @@ SYSTEM_PROMPT = """
 You are a part of a benchmarking system for HLS (High Level Synthesis).
 You are very skilled both in writing python and C++ code.
 Your job is to create the base code for tests within the benchmark.
-Each test should have a C++ implementation that hasn't been accellerated at all. This will serve as a functional example and provide a method to test HLS solutions.
-While this C++ implementation will not be synthesized for HLS, you should avoid using techniques and libraries that would fail to synthesize.
-Additionally, each test within the benchmark will have a Python file with a description of the task and functions to facilitate testing.
-Both these files should follow the patterns set out by the provided examples.
+Each test within the benchmark will have a Python file with a description of the task and functions to facilitate testing.
+This files should follow the patterns set out by the provided examples.
 Produce only the code requested, no main, no additional examples or code, and no wrappers of any kind.
 """
 if __name__ == "__main__":
@@ -84,7 +82,7 @@ if __name__ == "__main__":
 
    
         
-    model = "gpt-4o"
+    model = "openai/gpt-4o"
     temperature = 0.0
     top_p = 1.0
     attempts = 1
@@ -108,6 +106,7 @@ if __name__ == "__main__":
         Produce only the function, no main, no additional examples or code. Don't even wrap it in a code block.
         If there are constants then include them at the top of the file as variables. 
         Please ensure that the behavioral function performs a correct implementation of the kernel in Python, using numpy or pytorch as needed.
+        The examples will give you an example of how to take the description and transform it into a working generate.py file.
         """
         logger.debug(f"Generating code for {kernel_name} with prompt: {prompt + generate_line}")
         response = coder(prompt + generate_line)
@@ -132,7 +131,7 @@ if __name__ == "__main__":
                 f"The file dataset/generated_tests/{kernel_name}/generate.py already exists. Skipping file."
             )
     except FileExistsError:
-        logger.warning("The desired test already exists check the 'generated_tests folder before continuing.")
+        logger.warning("The desired test already exists check the 'generated_tests' folder before continuing.")
 
 
 

@@ -637,7 +637,7 @@ void my_function(...) {
         to extract the actual generated code snippet.
         """
         code_blocks = re.findall(
-            r"```(?:[a-zA-Z0-9]+)?\n(.*?)```|```(.*?)```", text, re.DOTALL
+            r"```(?:[a-zA-Z0-9#+]+)?\n(.*?)```|```(.*?)```", text, re.DOTALL
         )
         # Flatten the list and filter out empty matches
         code_blocks = [block for match in code_blocks for block in match if block]

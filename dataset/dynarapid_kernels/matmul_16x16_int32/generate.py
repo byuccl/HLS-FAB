@@ -48,9 +48,11 @@ inputs_info = [
 
 def behavioral(a, b):
     # Matrix multiplication for int32, result clamped to int32.
-    res = np.matmul(a.astype(np.int32), b.astype(np.int32))
-    res = np.clip(res, -1232, 127).astype(np.int32)
-    return res
+    a_mat = a.reshape((16,16))
+    b_mat = b.reshape((16,16))
+    res = np.matmul(a_mat.astype(np.int32), b_mat.astype(np.int32))
+    res = np.clip(res, -2**31, 2**31-1).astype(np.int32)
+    return res.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 

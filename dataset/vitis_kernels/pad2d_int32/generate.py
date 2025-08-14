@@ -44,7 +44,14 @@ inputs_info = [
 ]
 
 # Behavioral function to simulate the kernel's operation
-def behavioral(input_matrix, pad_size=pad_size, pad_value=pad_value):
+def behavioral(input_matrix, pad_size=pad_size, pad_value=pad_value):  
+    n_rows = int(np.sqrt(len(input_matrix)))  # This assumes a square matrix
+    n_cols = n_rows
+    
+    # Reshape to original 2D form
+    input_matrix = input_matrix.reshape(n_rows, n_cols)
+    
+    # Now proceed with padding as before
     input_rows, input_cols = input_matrix.shape
     padded_rows = input_rows + 2 * pad_size
     padded_cols = input_cols + 2 * pad_size

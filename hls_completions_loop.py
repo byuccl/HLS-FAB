@@ -12,7 +12,7 @@ from hlseval import run_dynarapid
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.INFO)
+logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
 
 VITIS_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
 Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
@@ -20,6 +20,20 @@ The goal is to create HLS code that runs correctly, taking as little time and us
 Do not use size as a function argument, instead use a constant defined at the top of the file or function.
 Produce only the C++ code for the requested kernel including any required headers and imports. 
 Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>) or the arbitrary precision floating point library (<ap_float.h>). As such, that header almost always needs to be added.
+Some data types are represented as these arbitrary precision integers or floating point numbers, for example, a bfloat16 is represented with the type `ap_float<16,8>`.
+Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
+Make sure the C++ code is complete and self contained in a single code block.
+Produce only the kernel function, no main, no additional examples or code.
+
+IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
+
+"""
+VITIS_LIBRARY_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
+Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
+The goal is to create HLS code that runs correctly, taking as little time and using as few hardware resources as possible. 
+Do not use size as a function argument, instead use a constant defined at the top of the file or function.
+Produce only the C++ code for the requested kernel including any required headers and imports. 
+Most kernels are dependent on the standard integer library for HLS (<stdint.h>). As such, that header almost always needs to be added.
 Some data types are represented as these arbitrary precision integers or floating point numbers, for example, a bfloat16 is represented with the type `ap_float<16,8>`.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
@@ -39,6 +53,7 @@ Dynamatic does not support arbitrary precision integers (from the <ap_int.h> lib
 The integer types you are allowed to use are int8_t, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t, uint64_t.
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
+Dynarapid does not use or recognize any #pragma HLS lines so do not include them. 
 
 """
 
@@ -94,7 +109,7 @@ def write_table_footer(logfile):
     logfile.write(border + "\n")
     logfile.flush()
 
-def feedback_prompt(prev_code, feedback):
+def feedback_prompt_vitis(prev_code, feedback):
     return f"""
 Here is my C HLS code:
 
@@ -126,6 +141,27 @@ TIER 3 - OPTIMIZATION OPPORTUNITIES (Final stage):
 Analyze the C Simulation and C Synthesis feedback to determine whether the code meets the first and second goals before moving on to the third goal of optimization
 """
 
+def feedback_prompt_dyarapid(prev_code, feedback):
+    return f"""
+Here is my C HLS code:
+
+{prev_code}
+
+Here is some feedback from the simulation and dynarapid run:
+
+{json.dumps(feedback, indent=2)}
+
+Please modify the code with the following Goals in mind. 
+
+Create dot and dcp files:
+- Each run should have a kernel_name.dot in its directories. This is necessary in order to create the next step kernel_name_routed.dcp.
+- Each run should also have a kernel_name_routed.dcp which is for the implementation stage. If it does not have one then edit the code to correctly create one.
+
+Optimize the logic:
+- We always want to make our hardware faster and dynarapid is based on Dataflow logic. Make the code work better for Dataflow. 
+
+
+"""
 byu_gpt_url2 = "https://api.openai.com/v1/completions"
 
 
@@ -182,7 +218,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             hls_flow=hls_flow,
             model=model,
             url=url,
-            system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
+            system_prompt= DYNARAPID_SYSTEM_PROMPT if (hls_flow=="dynarapid") else (VITIS_LIBRARY_SYSTEM_PROMPT if skip_behavioral else VITIS_SYSTEM_PROMPT),
             temperature=0.5,
             top_p=1.0,
             rag=False if hls_flow=="vitis" else False
@@ -191,32 +227,30 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
         llm_elapsed_time = llm_completion_end - llm_completion_begin
         logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
 
-        try:
-            with open(f"{solutions_path}/{kernel_name}.json", "x") as file:
-                json.dump(response, file, indent=4)
-        except FileExistsError:
-            logger.info(f"{solutions_path}/{kernel_name}.json already exists. Skipping")
+
+        with open(f"{solutions_path}/{kernel_name}.json", "w") as file:
+            json.dump(response, file, indent=4)
+
             
 
-        try:
-            with open(f"{solutions_path}/{kernel_name}.cpp", "x") as file:
-                logger.debug("Writing to file")
-                kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
-                if kernel_code == None:
-                        add_table_row(
-                            logfile,
-                            kernel_name, 
-                            attempt,
-                            llm_elapsed_time, 
-                            dynamatic_elapsed_time, 
-                            csim_elapsed_time, 
-                            csynth_elapsed_time
-                        )
-                        return 1, "Failed to produce kernel code"
-                else:
-                    file.write(kernel_code)
-        except FileExistsError:
-            logger.info(f"{solutions_path}/{kernel_name}.cpp already exists. Skipping")
+        
+        with open(f"{solutions_path}/{kernel_name}.cpp", "w") as file:
+            logger.debug("Writing to file")
+            kernel_code = hlseval.get_kernel_code(hls_flow, test, solutions_path)
+            if kernel_code == None:
+                    add_table_row(
+                        logfile,
+                        kernel_name, 
+                        attempt,
+                        llm_elapsed_time, 
+                        dynamatic_elapsed_time, 
+                        csim_elapsed_time, 
+                        csynth_elapsed_time
+                    )
+                    return 1, "Failed to produce kernel code"
+            else:
+                file.write(kernel_code)
+
 
     else:
         if mode == "correction":
@@ -231,7 +265,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
 
         llm_completion_begin = datetime.now()
 
-        new_prompt = feedback_prompt(prev_code=prev_code, feedback=prev_feedback)
+        new_prompt = feedback_prompt_vitis(prev_code=prev_code, feedback=prev_feedback) if hls_flow == "vitis" else feedback_prompt_dyarapid(prev_code=prev_code, feedback=prev_feedback)
         logger.debug(new_prompt)
         if workflow == "openrouter":
             # logger.debug("Setting openrouter url")
@@ -244,7 +278,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             hls_flow=hls_flow,
             model=model,
             url=url,
-            system_prompt=VITIS_SYSTEM_PROMPT if hls_flow=="vitis" else DYNARAPID_SYSTEM_PROMPT,
+            system_prompt= DYNARAPID_SYSTEM_PROMPT if (hls_flow=="dynarapid") else (VITIS_LIBRARY_SYSTEM_PROMPT if skip_behavioral else VITIS_SYSTEM_PROMPT),
             temperature=0.5,
             top_p=1.0,
             rag=False if hls_flow=="vitis" else False
@@ -276,6 +310,7 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
     
     if hls_flow == "vitis":
         if skip_behavioral:
+            logger.info("Skipping CSIM")
             sim_returncode = 0 # report that csim was successful
         else:
             # Run CSIM    
@@ -284,14 +319,11 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             try:
                 logger.info("Starting Vitis Run")
                 csim_output = hlseval.run_vitis_tools(solutions_path, kernel_name, mode="csim")
-                timeout_csim = False
                 sim_returncode = csim_output.returncode if (csim_output != None) else 1
             except hlseval.CsimTimeoutError as e:
-                timeout_csim = True
                 sim_returncode = 1
                 logger.warning("Vitis timed out on Simulation")
             except Exception as e:
-                timeout_csim = False
                 sim_returncode = 1
                 logger.warning(f"An error occurred: {e}") 
             csim_end = datetime.now()
@@ -359,12 +391,39 @@ def run_kernel_attempt(model, test, attempt, workflow, hls_flow, rapidwright, mo
             dynarapid_feedback = hlseval.gather_parsed_data(kernel_name, hls_flow=hls_flow, model=model, attempt=attempt+1, goals=goals, iter=iter)
         
 
-        returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwright)
+        returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_name, solutions_path, attempt, model, rapidwright, iter=iter)
 
-        dynarapid_feedback['compile_feedback'] = {
-            "returncode": returncode,
-            "stdout": stdout,
-        }
+        # Check if the dcp and dot exist
+        dot_path = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}.dot"
+        dot_path2 = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}/{kernel_name}.dot"
+        dcp_path = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}_routed.dcp"
+        dcp_path2 = f"./results/solutions/dynarapid/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}/dcp_designs/{kernel_name}/{kernel_name}_routed.dcp"
+
+        check_path_dot1 = pathlib.Path(dot_path)
+        check_path_dot1 = check_path_dot1.resolve()
+        check_path_dot2 = pathlib.Path(dot_path2)
+        check_path_dot2 = check_path_dot2.resolve()
+        check_path_dcp1 = pathlib.Path(dcp_path)
+        check_path_dcp1 = check_path_dcp1.resolve()
+        check_path_dcp2 = pathlib.Path(dcp_path2)
+        check_path_dcp2 = check_path_dcp2.resolve()
+
+        dynarapid_feedback['compile_feedback'] = {}
+        logger.info(dot_path)
+        logger.info(check_path_dot1.exists())
+        logger.info(dot_path2)
+        logger.info(check_path_dot2.exists())
+        logger.info(dcp_path)
+        logger.info(check_path_dcp1.exists())
+        logger.info(dcp_path2)
+        logger.info(check_path_dcp2.exists())
+
+        dynarapid_feedback['compile_feedback']["has_dot"] = True if check_path_dot1.exists() or check_path_dot2.exists() else False
+        dynarapid_feedback['compile_feedback']["has_dcp"] = True if check_path_dcp1.exists() or check_path_dcp2.exists() else False
+
+        dynarapid_feedback['compile_feedback']["returncode"] = returncode
+        # dynarapid_feedback['compile_feedback']["stdout"] = stdout
+
         out_data_path = f"{solutions_path}/{kernel_name}_data.json"
         # try:
         #     with open(f"{solutions_path}/{kernel_name}_test_data.json", "r") as f:
@@ -517,7 +576,7 @@ if __name__ == "__main__":
             with open (f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
                 write_table_header(logfile)
                 for test in tests:
-                    process_kernel(model, test, workflow="openrouter", hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals, iter=iter)
+                    process_kernel(model, test, workflow="openrouter", hls_flow=args.hls_flow, logfile=logfile, rapidwright=rapidwright, passes=passes, mode=mode, goals=goals, skip_behavioral=skip_behavioral, iter=iter)
                 
                 write_table_footer(logfile)
     # Delete the unecessary files after running the completions
