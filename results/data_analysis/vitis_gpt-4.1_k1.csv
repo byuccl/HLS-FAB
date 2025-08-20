@@ -2,9 +2,9 @@ model,kernel,attempts,llm_time,status,match,errors,csim_time,synth_errors,fmax,l
 openai/gpt-4.1,dotproduct_bias_relu_bfloat16,1,-,failed,mismatch,"""{'file': '../../../dotproduct_bias_relu_bfloat16_tb.cpp', 'line': 84, 'column': 9, 'message': ""no matching function for call to 'dotproduct_bias_relu_bfloat16'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,hardswish_bfloat16,1,-,passed,match,-,-,"""Address computation on scalar port 'input_vector' is not supported (attempts_1/hardswish_bfloat16.cpp:4:0)""",,-,,,,,-
 openai/gpt-4.1,negate_int8,1,-,passed,match,-,-,-,7.3,271,3,0,1442,3576,-
-openai/gpt-4.1,relu_bfloat16_cast_uint8,1,-,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+openai/gpt-4.1,relu_bfloat16_cast_uint8,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,compare_equal_bfloat16,1,-,failed,mismatch,"""{'file': '../../../compare_equal_bfloat16_tb.cpp', 'line': 83, 'column': 9, 'message': ""no matching function for call to 'compare_equal_bfloat16'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
-openai/gpt-4.1,round_bfloat16,1,-,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+openai/gpt-4.1,round_bfloat16,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,tan_bfloat16,1,-,passed,match,-,-,-,6.708,275,0,16,1991,3397,-
 openai/gpt-4.1,matmul_16x16_int8,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,add_offset_uint8,1,-,passed,match,-,-,"""Address computation on scalar port 'in_buffer' is not supported (attempts_1/add_offset_uint8.cpp:3:0)""",,-,,,,,-
@@ -12,7 +12,7 @@ openai/gpt-4.1,avgpool1d_bfloat16,1,-,passed,match,-,-,"""Address computation on
 openai/gpt-4.1,log10_bfloat16,1,-,failed,mismatch,"""{'file': '../../../log10_bfloat16.cpp', 'line': 5, 'column': 54, 'message': ""no member named 'minus_infinity' in 'ap_float<16, 8>'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,elementwise_max_bfloat16,1,-,passed,match,-,-,-,7.3,271,5,0,7939,22083,-
 openai/gpt-4.1,vectoradd_relu_bfloat16,1,-,passed,match,-,-,-,7.3,530,3,0,1458,2044,-
-openai/gpt-4.1,mse_loss_bfloat16,1,-,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+openai/gpt-4.1,mse_loss_bfloat16,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,hingeloss_bfloat16,1,-,passed,match,-,-,"""Address computation on scalar port 'label_r' is not supported (attempts_1/hingeloss_bfloat16.cpp:4:0)""",,-,,,,,-
 openai/gpt-4.1,vectormatrix_mult_int32,1,-,passed,match,-,-,"""Address computation on scalar port 'vector' is not supported (attempts_1/vectormatrix_mult_int32.cpp:3:0)""",,-,,,,,-
 openai/gpt-4.1,pad2d_int32,1,-,failed,mismatch,"""{'file': '../../../pad2d_int32_tb.cpp', 'line': 67, 'column': 9, 'message': ""no matching function for call to 'pad2d_int32'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
@@ -23,10 +23,10 @@ openai/gpt-4.1,argmax_int32,1,-,passed,match,-,-,"""Address computation on scala
 openai/gpt-4.1,log2_bfloat16,1,-,failed,mismatch,"""{'file': '../../../log2_bfloat16.cpp', 'line': 6, 'column': 54, 'message': ""no member named 'getInf' in 'ap_float<16, 8>'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,avgpool1d_relu_bfloat16,1,-,passed,match,-,-,-,6.675,5,0,0,159,1847,-
 openai/gpt-4.1,euclidean_dist_bfloat16,1,-,passed,match,-,-,"""Address computation on scalar port 'input_a' is not supported (attempts_1/euclidean_dist_bfloat16.cpp:4:0)""",,-,,,,,-
-openai/gpt-4.1,cumsum_bfloat16,1,-,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+openai/gpt-4.1,cumsum_bfloat16,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,complexabs_bfloat16,1,-,failed,mismatch,"""{'file': '../../../complexabs_bfloat16.cpp', 'line': 20, 'column': 37, 'message': ""no member named 'sqrt' in 'ap_float<16, 8>'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,mish_bfloat16,1,-,failed,mismatch,"""{'file': '../../../mish_bfloat16.cpp', 'line': 16, 'column': 33, 'message': ""no member named 'exp' in 'ap_float<16, 8>'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
-openai/gpt-4.1,variance_bfloat16,1,-,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+openai/gpt-4.1,variance_bfloat16,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,cast_bfloat16_to_float32,1,-,passed,match,-,-,-,7.3,529,4,0,1370,1442,-
 openai/gpt-4.1,elementwise_max_int8,1,-,passed,match,-,-,"""Address computation on scalar port 'in_buffer1' is not supported (attempts_1/elementwise_max_int8.cpp:3:0)""",,-,,,,,-
 openai/gpt-4.1,pad1d_int32,1,-,passed,match,-,-,"""Address computation on scalar port 'padded_vector' is not supported (attempts_1/pad1d_int32.cpp:3:0)""",,-,,,,,-
@@ -36,7 +36,7 @@ openai/gpt-4.1,sigmoid_bfloat16,1,-,failed,mismatch,"""{'file': '../../../sigmoi
 openai/gpt-4.1,conv2d_int32,1,-,passed,match,-,-,"""Address computation on scalar port 'kernel' is not supported (attempts_1/conv2d_int32.cpp:3:0)""",,-,,,,,-
 openai/gpt-4.1,cumsum_int16,1,-,passed,match,-,-,"""Address computation on scalar port 'in_buffer' is not supported (attempts_1/cumsum_int16.cpp:3:0)""",,-,,,,,-
 openai/gpt-4.1,exp_bfloat16,1,-,failed,mismatch,"""{'file': '../../../exp_bfloat16.cpp', 'line': 18, 'column': 32, 'message': ""no member named 'inf' in 'ap_float<16, 8>'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
-openai/gpt-4.1,hardsigmoid_int8,1,-,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+openai/gpt-4.1,hardsigmoid_int8,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,conv2d_k4_s2_bias_relu_bfloat16,1,-,passed,match,-,-,"""Address computation on scalar port 'kernel' is not supported (attempts_1/conv2d_k4_s2_bias_relu_bfloat16.cpp:5:0)""",,-,,,,,-
 openai/gpt-4.1,conv1d_k4_s1_bias_relu_bfloat16,1,-,passed,match,-,-,-,7.3,1045,5,0,2378,4516,-
 openai/gpt-4.1,cast_int8_to_int32,1,-,passed,match,-,-,"""Address computation on scalar port 'input_vector' is not supported (attempts_1/cast_int8_to_int32.cpp:3:0)""",,-,,,,,-
@@ -60,7 +60,7 @@ openai/gpt-4.1,relu_bfloat16,1,-,passed,match,-,-,-,7.3,273,3,0,1295,1293,-
 openai/gpt-4.1,compare_lt_int8,1,-,passed,match,-,-,"""Address computation on scalar port 'input_a' is not supported (attempts_1/compare_lt_int8.cpp:3:0)""",,-,,,,,-
 openai/gpt-4.1,sqrt_bfloat16,1,-,failed,mismatch,"""{'file': '../../../sqrt_bfloat16.cpp', 'line': 22, 'column': 30, 'message': ""no member named 'sqrt' in 'ap_float<16, 8>'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,vectoradd_bfloat16,1,-,passed,match,-,-,-,7.3,529,3,0,1439,1906,-
-openai/gpt-4.1,cast_bfloat16_to_int8,1,-,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
+openai/gpt-4.1,cast_bfloat16_to_int8,1,-,failed,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,vectorsubtract_int8,1,-,passed,match,-,-,-,7.3,1041,3,0,1429,1612,-
 openai/gpt-4.1,inverse_uint8,1,-,failed,mismatch,"""{'file': '../../../inverse_uint8_tb.cpp', 'line': 67, 'column': 9, 'message': ""no matching function for call to 'inverse_uint8'""}""",-,"""Synthesis not run due to failed C Simulation.""",,-,,,,,-
 openai/gpt-4.1,elementwise_min_int8,1,-,passed,match,-,-,-,7.3,527,3,0,5934,11242,-
