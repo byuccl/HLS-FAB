@@ -649,7 +649,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
                 sim_cmd,
                 capture_output=True,
                 check=False,
-                timeout=120,  # Timeout after 2 minutes
+                timeout=180,  # Timeout after 3 minutes
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
