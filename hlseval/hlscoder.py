@@ -8,7 +8,6 @@ import os
 import json  
 import inspect  
 import tiktoken
-import hlseval 
 
 
 from typing import Dict, Any, List  
@@ -109,7 +108,8 @@ openrouter_headers={
 class HLSCoder:
     """A basic agent that talks via OpenAI APIs"""
     def __init__(  
-    self, url, workflow, hls_flow, system_prompt, model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1, rag=False  
+        self, workflow, hls_flow, system_prompt, 
+        url="https://openrouter.ai/api/v1/chat/completions", model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1, rag=False  
     ):  
         self.system_prompt=system_prompt  
         self.messages = [{"role": "system", "content": self.system_prompt}]  
@@ -806,7 +806,7 @@ def setup_rag():
     documents = SimpleDirectoryReader("./rag_data").load_data()  
       
     logger.debug("Creating multi-content splitter...")  
-    content_splitter = hlseval.MultiContentSplitter()  
+    content_splitter = MultiContentSplitter()  
       
     logger.debug("Creating embedding model...")  
     if HuggingFaceEmbedding is not None:  

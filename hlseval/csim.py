@@ -4,6 +4,7 @@ import numpy as np
 import re  
 import subprocess  
 import json
+import datetime
 from hlseval.utils import get_ap_cpp_type_str, import_module_members, get_std_cpp_type_str, generate_inputs
 
 logger = logging.getLogger("CSIM")
@@ -28,9 +29,6 @@ class NumpyEncoder(json.JSONEncoder):
             return str(obj)  
         return json.JSONEncoder.default(self, obj) 
    
-class CsimTimeoutError(Exception):
-    """Raised when Vitis HLS times out."""
-    pass
 
 
 def generate_h_file(kernel_code, model_dir, kernel_name):
@@ -622,12 +620,13 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
     project_dir = model_dir
     kernel_code_path = os.path.join(project_dir, f"{kernel_name}.cpp")
     kernel_testbench_path = os.path.join(project_dir, f"{kernel_name}_tb.cpp")
-    
+    csim_elapsed_time = None
+    csim_begin = datetime.now()
     with open("vitis_config_csim.cfg", "w") as file:
         file.write(
             f"""
-        part=xazu1eg-sbva484-1-i
-
+        part=xcu280-fsvh2892-2L-e
+        
         [hls]
         flow_target=vitis
         package.output.format=xo
@@ -653,7 +652,8 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
-            return sim_result
+            csim_elapsed_time = datetime.now() - csim_begin
+            return sim_result, csim_elapsed_time
 
         except subprocess.TimeoutExpired as e:
             logger.warning(f"Timeout occured: {e}")
@@ -671,11 +671,14 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
             sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
             # logger.debug(sim_stdout)
-            return e
+            csim_elapsed_time = datetime.now() - csim_begin
+            return e, csim_elapsed_time
 
         except Exception as e:
             logger.error(f"An unexpected error occurred during CSIM: {e}")
-            return e
+            csim_elapsed_time = datetime.now() - csim_begin
+
+            return e, csim_elapsed_time
     else: 
         logger.warning("No Testbench file skipping to next kernel.")
         #No Testebench was made skip this kernel. 

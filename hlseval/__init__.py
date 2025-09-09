@@ -1,12 +1,14 @@
 __all__ = ["prompt_constructor", "utils"]
 
 from .prompt_constructor import PromptConstructor
-from .utils import get_kernel_code,  get_cpp_type, generate_types, generate_examples, import_module_members, get_ap_cpp_type_str, get_norm_cpp_type_str, generate_inputs
-from .utils import generate_one_completion
+from .utils import  generate_examples, generate_types # Used for generate.py's
+from .utils import generate_inputs, import_module_members, get_ap_cpp_type_str, get_std_cpp_type_str # Used for csim.py
+from .utils import write_table_header, add_table_row, write_table_footer # Used for hls_completions.py / run_kernel_attempt()
 from .hlscoder import HLSCoder
 from .parser import gather_parsed_data, save_feedback_data
-from .csim import create_testbench, run_csim, CsimTimeoutError
-from .vitis import run_vitis_tools, CsynthTimeoutError
+from .csim import run_csim
+from .vitis import run_vitis_tools
 from .splitter import MultiContentSplitter
-from .dynarapid import run_dynarapid
-
+from .dynarapid import run_dynarapid_w_feedback
+from .hlsobject import HLSEval
+from .prompts import feedback_prompt_dyarapid, feedback_prompt_vitis, SYSTEM_PROMPTS
