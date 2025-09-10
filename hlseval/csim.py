@@ -4,11 +4,14 @@ import numpy as np
 import re  
 import subprocess  
 import json
-import datetime
+from datetime import datetime as dt
 from hlseval.utils import get_ap_cpp_type_str, import_module_members, get_std_cpp_type_str, generate_inputs
 
 logger = logging.getLogger("CSIM")
 
+class CsimTimeoutError(Exception):
+    """Raised when Vitis HLS times out."""
+    pass
 
 class NumpyEncoder(json.JSONEncoder):  
     """  
@@ -621,7 +624,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
     kernel_code_path = os.path.join(project_dir, f"{kernel_name}.cpp")
     kernel_testbench_path = os.path.join(project_dir, f"{kernel_name}_tb.cpp")
     csim_elapsed_time = None
-    csim_begin = datetime.now()
+    csim_begin = dt.now()
     with open("vitis_config_csim.cfg", "w") as file:
         file.write(
             f"""
@@ -652,7 +655,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
             )
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
-            csim_elapsed_time = datetime.now() - csim_begin
+            csim_elapsed_time = dt.now() - csim_begin
             return sim_result, csim_elapsed_time
 
         except subprocess.TimeoutExpired as e:
@@ -671,12 +674,12 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
             sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
             # logger.debug(sim_stdout)
-            csim_elapsed_time = datetime.now() - csim_begin
+            csim_elapsed_time = dt.now() - csim_begin
             return e, csim_elapsed_time
 
         except Exception as e:
             logger.error(f"An unexpected error occurred during CSIM: {e}")
-            csim_elapsed_time = datetime.now() - csim_begin
+            csim_elapsed_time = dt.now() - csim_begin
 
             return e, csim_elapsed_time
     else: 

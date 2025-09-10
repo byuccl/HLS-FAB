@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime as dt
 import logging
 import pathlib
 import json
@@ -8,7 +8,9 @@ import hlseval.utils as utils
 from hlseval.hlscoder import HLSCoder
 import hlseval.prompts as prompts
 import hlseval.parser as parser
-from .vitis import CsimTimeoutError, CsynthTimeoutError, run_vitis_tools
+from .vitis import CsynthTimeoutError, run_vitis_tools
+from .csim import CsimTimeoutError
+from .prompts import SYSTEM_PROMPTS
 
 logger = logging.getLogger(__name__)
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -22,7 +24,20 @@ class HLSEval(HLSCoder):
             num_attempts: int = 1,
             skip_behavioral: bool = False,
             rapidwright: bool = False,
-            goals = None):
+            goals = None,
+            logfile = None):
+        
+        super().__init__(
+            hls_flow=hls_tool_chain, 
+            system_prompt=SYSTEM_PROMPTS[f"{hls_tool_chain}"][f"skip_behavioral_{skip_behavioral}"], 
+            url="https://openrouter.ai/api/v1/chat/completions", 
+            model=model, 
+            temperature=0.0, 
+            top_p=1.0, 
+            attempts=1, 
+            rag= True if hls_tool_chain=="vitis" else False  
+        )
+
         self._model = model
         self._kernel = kernel
         self._hls_tool = hls_tool_chain
@@ -32,7 +47,7 @@ class HLSEval(HLSCoder):
         self._rapidwright = rapidwright
         self._goals = goals
         self._kernel_name = kernel["kernel_name"]
-        self._logfile = f"results/solutions/{hls_tool_chain}/{model}/{iteration+1}/logs/timing.log"
+        self._logfile = logfile
 
         self._solution_path = f"./results/solutions/{hls_tool_chain}/{model}/{self._iter+1}/{self._kernel_name}"
         pathlib.Path(self._solution_path).mkdir(parents=True, exist_ok=True)
@@ -73,7 +88,7 @@ class HLSEval(HLSCoder):
 
         url = OPENROUTER_URL
         
-        llm_completion_begin = datetime.now()
+        llm_completion_begin = dt.now()
 
         response = self(prompt)
         result = {
@@ -83,15 +98,15 @@ class HLSEval(HLSCoder):
                 "history": response["history"],
             },
         }
-        new_solution_path = f"{self.solution_path}/{attempt+1}"
+        new_solution_path = f"{self.solution_path}/attempts_{attempt+1}"
         generated_code = result["code"]
 
-        llm_completion_end = datetime.now()
+        llm_completion_end = dt.now()
         llm_elapsed_time = llm_completion_end - llm_completion_begin
         logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
 
         with open(f"{new_solution_path}/{self.kernel_name}.json", "w") as file:
-            json.dump(generated_code, file, indent=4)
+            json.dump(result, file, indent=4)
 
         with open(f"{new_solution_path}/{self.kernel_name}.cpp", "w") as file:
             logger.debug("Writing to file")
@@ -107,7 +122,9 @@ class HLSEval(HLSCoder):
     # Function for running all the tools and gathering the feedback
     def vitis_run_w_feedback(self, attempt: int, goals: str):
         vitis_feedback = {}
-        new_solution_path = f"{self.solution_path}/{attempt+1}"
+        new_solution_path = f"{self.solution_path}/attempts_{attempt+1}"
+        csim_elapsed_time = None
+        csynth_elapsed_time = None
         if self._skip_behavioral:
             logger.info("Skipping CSIM")
             sim_returncode = 0 # report that csim was successful
@@ -162,63 +179,6 @@ class HLSEval(HLSCoder):
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         return returncode, vitis_feedback, csim_elapsed_time, csynth_elapsed_time
 
-    # def run_kernel_attempt(
-    #     self,
-    #     attempt: int, 
-    #     prev_feedback: dict=None, 
-    #     goals: str=None
-    #     ) -> tuple :
-
-    #     llm_elapsed_time = None
-    #     dynamatic_elapsed_time = None
-    #     csim_elapsed_time = None
-    #     csynth_elapsed_time = None
-    #     new_solution_path = f"{self.solution_path}/{attempt+1}"
-
-
-    #     llm_elapsed_time = self.llm_call(attempt, feedback=prev_feedback)
-
-
-    #     if self.hls_flow == "vitis":
-    #         returncode, feedback, csim_elapsed_time, csynth_elapsed_time = self.vitis_run_w_feedback(attempt, goals)
-
-    #     elif self.hls_flow == "dynarapid":
-    #         returncode, feedback, csim_elapsed_time, dynamatic_elapsed_time = run_dynarapid_w_feedback(self, attempt, goals)
-   
-    #     utils.add_table_row(
-    #         self._logfile,
-    #         self.kernel_name, 
-    #         attempt,
-    #         llm_elapsed_time, 
-    #         dynamatic_elapsed_time, 
-    #         csim_elapsed_time, 
-    #         csynth_elapsed_time
-    #     )
-    #     return returncode, feedback
-
-    # def process_kernel(self):
-    #     prev_ret_code = -1
-    #     testbench_status = "failure"
-    #     testbench_match_status = ""
-    #     feedback = None
-    #     timestamp = datetime.now().strftime("%H:%M:%S")
-    #     logger.debug(f"Kernel Start time: {timestamp}")
-
-    #     for attempt in self._num_attempts:
-    #         logger.info(f"Kernel: {self._kernel_name} Attempt: {attempt+1}")
-
-    #         # dir_path = pathlib.Path(f"./results/solutions/{hls_flow}/{model}/{iter+1}/{kernel_name}/attempts_{attempt+1}")
-    #         prev_ret_code, feedback = utils.run_kernel_attempt(self, attempt, feedback, goals=self._goals)
-    #         logger.debug(feedback)
-
-    #         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
-    #             logger.debug(f"{self._kernel_name} compiled successfully on attempt {attempt+1}.")
-
-    #         timestamp = datetime.now().strftime("%H:%M:%S")
-    #         logger.debug(f"[{self._model}] Attempt {attempt+1} for kernel {self._kernel_name} ended at {timestamp}")
-
-    #     logger.info(f"All attempts completed for {self._kernel_name}")
-
 
     def get_kernel_code(self, new_solutions_path: str = None) -> str:
         """Fetch the kernel code from the provided solution path, if none provided default 
@@ -228,6 +188,7 @@ class HLSEval(HLSCoder):
         
         with open(os.path.join(new_solutions_path, f"{self.kernel_name}.json"), 'r') as sol_file:
             solution = json.load(sol_file)
+            logger.debug(solution)
             if not solution.get('code'):
                 if not solution.get('content'):
                     logger.warning(f"UTILS: No code available in {new_solutions_path} for {self.kernel_name}")
