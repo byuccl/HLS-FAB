@@ -23,7 +23,7 @@ def run_vitis_tools(filepath, kernel_name, mode="csynth", hls_flow="vitis"):
         with open("vitis_config.cfg", "w") as file:
             file.write(
                 f"""
-            part=xcu280-fsvh2892-2L-e
+            part=xazu1eg-sbva484-1-i
 
             [hls]
             flow_target=vivado

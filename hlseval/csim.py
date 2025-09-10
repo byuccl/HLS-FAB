@@ -628,7 +628,7 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
     with open("vitis_config_csim.cfg", "w") as file:
         file.write(
             f"""
-        part=xcu280-fsvh2892-2L-e
+        part=xazu1eg-sbva484-1-i
         
         [hls]
         flow_target=vitis

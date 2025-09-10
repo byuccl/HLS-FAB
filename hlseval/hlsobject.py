@@ -76,7 +76,7 @@ class HLSEval(HLSCoder):
         logger.debug(f"Generating LLM Call for {self.kernel_name} attempt {attempt+1}")
         # Generate the Prompt for LLM
         if attempt > 0:
-            prev_solutions_path = f"{self.solution_path}/{attempt}"
+            prev_solutions_path = f"{self.solution_path}/attempts_{attempt}"
             with open(f"{prev_solutions_path}/{self.kernel_name}.cpp", "r") as f:
                 prev_code = f.read()
             prompt = prompts.feedback_prompt_vitis(prev_code=prev_code, feedback=feedback) if self.hls_flow == "vitis" else prompts.feedback_prompt_dyarapid(prev_code=prev_code, feedback=feedback)
