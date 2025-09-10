@@ -10,9 +10,9 @@
 ### Clone and prepare the repo 
 ```
 git clone git@github.com:Preston-Walker/hlseval.git
-python -m venv venv
-source venv/bin/activate
 cd hlseval
+python3.10 -m venv venv
+source venv/bin/activate
 pip install -e .
 bash build_rag_dir.sh
 ```
@@ -21,12 +21,18 @@ bash build_rag_dir.sh
 ```
 cd dataset
 # Add just one kernel for the test run
-cp -r examples/absolute_value_int8 dataset/kernels
-bash generate_kernels.sh
-python generate_hlseval
+cp -r examples/abs_int8 kernels
+make dataset
 cd ..
 ```
 To set which LLM models to use, edit the `dataset/llm_models.txt` file.\
+
+#### Set up docker container for dynarapid
+```
+wget https://gist.githubusercontent.com/clavin-xlnx/7ff0b7238aa5f5de4ff2dac7392d5132/raw/a130d502374cfa2779e59f918a2248e61fec5363/Dockerfile.dynarapid
+docker build -t my-llvm6-dynarapid-image .
+docker run -v <Path to hlseval reposotory>/hlseval:/mount --name dynarapid_container -t my-llvm6-dynarapid-image
+```
 
 ### Run Vitis Completions
 Sample of run command:\
@@ -37,9 +43,8 @@ Options:
 
 ### Run DynaRapid Completions
 Sample of run command:\
-`make run_vitis_completions LOG=DEBUG ATTEMPTS=5`\
-Options:
 `make run_dynarapid_completions LOG=DEBUG ATTEMPTS=4 RAPIDWRIGHT=TRUE`
+Options:
 - `LOG` option: Allows you to set the logging level of the ouput log file. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
 - `ATTEMPTS` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `ATTEMPTS` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
 - `RAPIDWRIGHT` option: If omitted, or set to `FALSE`, Dynamatic will run without RapidWright, resulting in a `.dot` file, but no placed and routed circut. Adding the `DYNAMATIC` option and setting it to anything other than `FALSE` will run both Dynamatic and RapidWright. The value `TRUE` is used here for clarity.
