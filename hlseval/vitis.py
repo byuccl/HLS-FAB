@@ -11,52 +11,41 @@ class CsynthTimeoutError(Exception):
     pass
 
 
-
-
-
-# Run vitis tools on the generated code
-def run_vitis_tools(filepath, kernel_name, mode="csynth", hls_flow="vitis"):
+def run_csynth(filepath, kernel_name):
     csynth_elapse_time = None
+    csynth_begin = dt.now()
+    with open("vitis_config.cfg", "w") as file:
+        file.write(
+            f"""
+        part=xazu1eg-sbva484-1-i
 
-    if mode == "csynth":
-        csynth_begin = dt.now()
-        with open("vitis_config.cfg", "w") as file:
-            file.write(
-                f"""
-            part=xazu1eg-sbva484-1-i
-
-            [hls]
-            flow_target=vivado
-            package.output.format=ip_catalog
-            package.output.syn=false
-            syn.top={kernel_name}
-            syn.file={filepath}/{kernel_name}.cpp
-            """
-            )
-        try:
-            result = subprocess.run(
-                [
-                    "v++",
-                    "-c",
-                    "--mode",
-                    "hls",
-                    "--config",
-                    "vitis_config.cfg",
-                    "--work_dir",
-                    filepath,
-                ], 
-                # v++ -c --mode hls --config vitis_config.cfg --work_dir ./results/solutions/gpt-4o/...
-                timeout=120,
-
-                capture_output=True, 
-                text=True
-            )
-            csynth_end = dt.now()
-            csynth_elapse_time = csynth_end - csynth_begin
-            return result, csynth_elapse_time
-        except subprocess.TimeoutExpired:
-            raise CsynthTimeoutError("Vitis tools stalled during HLS Synthesis.")
-
-    elif mode == "csim":
-        return run_csim(kernel_name, filepath, hls_flow=hls_flow)
-        
+        [hls]
+        flow_target=vivado
+        package.output.format=ip_catalog
+        package.output.syn=false
+        syn.top={kernel_name}
+        syn.file={filepath}/{kernel_name}.cpp
+        """
+        )
+    try:
+        result = subprocess.run(
+            [
+                "v++",
+                "-c",
+                "--mode",
+                "hls",
+                "--config",
+                "vitis_config.cfg",
+                "--work_dir",
+                filepath,
+            ], 
+            # v++ -c --mode hls --config vitis_config.cfg --work_dir ./results/solutions/gpt-4o/...
+            timeout=120,
+            capture_output=True, 
+            text=True
+        )
+        csynth_end = dt.now()
+        csynth_elapse_time = csynth_end - csynth_begin
+        return result, csynth_elapse_time
+    except subprocess.TimeoutExpired:
+        raise CsynthTimeoutError("Vitis tools stalled during HLS Synthesis.")

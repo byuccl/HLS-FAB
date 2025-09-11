@@ -7,11 +7,11 @@ from datetime import datetime
 import pathlib
 import hlseval.hlsobject as hls
 import hlseval.parser as parser
-import hlseval.vitis as vitis
+import hlseval.csim as csim
 
 logger = logging.getLogger(__name__)
 
-def run_dynarapid_w_feedback(test: hls.HLSEval, attempt: int=0, goals: str=None):
+def run_dynarapid_w_feedback(test: hls.HLSEval, attempt: int=0):
     new_solution_path = f"{test.solution_path}/{attempt+1}"
     if test._skip_behavioral:
         pass
@@ -20,12 +20,12 @@ def run_dynarapid_w_feedback(test: hls.HLSEval, attempt: int=0, goals: str=None)
 
         try:
             logger.info("Starting Dynarapid Simulation")
-            dsim_output, csim_elapsed_time = vitis.run_vitis_tools(new_solution_path, test.kernel_name, mode="csim", hls_flow=test.hls_flow)
+            dsim_output, csim_elapsed_time = csim.run_csim(new_solution_path, test.kernel_name, hls_flow=test.hls_flow)
             logger.debug(dsim_output)
-        except vitis.CsimTimeoutError as e:
+        except csim.CsimTimeoutError as e:
             logger.warning("Vitis timed out on Simulation")
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = parser.gather_parsed_data(test.kernel_name, hls_flow=test.hls_flow, model=test._model, attempt=attempt+1, goals=goals, iter=test._iter)
+        dynarapid_feedback = parser.gather_parsed_data(test.kernel_name, hls_flow=test.hls_flow, model=test._model, attempt=attempt+1, iter=test._iter)
     
 
     returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(test.kernel_name, new_solution_path, attempt, test._model, test._rapidwright, iter=test._iter)
@@ -206,7 +206,7 @@ exit
                 return 1, "Error creating symbolic link", dynamatic_elapsed_time, java_elapsed_time
             
             # Now run the Java command with the symbolic link in place
-            java_cmd = f"docker exec dynarapid_container bash -c 'cd {container_path} && java ch.agsl.dynarapid.GenerateDesign -placer greedy -f {container_path}/reports/{kernel_name}.dot'"
+            java_cmd = f"docker exec dynarapid_container bash -c 'cd {container_path} && java ch.agsl.dynarapid.GenerateDesign -placer greedy -f {container_path}/reports/{test.kernel_name}.dot'"
             
             java_begin = datetime.now()
             java_process = subprocess.Popen(java_cmd, shell=True, stdout=subprocess.PIPE, 

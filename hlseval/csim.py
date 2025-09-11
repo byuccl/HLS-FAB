@@ -31,8 +31,10 @@ class NumpyEncoder(json.JSONEncoder):
         elif isinstance(obj, (np.void, np.complex128)):  
             return str(obj)  
         return json.JSONEncoder.default(self, obj) 
-   
 
+class CsynthTimeoutError(Exception):
+    """Raised when Vitis HLS times out."""
+    pass
 
 def generate_h_file(kernel_code, model_dir, kernel_name):
     """
@@ -64,12 +66,6 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
         if not found_function_start:
             if stripped.startswith("#"):
                 preprocessor_lines.append(line)
-            else:
-                # Accumulate potential signature lines until the kernel name is found
-                # Or just start looking for kernel name if not a preprocessor
-                # This ensures we capture the return type too if it's on a previous line
-                pass # We'll build func_signature_lines once found_function_start is True
-
             # Check if the current line (or part of it) contains the function's start
             if function_name_pattern.search(line):
                 found_function_start = True
@@ -100,16 +96,10 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
         raise ValueError(f"Opening brace '{{' for function '{kernel_name}' not found after its declaration in the provided code.")
     if 'func_signature' not in locals() or func_signature is None: # Check if func_signature was actually set
         raise ValueError(f"Function signature for '{kernel_name}' could not be extracted. Check kernel_code format.")
-
-
-
     if func_signature is None:
         raise ValueError(f"Function {kernel_name} not found in the provided code.")
 
-    # Add semicolon to make it a declaration
     func_declaration = func_signature + ";"
-
-    # Prepare include guard macro
     guard_macro = kernel_name.upper() + "_H"
 
     # Write everything to the header file
@@ -125,10 +115,6 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
         f.write(f"#endif // {guard_macro}\n")
 
     logger.info(f"Header file generated at: {h_file_path}")
-
-    pass
-
-    
 def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="vitis"):
     """
     Generates a C++ testbench file (`testbench.cpp`) that reads test data from a JSON file,
@@ -203,19 +189,11 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     testbench_code.append("#include \"nlohmann/json.hpp\"") # Assuming nlohmann/json.hpp is available in include path
     testbench_code.append("#include \"utils.hpp\"")    # Floating-point comparison helper function
     testbench_code.append("#include \"nlohmann/apint_serializer.hpp\"")    # ap_int serializer
-
     # Include the actual kernel file 
     testbench_code.append(f"#include \"{kernel_name}.h\"\n\n")
-
-
     testbench_code.append("using json = nlohmann::json;")
     testbench_code.append("using namespace std;\n\n")
-
     testbench_code.append("int main() {")
-
-    # Open and parse JSON test data
-    # NOTE: The JSON file path needs to be accessible from where the C++ executable runs.
-    json_filename_only = os.path.basename(test_data_json_path)
     testbench_code.append(f"    std::ifstream ifs(\"{test_data_json_path}\");")
     testbench_code.append("    if (!ifs.is_open()) {")
     testbench_code.append(f"        std::cerr << \"Error: Could not open test data file {json_filename_only}. Make sure it's in the executable's directory.\" << std::endl;")
@@ -228,7 +206,6 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     testbench_code.append("        std::cerr << \"JSON parse error: \" << e.what() << std::endl;")
     testbench_code.append("        return 1;")
     testbench_code.append("    }")
-
     testbench_code.append("\n    int total_tests = 0;")
     testbench_code.append("    int failed_tests = 0;")
     testbench_code.append("    int flat_idx = 0;")
@@ -261,18 +238,13 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
                 # For outputs, declare a variable and pass its address
                 testbench_code.append(f"        {cpp_base_type} {var_name}_out_actual = 0; // Initialize for output clarity")
                 kernel_call_args.append(f"&{var_name}_out_actual") # Pass by address for output
-                # No dynamic allocation for scalar, so no cleanup here
-        # Handle arrays (1D) use dynamic allocation and flatten
         elif array_dimension >= 1:
             # Declare and allocate flattened array
             testbench_code.append(f"        {cpp_base_type}* {var_name}_arr = new {cpp_base_type}[{total_elements}];")
             cleanup_deallocations.append(f"        delete[] {var_name}_arr;")
-
-            # Initialize from JSON for inputs
             if in_out_status in ["in", "inout"]:
                 testbench_code.append(f"\n        // Initialize {var_name}_arr from JSON input")
                 testbench_code.append(f"        auto {var_name}_json_data = test_case.at(\"inputs\").at(\"{var_name}\");")
-
                 testbench_code.append(f"        uint32_t flat_idx_for_{var_name} = 0;")
                 testbench_code.append(f"        for (const auto& val : {var_name}_json_data) {{")
                 testbench_code.append(f"            if (flat_idx_for_{var_name} >= {total_elements}) {{")
@@ -284,34 +256,17 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
                 testbench_code.append(f"        if (flat_idx_for_{var_name} != {total_elements}) {{")
                 testbench_code.append(f"            std::cerr << \"Error: {var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;")
                 testbench_code.append(f"            return 1;")
-                testbench_code.append(f"        }}") 
-                
-                ## Debugging output for input arrays
-                # testbench_code.append(f"        // In testbench, after loading {var_name}_arr")
-                # testbench_code.append(f"        std::cout << \"{var_name} (first 10 elements): \";")
-                # testbench_code.append(f"        for (int i = 0; i < 10; ++i) {{")
-                # testbench_code.append(f"            std::cout << {var_name}_arr[i] << \" \";")
-                # testbench_code.append(f"        }}")
-                # testbench_code.append(f"        std::cout << std::endl;")      
-                
+                testbench_code.append(f"        }}")      
             elif in_out_status == "out":
-                # Initialize output buffers to 0 for clarity
                 testbench_code.append(f"\n        // Initialize output array {var_name}_arr to zeros")
                 testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{")
                 testbench_code.append(f"            {var_name}_arr[i] = 0; // Or appropriate default value")
                 testbench_code.append("        }")
-
-            # Add to kernel arguments (passing pointer to flattened array)
             kernel_call_args.append(var_name + "_arr")
-
-    # Call the kernel function
     testbench_code.append(f"\n        // Call the kernel function")
     testbench_code.append(f"        {kernel_name}({', '.join(kernel_call_args)});")
-
-    # --- Comparison Logic ---
     testbench_code.append("\n        bool test_case_passed = true;")
     testbench_code.append("        std::cout << \"Comparing results...\" << std::endl;")
-
 
     # Compare outputs based on all_var_metadata
     for var_info in all_var_metadata:
@@ -326,21 +281,12 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
         if in_out_status in ["out", "inout"]:
             # Get expected values from JSON
             testbench_code.append(f"\n        num_mismatches = 0;")
-            
             testbench_code.append(f"\n        // Get expected values for {var_name}")
             testbench_code.append(f"        auto {var_name}_expected_json = test_case.at(\"expected_outputs\").at(\"{var_name}\");")
-            
-            # Check for the outer-most dimension
-            if array_dimension > 0: # Only check for arrays
-                testbench_code.append(f"        if (!{var_name}_expected_json.is_array() || {var_name}_expected_json.size() < {shape[0]}) {{")
-                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements expected: {shape[0]} has: \" << {var_name}_expected_json.size() << \").\" << std::endl;")
-                testbench_code.append(f"            return 1; // Or handle appropriately")
-                testbench_code.append("        }")
-                
+
             if array_dimension == 0: # Scalar comparison
                 testbench_code.append(f"        {cpp_base_type} {var_name}_expected_val = {var_name}_expected_json.get<{cpp_base_type}>();")
                 testbench_code.append(f"        if (!compare_numeric({var_name}_out_actual, {var_name}_expected_val)) {{")
-                # FIXME: Commentted out these lines that cause context window to explode with failed test cases. Need to know if I should replace them with something else.
                 testbench_code.append(f"            if (num_mismatches < {mismatches_to_report}){{")
                 testbench_code.append(f"                std::cout << \"  FAIL: Scalar '{var_name}' - Expected: \" << {var_name}_expected_val << \", Actual: \" << {var_name}_out_actual << std::endl;")
                 testbench_code.append("             }")
@@ -348,9 +294,11 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
                 testbench_code.append("             test_case_passed = false;")
                 testbench_code.append("         }")
                 testbench_code.append(f"        else {{ std::cout << \"  PASS: Scalar '{var_name}' matches.\" << std::endl; }}")
-
-
             elif array_dimension >= 1: # Unified array comparison (flattened)
+                testbench_code.append(f"        if (!{var_name}_expected_json.is_array() || {var_name}_expected_json.size() < {shape[0]}) {{")
+                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements expected: {shape[0]} has: \" << {var_name}_expected_json.size() << \").\" << std::endl;")
+                testbench_code.append(f"            return 1;")
+                testbench_code.append("        }")
                 testbench_code.append(f"\n        // Compare array {var_name} (flattened)")
                 testbench_code.append(f"        uint32_t flat_{var_name}_idx = 0;")
                 testbench_code.append(f"        for (const auto& expected_val_json : {var_name}_expected_json) {{")
@@ -374,29 +322,22 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
                 testbench_code.append(f"            return 1;")
                 testbench_code.append(f"        }}")
                 testbench_code.append(f"        if (num_mismatches == 0) std::cout << \"  PASS: Array '{var_name}' matches.\" << std::endl;")
-
-
     testbench_code.append("\n        if (test_case_passed) {")
     testbench_code.append("            std::cout << \"Test Case PASSED: \" << test_id << std::endl;")
     testbench_code.append("        } else {")
     testbench_code.append("            std::cout << \"Test Case FAILED: \" << test_id << std::endl;")
     testbench_code.append("            failed_tests++;")
     testbench_code.append("        }")
-
-
     # Cleanup dynamic memory for current test case
     for cleanup_line in cleanup_deallocations:
         testbench_code.append(cleanup_line)
-
-    #Calculate the Percent Error
+    #Calculate the Percent Error FIXME: FInd out if we will even use this number because sometimes it is wrong and we dont even care because its just wrong.
     testbench_code.append("        if (num_mismatches > 0) {")
     testbench_code.append(f"            percent_error = ((float)num_mismatches / {total_elements}) * 100.0;")
     testbench_code.append("        } else {")
     testbench_code.append("            percent_error = 0.0;")
     testbench_code.append("        }")
-
     testbench_code.append("    }") # End of for-loop for test_cases_json
-    
     testbench_code.append("\n    std::cout << \"\\n--- Test Summary ---\" << std::endl;")
     testbench_code.append("    std::cout << \"Compilation Status: success\" << std::endl;")
     testbench_code.append("    std::cout << \"Total Tests: \" << total_tests << std::endl;")
@@ -424,8 +365,6 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     except Exception as e:
         logger.error(f"Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
-
-
 def write_json_test_data(filename, test_cases_list):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
@@ -442,15 +381,11 @@ def write_json_test_data(filename, test_cases_list):
     except Exception as e:
         logger.error(f"Error writing test data to {filename}: {e}")
         raise
-
-
-def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0, hls_flow="vitis"):
+def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0, hls_flow="vitis"):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
-
     Each test case should be a dictionary with at least 'test_id', 'inputs',
     and 'expected_outputs' keys.
-
     Args:
         kernel_name (str): The name of the kernel being tested
                         Example: "mat_mult_int16"
@@ -463,7 +398,6 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
     """
     project_root = (os.path.dirname(os.path.dirname(__file__)))
     kernel_dir = os.path.join(project_root, "dataset", "kernels")
-
     if kernel_name is None:
         kernel_names = [d for d in os.listdir(kernel_dir)
                       if os.path.isdir(os.path.join(kernel_dir, d))]
@@ -474,10 +408,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
 
     for name in kernel_names:
         logger.info(f"Processing kernel for JSON reference data: {name}")
-        
         members = import_module_members(name, ["inputs_info","behavioral"])
-        
-        
         if not members or "inputs_info" not in members:
             logger.warning(f"Could not import inputs info for {name}, skipping...")
             all_results[name] = {"status": "error", "message": "Could not import inputs_info"}
@@ -490,47 +421,28 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             input_types = generation_result.get("types")
         else:
             inputs_list = generation_result # Old format
-            input_types = None # No type info
-
+            input_types = None
         logger.info(f"Generated raw inputs for {name}")
-
-        # Separate 'in' arguments for behavioral model call
         input_arg_values_for_behavioral = []
-        # Keep track of names for inputs to JSON
         json_inputs_dict = {}
-        # Keep track of variable names for outputs to JSON
         json_expected_outputs_dict = {}
-        # List of output variable names in order for the C++ testbench to know
         output_var_names_in_order = []
-
         # Populate json_inputs_dict and prepare for behavioral call
         for i, type_info in enumerate(input_types):
             var_name = type_info["name"]
             current_value = inputs_list[i] # Get the actual value from the inputs_list
-
             if type_info["iotype"] in ["in", "inout"]:
-                # These are inputs to the kernel, so they go into the JSON's "inputs"
                 json_inputs_dict[var_name] = current_value
-                # Also collect for behavioral function call (copy if mutable)
                 input_arg_values_for_behavioral.append(np.copy(current_value) if isinstance(current_value, np.ndarray) else current_value)
-
             if type_info["iotype"] in ["out", "inout"]:
-                # These are outputs from the kernel. We need their names to map behavioral results.
                 json_inputs_dict[var_name] = current_value
-                # All inputs and outputs are inputs to the c++ kernel. 
                 output_var_names_in_order.append(var_name)
-                # json_expected_outputs_dict[var_name] will be filled after behavioral run
-            # For 'in' only types, they don't get added to json_expected_outputs_dict
-            # For 'out' only types, they are not added to input_arg_values_for_behavioral
         
         if "behavioral" in members:
             behavioral_func = members["behavioral"]
             try:
-                # Call behavioral with only the 'in' and 'inout' args, which are collected in order
                 behavioral_result_raw = behavioral_func(*input_arg_values_for_behavioral)
                 logger.info(f"Behavioral model executed successfully for {name}")
-
-                # Map behavioral_result_raw to json_expected_outputs_dict
                 if isinstance(behavioral_result_raw, tuple):
                     if len(behavioral_result_raw) != len(output_var_names_in_order):
                         raise ValueError(
@@ -548,7 +460,6 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
                             f"outputs based on input_types for {name}. Expected output names: {output_var_names_in_order}"
                         )
                     json_expected_outputs_dict[output_var_names_in_order[0]] = behavioral_result_raw
-
             except Exception as e:
                 logger.error(f"Error running behavioral function for {name}: {e}")
                 all_results[name] = {"status": "error", "message": f"Behavioral error: {e}"}
@@ -557,25 +468,19 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             logger.error(f"No behavioral model found for {name}, skipping JSON generation.")
             all_results[name] = {"status": "error", "message": "No behavioral model"}
             continue
-
-        # Construct the single test case dictionary
         current_test_case = {
             "test_id": f"{name}_test_{seed}",
             "inputs": json_inputs_dict,
             "expected_outputs": json_expected_outputs_dict,
             "types_metadata": input_types # Include full types info for C++ to interpret easily
         }
-
-        # The JSON file path.
         copy_model_dir = os.path.join(model_dir, "test_data")
         if not os.path.exists(copy_model_dir):
             os.makedirs(copy_model_dir)
             logger.debug(f"Created directory for test data: {copy_model_dir}")
         json_output_filename = os.path.abspath(os.path.join(model_dir, f"{name}_test_data.json"))
         copy_json_output_filename = os.path.abspath(os.path.join(copy_model_dir, f"{name}_test_data_copy.json"))
-        # Write this single test case to a JSON file
         try:
-            # write_json_test_data expects a list of test cases, even if it's just one
             write_json_test_data(json_output_filename, [current_test_case])
             write_json_test_data(copy_json_output_filename, [current_test_case]  )
             logger.info(f"Generated JSON test data for {name} at: {json_output_filename}")
@@ -583,9 +488,6 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             logger.error(f"Failed to write JSON test data for {name}: {e}")
             all_results[name] = {"status": "error", "message": f"JSON write error: {e}"}
             continue
-
-
-        # --- NOW CALL THE NEW sim_cpp_with_inputs (Testbench File Generator) ---
         logger.info(f"Generating C++ testbench source file for {name}")
         testbench_cpp_path, json_filename_basename, generation_status = create_testbench(
             kernel_name=name,
@@ -593,7 +495,6 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             model_dir=model_dir,
             hls_flow=hls_flow
         )
-
         if generation_status == "SUCCESS" and testbench_cpp_path:
             all_results[name] = {
                 "status": "success_testbench_generated",
@@ -604,8 +505,7 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
             all_results[name] = {
                 "status": "success_testbench_generated_with_warnings",
                 "testbench_cpp_path": testbench_cpp_path,
-                "message": generation_status
-                
+                "message": generation_status     
             }
         else:
             all_results[name] = {
@@ -616,9 +516,9 @@ def create_reference_data(kernel_name=None, model_dir="./results/solutions/gpt-4
 
     return all_results
 
-def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", hls_flow="vitis"):
+def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kernel_name=None, hls_flow="vitis"):
     logger.info("Preparing CSIM")
-    result = create_reference_data(kernel_name, model_dir, seed=45, hls_flow=hls_flow)
+    result = prepare_csim(kernel_name, model_dir, seed=45, hls_flow=hls_flow)
     
     project_dir = model_dir
     kernel_code_path = os.path.join(project_dir, f"{kernel_name}.cpp")
@@ -657,7 +557,6 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
             csim_elapsed_time = dt.now() - csim_begin
             return sim_result, csim_elapsed_time
-
         except subprocess.TimeoutExpired as e:
             logger.warning(f"Timeout occured: {e}")
             # IMPORTANT: Access stdout and stderr from the exception object 'e'
@@ -667,16 +566,6 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
             raise CsimTimeoutError(
                 f"CSIM timed out after {e.timeout} seconds. Output: {sim_stdout}, Error: {sim_stderr}"
             )
-
-
-        except subprocess.CalledProcessError as e: # Catch this specifically for non-zero exit codes
-            logger.error(f"Failed with exit code {e.returncode}")
-            sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
-            sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-            # logger.debug(sim_stdout)
-            csim_elapsed_time = dt.now() - csim_begin
-            return e, csim_elapsed_time
-
         except Exception as e:
             logger.error(f"An unexpected error occurred during CSIM: {e}")
             csim_elapsed_time = dt.now() - csim_begin
@@ -687,11 +576,41 @@ def run_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/axpy_int32/
         #No Testebench was made skip this kernel. 
         return 
         
-# --- Main execution block for debugging purposes ---
-if __name__ == "__main__":
-    # Ensure this path exists or is creatable
-    target_model_dir = "./results/solutions/gpt-4o/conv2d_int16/attempts_1"
+def run_csynth(filepath, kernel_name):
+    csynth_elapse_time = None
+    csynth_begin = dt.now()
+    with open("vitis_config.cfg", "w") as file:
+        file.write(
+            f"""
+        part=xazu1eg-sbva484-1-i
 
-    run_csim("conv2d_int16", target_model_dir)
-    # After running this, inspect the generated JSON file
-    # Example: cat results/solutions/gpt-4o/axpy_int32/attempts_6/axpy_int32_test_data.json
+        [hls]
+        flow_target=vivado
+        package.output.format=ip_catalog
+        package.output.syn=false
+        syn.top={kernel_name}
+        syn.file={filepath}/{kernel_name}.cpp
+        """
+        )
+    try:
+        result = subprocess.run(
+            [
+                "v++",
+                "-c",
+                "--mode",
+                "hls",
+                "--config",
+                "vitis_config.cfg",
+                "--work_dir",
+                filepath,
+            ], 
+            # v++ -c --mode hls --config vitis_config.cfg --work_dir ./results/solutions/gpt-4o/...
+            timeout=120,
+            capture_output=True, 
+            text=True
+        )
+        csynth_end = dt.now()
+        csynth_elapse_time = csynth_end - csynth_begin
+        return result, csynth_elapse_time
+    except subprocess.TimeoutExpired:
+        raise CsynthTimeoutError("Vitis tools stalled during HLS Synthesis.")

@@ -8,8 +8,8 @@ import hlseval.utils as utils
 from hlseval.hlscoder import HLSCoder
 import hlseval.prompts as prompts
 import hlseval.parser as parser
-from .vitis import CsynthTimeoutError, run_vitis_tools
-from .csim import CsimTimeoutError
+from .vitis import CsynthTimeoutError, run_csynth
+from .csim import run_csim, CsimTimeoutError
 from .prompts import SYSTEM_PROMPTS
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,6 @@ class HLSEval(HLSCoder):
             num_attempts: int = 1,
             skip_behavioral: bool = False,
             rapidwright: bool = False,
-            goals = None,
             logfile = None):
         
         super().__init__(
@@ -45,7 +44,6 @@ class HLSEval(HLSCoder):
         self._num_attempts = num_attempts
         self._skip_behavioral = skip_behavioral
         self._rapidwright = rapidwright
-        self._goals = goals
         self._kernel_name = kernel["kernel_name"]
         self._logfile = logfile
 
@@ -119,7 +117,7 @@ class HLSEval(HLSCoder):
         return llm_elapsed_time
 
     # Function for running all the tools and gathering the feedback
-    def vitis_run_w_feedback(self, attempt: int, goals: str):
+    def vitis_run_w_feedback(self, attempt: int):
         vitis_feedback = {}
         new_solution_path = f"{self.solution_path}/attempts_{attempt+1}"
         csim_elapsed_time = None
@@ -131,7 +129,8 @@ class HLSEval(HLSCoder):
             # Run CSIM    
             try:
                 logger.info("Starting Vitis Run")
-                csim_output, csim_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csim") # FIXME: Switch to run_csim function
+                csim_output, csim_elapsed_time = run_csim(new_solution_path, self.kernel_name)
+                # csim_output, csim_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csim") # FIXME: Switch to run_csim function
                 sim_returncode = csim_output.returncode if (csim_output != None) else 1
             except CsimTimeoutError as e:
                 sim_returncode = 1
@@ -146,25 +145,23 @@ class HLSEval(HLSCoder):
         # Run Synthesis only if CSIM was successful
             try:
                 logger.info("--- Running CSYNTH ---")
-                synth_output, csynth_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csynth") # FIXME: Rename function to run_csynth
-                vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, goals=goals, iter=self._iter)
+                synth_output, csynth_elapsed_time = run_csynth(new_solution_path, self.kernel_name)
+                vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, iter=self._iter) #FIXME: Redo the gather parsed data thing
                 synth_returncode = synth_output.returncode 
 
                 logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
             except CsynthTimeoutError as e:
                 logger.warning(" Vitis timed out")
-                vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, goals=goals, iter=self._iter)
+                vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, iter=self._iter)
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
                 vitis_feedback['synth_feedback']['goals'].extend([
                     "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining."
                 ])
-                logger.debug(vitis_feedback)
-                logger.debug("vitis Feedback before Adding new Errors")
                 synth_returncode = 1
         else:
-            vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, goals=goals, iter=self._iter)
+            vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, iter=self._iter)
             vitis_feedback['sim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
