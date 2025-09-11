@@ -136,8 +136,12 @@ if __name__ == "__main__":
                 hlseval.write_table_header(logfile)
                 for kernel in kernels:
                     logger.info(f"Running Model: {model} Kernel: {kernel["kernel_name"]} Pass: {iter+1}")
+<<<<<<< HEAD
                     # Put many of the parameters into an object to pass them between functions easier.
                     test = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, goals) # FIXME: I know this probably just isn't finished yet, but 'test' isn't a great name for this object
+=======
+                    test = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, goals, logfile)
+>>>>>>> eed97149cbd56337c8ff33d7ae5f510e839d252d
                     process_kernel(test)
                     
                 hlseval.write_table_footer(logfile)

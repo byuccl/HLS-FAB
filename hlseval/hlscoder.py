@@ -108,7 +108,7 @@ openrouter_headers={
 class HLSCoder:
     """A basic agent that talks via OpenAI APIs"""
     def __init__(  
-        self, workflow, hls_flow, system_prompt, 
+        self, hls_flow, system_prompt, 
         url="https://openrouter.ai/api/v1/chat/completions", model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1, rag=False  
     ):  
         self.system_prompt=system_prompt  
@@ -117,7 +117,6 @@ class HLSCoder:
         self.temperature = temperature  
         self.top_p = top_p  
         self.attempts = attempts  
-        self.workflow = workflow  
         self.hls_flow = hls_flow
         self.token_usage = {  
             "completion_tokens": 0,  
@@ -134,12 +133,7 @@ class HLSCoder:
             self.embed_model = None  
     
         self.url=url  
-        if self.workflow == "byu":  
-            self.headers = byu_headers   
-        elif self.workflow == "amd":  
-            self.headers = amd_headers  
-        elif self.workflow == "openrouter":
-            self.headers = openrouter_headers
+        self.headers = openrouter_headers
 
 
     def __call__(self, prompt):
@@ -730,8 +724,8 @@ def call_llm_api(coder, tools=None):
     if tools:  
         body["tools"] = tools  
     
-    if coder.workflow == "byu":
-        body["model"] = coder.model # The model is only needed for the byu API
+    # if coder.workflow == "byu":
+    #     body["model"] = coder.model # The model is only needed for the byu API
 
     if "claude" in coder.url.lower() or "gemini" in coder.url.lower(): # The Claude models needed a max_tokens value
         body["max_tokens"] = 8000
@@ -739,15 +733,15 @@ def call_llm_api(coder, tools=None):
     # logger.debug(f"HLS CODER: API Request headers: {json.dumps(coder.headers, indent=2)}")
     logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")  
 
-    if coder.workflow != "openrouter":
-        response = requests.post(url=coder.url, json=body, headers=coder.headers)  
-    else:
-        data = json.dumps({
-            "model": coder.model, 
-            "messages": coder.messages
-        })
-        response = requests.post(url=coder.url, data=data, headers=coder.headers)  
-      
+    # if coder.workflow != "openrouter":
+    #     response = requests.post(url=coder.url, json=body, headers=coder.headers)  
+    # else:
+    data = json.dumps({
+        "model": coder.model, 
+        "messages": coder.messages
+    })
+    response = requests.post(url=coder.url, data=data, headers=coder.headers)  
+    
     # Log the raw response for debugging  
     logger.debug(f"API Response status: {response.status_code}")  
     try:  
