@@ -29,9 +29,6 @@ Some data types are represented as these arbitrary precision integers or floatin
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
-
-IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
-
 """,
         "skip_behavioral_False": """You are a part of a code generation system for HLS (High Level Synthesis).
 Your job is to write C++ code for a single kernel that will be compiled to with Vitis HLS tools to run on an AMD Zynq UltraScale+ MPSoC FPGA.
@@ -43,9 +40,6 @@ Some data types are represented as these arbitrary precision integers or floatin
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
-
-IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
-
 """
     },
 }
@@ -61,9 +55,6 @@ Some data types are represented as these arbitrary precision integers or floatin
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
-
-IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
-
 """
 
 VITIS_LIBRARY_SYSTEM_PROMPT = """You are a part of a code generation system for HLS (High Level Synthesis).
@@ -76,9 +67,6 @@ Some data types are represented as these arbitrary precision integers or floatin
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
-
-IMPORTANT: You MUST use the search_wrapper tool to retrieve relevant code examples before generating any code. Never write code without first consulting the examples in the database.
-
 """
 
 DYNARAPID_SYSTEM_PROMPT = """
@@ -92,7 +80,6 @@ The integer types you are allowed to use are int8_t, uint8_t, int16_t, uint16_t,
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Dynarapid does not use or recognize any #pragma HLS lines so do not include them. 
-
 """,
 
 

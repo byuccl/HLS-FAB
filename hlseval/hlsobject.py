@@ -67,8 +67,7 @@ class HLSEval(HLSCoder):
             prompt = prompts.feedback_prompt_vitis(prev_code=prev_code, feedback=feedback) if self.hls_flow == "vitis" else prompts.feedback_prompt_dyarapid(prev_code=prev_code, feedback=feedback)
             logger.debug(prompt)
         else: 
-            context_string = "Reference vectorized code:\n"
-            prompt = self._kernel["prompt"] + "\n" + context_string
+            prompt = self._kernel["prompt"]
 
 
         url = OPENROUTER_URL
@@ -115,7 +114,7 @@ class HLSEval(HLSCoder):
             # Run CSIM    
             try:
                 logger.info("Starting Vitis Run")
-                csim_output, csim_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csim")
+                csim_output, csim_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csim") # FIXME: Switch to run_csim function
                 sim_returncode = csim_output.returncode if (csim_output != None) else 1
             except CsimTimeoutError as e:
                 sim_returncode = 1
@@ -130,7 +129,7 @@ class HLSEval(HLSCoder):
         # Run Synthesis only if CSIM was successful
             try:
                 logger.info("--- Running CSYNTH ---")
-                synth_output, csynth_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csynth")
+                synth_output, csynth_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csynth") # FIXME: Rename function to run_csynth
                 vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, goals=goals, iter=self._iter)
                 synth_returncode = synth_output.returncode 
 
@@ -220,11 +219,12 @@ class HLSEval(HLSCoder):
     #     logger.info(f"All attempts completed for {self._kernel_name}")
 
 
+    # Extract the code from the LLM response
     def get_kernel_code(self, new_solutions_path: str = None) -> str:
         """Fetch the kernel code from the provided solution path, if none provided default 
         to canonical solution."""
         if not new_solutions_path:
-            return self.get_prompt + self.get_canonical 
+            return self.get_prompt + self.get_canonical # FIXME: I'm pretty sure this wouldn't work anymore. We probably need a try/catch style solution for no solution file
         
         with open(os.path.join(new_solutions_path, f"{self.kernel_name}.json"), 'r') as sol_file:
             solution = json.load(sol_file)
