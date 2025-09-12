@@ -7,7 +7,7 @@ from datetime import datetime
 import pathlib
 import hlseval.hlsobject as hls
 import hlseval.parser as parser
-import hlseval.csim as csim
+import hlseval.vitis as vitis
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +20,9 @@ def run_dynarapid_w_feedback(test: hls.HLSEval, attempt: int=0):
 
         try:
             logger.info("Starting Dynarapid Simulation")
-            dsim_output, csim_elapsed_time = csim.run_csim(new_solution_path, test.kernel_name, hls_flow=test.hls_flow)
+            dsim_output, csim_elapsed_time = vitis.run_csim(new_solution_path, test.kernel_name, hls_flow=test.hls_flow)
             logger.debug(dsim_output)
-        except csim.CsimTimeoutError as e:
+        except vitis.CsimTimeoutError as e:
             logger.warning("Vitis timed out on Simulation")
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
         dynarapid_feedback = parser.gather_parsed_data(test.kernel_name, hls_flow=test.hls_flow, model=test._model, attempt=attempt+1, iter=test._iter)

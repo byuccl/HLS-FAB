@@ -6,7 +6,7 @@ from .utils import generate_inputs, import_module_members, get_ap_cpp_type_str, 
 from .utils import write_table_header, add_table_row, write_table_footer # Used for hls_completions.py / run_kernel_attempt()
 from .hlscoder import HLSCoder
 from .parser import gather_parsed_data, save_feedback_data
-from .csim import run_csim
+from .vitis import run_csim
 from .vitis import run_vitis_tools
 from .splitter import MultiContentSplitter
 from .dynarapid import run_dynarapid_w_feedback

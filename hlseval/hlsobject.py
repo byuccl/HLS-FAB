@@ -9,10 +9,10 @@ from hlseval.hlscoder import HLSCoder
 import hlseval.prompts as prompts
 import hlseval.parser as parser
 from .vitis import CsynthTimeoutError, run_csynth
-from .csim import run_csim, CsimTimeoutError
+from .vitis import run_csim, CsimTimeoutError
 from .prompts import SYSTEM_PROMPTS
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("HLSOBJECT")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 class HLSEval(HLSCoder):
@@ -34,7 +34,6 @@ class HLSEval(HLSCoder):
             temperature=0.0, 
             top_p=1.0, 
             attempts=1, 
-            rag= True if hls_tool_chain=="vitis" else False  
         )
 
         self._model = model
@@ -69,8 +68,6 @@ class HLSEval(HLSCoder):
         return self._kernel["canonical_solution"]
 
     def llm_call(self, attempt: int, feedback=None):
-
-
         logger.debug(f"Generating LLM Call for {self.kernel_name} attempt {attempt+1}")
         # Generate the Prompt for LLM
         if attempt > 0:
@@ -81,9 +78,6 @@ class HLSEval(HLSCoder):
             logger.debug(prompt)
         else: 
             prompt = self._kernel["prompt"]
-
-
-        url = OPENROUTER_URL
         
         llm_completion_begin = dt.now()
 
@@ -96,8 +90,6 @@ class HLSEval(HLSCoder):
             },
         }
         new_solution_path = f"{self.solution_path}/attempts_{attempt+1}"
-        generated_code = result["code"]
-
         llm_completion_end = dt.now()
         llm_elapsed_time = llm_completion_end - llm_completion_begin
         logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
@@ -109,11 +101,10 @@ class HLSEval(HLSCoder):
             logger.debug("Writing to file")
             kernel_code = self.get_kernel_code(new_solution_path)
             if kernel_code == None:
-                    logger.warning("LLM Failed to produce Code. Skipping attempt")
+                    logger.error("LLM Failed to produce Code. Skipping attempt")
                     return 1, "Failed to produce kernel code"
             else:
                 file.write(kernel_code)
-
         return llm_elapsed_time
 
     # Function for running all the tools and gathering the feedback
@@ -138,9 +129,7 @@ class HLSEval(HLSCoder):
             except Exception as e:
                 sim_returncode = 1
                 logger.warning(f"An error occurred: {e}") 
-
             logger.debug(f"CSIM elapsed time: {csim_elapsed_time}")
-
         if sim_returncode == 0:
         # Run Synthesis only if CSIM was successful
             try:
@@ -165,13 +154,9 @@ class HLSEval(HLSCoder):
             vitis_feedback['sim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
-
         logger.info("--- Vitis Run Completed ---")
-
         out_data_path = f"{new_solution_path}/{self.kernel_name}_data.json"
         parser.save_feedback_data(out_data_path, vitis_feedback)
-        
-
         returncode = (sim_returncode and synth_returncode) if sim_returncode else synth_returncode
         return returncode, vitis_feedback, csim_elapsed_time, csynth_elapsed_time
 
@@ -180,26 +165,27 @@ class HLSEval(HLSCoder):
     def get_kernel_code(self, new_solutions_path: str = None) -> str:
         """Fetch the kernel code from the provided solution path, if none provided default 
         to canonical solution."""
-        if not new_solutions_path:
-            return self.get_prompt + self.get_canonical # FIXME: I'm pretty sure this wouldn't work anymore. We probably need a try/catch style solution for no solution file
-        
-        with open(os.path.join(new_solutions_path, f"{self.kernel_name}.json"), 'r') as sol_file:
-            solution = json.load(sol_file)
-            logger.debug(solution)
-            if not solution.get('code'):
-                if not solution.get('content'):
-                    logger.warning(f"UTILS: No code available in {new_solutions_path} for {self.kernel_name}")
-                    return None
-                srccode = solution['content']
+        try:
+            with open(os.path.join(new_solutions_path, f"{self.kernel_name}.json"), 'r') as sol_file:
+                solution = json.load(sol_file)
+                logger.debug(solution)
+                if not solution.get('code'):
+                    if not solution.get('content'):
+                        logger.warning(f"No code available in {new_solutions_path} for {self.kernel_name}")
+                        return None
+                    srccode = solution['content']
+                    return srccode
+
+
+                srccode = solution['code']
+                if self._hls_tool == "vitis":
+                    # if gpt decides to be too helpful and adds a main()... remove it
+                    srccode = re.sub(r'int\s+main\s*\([^)]*\)\s*{[^{}]*({[^{}]*}[^{}]*)*}', '', srccode, flags=re.DOTALL)
+                    
+                    # cppheaderparser will complain if we don't remove trailing comments
+                    srccode = srccode.split('// extern "C"')[0]
+                    
                 return srccode
-
-
-            srccode = solution['code']
-            if self._hls_tool == "vitis":
-                # if gpt decides to be too helpful and adds a main()... remove it
-                srccode = re.sub(r'int\s+main\s*\([^)]*\)\s*{[^{}]*({[^{}]*}[^{}]*)*}', '', srccode, flags=re.DOTALL)
-                
-                # cppheaderparser will complain if we don't remove trailing comments
-                srccode = srccode.split('// extern "C"')[0]
-                
-            return srccode
+        except:
+            logger.error("No Solution Path Provided. No Code extracted")
+            return None
