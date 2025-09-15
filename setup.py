@@ -14,5 +14,6 @@ setup(
         "llama_index", 
         "ml_dtypes",
         "scipy",
+        'tiktoken'
     ]
 )

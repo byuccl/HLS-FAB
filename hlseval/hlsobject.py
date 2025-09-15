@@ -4,7 +4,8 @@ import pathlib
 import json
 import os
 import re
-import hlseval.utils as utils
+from typing import Any
+
 from hlseval.hlscoder import HLSCoder
 import hlseval.prompts as prompts
 import hlseval.parser as parser
@@ -100,7 +101,7 @@ class HLSEval(HLSCoder):
         with open(f"{new_solution_path}/{self.kernel_name}.cpp", "w") as file:
             logger.debug("Writing to file")
             kernel_code = self.get_kernel_code(new_solution_path)
-            if kernel_code == None:
+            if kernel_code is None:
                     logger.error("LLM Failed to produce Code. Skipping attempt")
                     return 1, "Failed to produce kernel code"
             else:
@@ -121,8 +122,7 @@ class HLSEval(HLSCoder):
             try:
                 logger.info("Starting Vitis Run")
                 csim_output, csim_elapsed_time = run_csim(new_solution_path, self.kernel_name)
-                # csim_output, csim_elapsed_time = run_vitis_tools(new_solution_path, self.kernel_name, mode="csim") # FIXME: Switch to run_csim function
-                sim_returncode = csim_output.returncode if (csim_output != None) else 1
+                sim_returncode = csim_output.returncode if (csim_output is not None) else 1
             except CsimTimeoutError as e:
                 sim_returncode = 1
                 logger.warning("Vitis timed out on Simulation")
@@ -162,7 +162,7 @@ class HLSEval(HLSCoder):
 
 
     # Extract the code from the LLM response
-    def get_kernel_code(self, new_solutions_path: str = None) -> str:
+    def get_kernel_code(self, new_solutions_path: str = None) -> str | None | Any:
         """Fetch the kernel code from the provided solution path, if none provided default 
         to canonical solution."""
         try:
