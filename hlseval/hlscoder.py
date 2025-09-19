@@ -15,9 +15,8 @@ except ImportError:
     HuggingFaceEmbedding = None  
 
 
-api_key = os.environ["API_KEY"] # reads for the environment variable 'API_KEY'
+api_key = os.environ["OPENAI_API_KEY"] # reads for the environment variable 'API_KEY'
 openrouter_api_key = os.environ["OPENROUTER_API_KEY"] # reads for the environment variable 'OPENROUTER_API_KEY'
-
 
 def count_tokens(text, model="gpt-4o"):
     """Estimate token count for a given text string."""
@@ -61,7 +60,9 @@ class HLSCoder:
             "total_tokens": 0,  
         }
         self.url=url  
-        self.headers = {"Authorization": f"Bearer {openrouter_api_key}"}
+        self.headers = {"Authorization": f"Bearer {api_key}"
+                        , "Content-Type": "application/json" #Comment out when using the Openrouter key uncomment for OPenai
+                        }
 
 
     def __call__(self, prompt):

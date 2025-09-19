@@ -15,6 +15,8 @@ from .prompts import SYSTEM_PROMPTS
 
 logger = logging.getLogger("HLSOBJECT")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENAI_URL="https://api.openai.com/v1/chat/completions"
+
 
 class HLSEval(HLSCoder):
     def __init__(self,
@@ -30,7 +32,7 @@ class HLSEval(HLSCoder):
         super().__init__(
             hls_flow=hls_tool_chain, 
             system_prompt=SYSTEM_PROMPTS[f"{hls_tool_chain}"][f"skip_behavioral_{skip_behavioral}"], 
-            url="https://openrouter.ai/api/v1/chat/completions", 
+            url=OPENAI_URL, 
             model=model, 
             temperature=0.0, 
             top_p=1.0, 

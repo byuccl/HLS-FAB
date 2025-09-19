@@ -104,7 +104,7 @@ TIER 1 - CRITICAL ERRORS (Must Fix First):
 
 TIER 2 - PERFORMANCE WARNINGS (Address if Tier 1 is clear):
 - II Violations → Memory port contention
-- Resource overflow → Exceeding FPGA limits (BRAM: 216, DSP: 216, FF: 74880 , LUT: 37440)
+- Resource overflow → Exceeding FPGA limits
 - Timing violations → Clock frequency issues
 
 TIER 3 - OPTIMIZATION OPPORTUNITIES (Final stage):
