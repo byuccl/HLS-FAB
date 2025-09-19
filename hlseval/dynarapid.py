@@ -11,51 +11,52 @@ import hlseval.vitis as vitis
 
 logger = logging.getLogger(__name__)
 
-def run_dynarapid_w_feedback(test: hls.HLSEval, attempt: int=0):
-    new_solution_path = f"{test.solution_path}/{attempt+1}"
-    if test._skip_behavioral:
+def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
+    new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
+    if kernel_object._skip_behavioral:
         pass
     else:
     # Run CSIM    
 
         try:
             logger.info("Starting Dynarapid Simulation")
-            dsim_output, csim_elapsed_time = vitis.run_csim(new_solution_path, test.kernel_name, hls_flow=test.hls_flow)
+            dsim_output, csim_elapsed_time = vitis.run_csim(new_solution_path, kernel_object.kernel_name, hls_flow=kernel_object.hls_flow)
             logger.debug(dsim_output)
         except vitis.CsimTimeoutError as e:
             logger.warning("Vitis timed out on Simulation")
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = parser.gather_parsed_data(test.kernel_name, hls_flow=test.hls_flow, model=test._model, attempt=attempt+1, iter=test._iter)
+        dynarapid_feedback = parser.gather_parsed_data(kernel_object.kernel_name, hls_flow=kernel_object.hls_flow, model=kernel_object._model, attempt=attempt+1, iter=kernel_object._iter)
     
 
-    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(test.kernel_name, new_solution_path, attempt, test._model, test._rapidwright, iter=test._iter)
-    dynarapid_feedback['compile_feedback']["returncode"] = returncode
+    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_object, attempt=attempt)
+    dynarapid_feedback['sim_feedback']["returncode"] = returncode
 
 
-    dynarapid_feedback = check_dot_dcp(test, attempt, dynarapid_feedback)
+    dynarapid_feedback = check_dot_dcp(kernel_object, attempt, dynarapid_feedback)
 
     return returncode, dynarapid_feedback, csim_elapsed_time, dynamatic_elapsed_time
 
 
-def run_dynarapid(test: hls.HLSEval, attempt: int=0):
+def run_dynarapid(kernel_object: hls.HLSEval, attempt: int=0):
     dynamatic_elapsed_time = None
     java_elapsed_time = None
+    new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
     # Extract the relevant part of the path
     # Get the path from solutions_path that matches the container's structure
-    if "/results/solutions/dynarapid/" in test.solution_path:
+    if "/results/solutions/dynarapid/" in new_solution_path:
         # Extract the path starting from /results/...
-        container_path = "/mount" + test.solution_path[test.solution_path.find("/results/solutions/dynarapid/"):]
+        container_path = "/mount" + new_solution_path[new_solution_path.find("/results/solutions/dynarapid/"):]
     else:
         # Use the full path as fallback
-        container_path = f"/mount{test.solution_path}"
+        container_path = f"/mount{new_solution_path}"
     
-    logger.debug(f"Host path: {test.solution_path}")
+    logger.debug(f"Host path: {new_solution_path}")
     logger.debug(f"Container path: {container_path}")
     
     # Create the TCL script content
     syn_tcl = f"""
 set_project .
-set_top_file {test.kernel_name}.cpp
+set_top_file {kernel_object.kernel_name}.cpp
 synthesize -use-lsq=false -simple-buffers=true -verbose
 #cdfg
 write_hdl
@@ -68,7 +69,7 @@ exit
     old_umask = os.umask(0)
     try:
         # Write the TCL script to a file with proper permissions from the start
-        filename = f"{test.solution_path}/synthesis.tcl"
+        filename = f"{new_solution_path}/synthesis.tcl"
         try:
             with open(filename, "w") as file:
                 file.write(syn_tcl)
@@ -79,11 +80,11 @@ exit
         
         # Prepare the source directory with proper permissions
         try:
-            os.makedirs(f"{test.solution_path}/src", mode=0o777, exist_ok=True)
-            os.makedirs(f"{test.solution_path}/reports", mode=0o777, exist_ok=True)
+            os.makedirs(f"{new_solution_path}/src", mode=0o777, exist_ok=True)
+            os.makedirs(f"{new_solution_path}/reports", mode=0o777, exist_ok=True)
             
             # Use the cp command with the --preserve=mode option to preserve mode but not ownership
-            subprocess.run(f"cp {test.solution_path}/{test.kernel_name}.cpp {test.solution_path}/src/", 
+            subprocess.run(f"cp {new_solution_path}/{kernel_object.kernel_name}.cpp {new_solution_path}/src/", 
                           shell=True, check=True, text=True)
             
         except Exception as e:
@@ -147,7 +148,7 @@ exit
                 return 1, "Synthesis process failed", dynamatic_elapsed_time, java_elapsed_time
 
             # If rapidwright is False, return after dynamatic synthesis
-            if not test._rapidwright:
+            if not kernel_object._rapidwright:
                 # Instead of chmod, use Docker to set permissions from inside the container
                 fix_perm_cmd = f"docker exec dynarapid_container bash -c 'chmod -R a+rwx {container_path}'"
                 try:
@@ -163,7 +164,7 @@ exit
             logger.info("Running Java GenerateDesign command...")
             
             # Define the target directory for this attempt with new structure
-            attempt_dir = f"/mount/results/solutions/dynarapid/{test._model}/{test._iter+1}/{test.kernel_name}/attempts_{attempt+1}/dcp_designs"
+            attempt_dir = f"/mount/results/solutions/dynarapid/{kernel_object._model}/{kernel_object._iter+1}/{kernel_object.kernel_name}/attempts_{attempt+1}/dcp_designs"
             
             # Create the target directory
             mkdir_cmd = f"docker exec dynarapid_container bash -c 'mkdir -p {attempt_dir}'"
@@ -206,7 +207,7 @@ exit
                 return 1, "Error creating symbolic link", dynamatic_elapsed_time, java_elapsed_time
             
             # Now run the Java command with the symbolic link in place
-            java_cmd = f"docker exec dynarapid_container bash -c 'cd {container_path} && java ch.agsl.dynarapid.GenerateDesign -placer greedy -f {container_path}/reports/{test.kernel_name}.dot'"
+            java_cmd = f"docker exec dynarapid_container bash -c 'cd {container_path} && java ch.agsl.dynarapid.GenerateDesign -placer greedy -f {container_path}/reports/{kernel_object.kernel_name}.dot'"
             
             java_begin = datetime.now()
             java_process = subprocess.Popen(java_cmd, shell=True, stdout=subprocess.PIPE, 
@@ -289,11 +290,14 @@ exit
     
     return 0, stdout, dynamatic_elapsed_time, java_elapsed_time
 
-def check_dot_dcp(test: hls.HLSEval, attempt: int=0, dynarapid_feedback = None):
-    dot_path  = f"{test.solution_path}/attempts_{attempt+1}/dcp_designs/{test.kernel_name}.dot"
-    dot_path2 = f"{test.solution_path}/attempts_{attempt+1}/dcp_designs/{test.kernel_name}/{test.kernel_name}.dot"
-    dcp_path  = f"{test.solution_path}/attempts_{attempt+1}/dcp_designs/{test.kernel_name}_routed.dcp"
-    dcp_path2 = f"{test.solution_path}/attempts_{attempt+1}/dcp_designs/{test.kernel_name}/{test.kernel_name}_routed.dcp"
+def check_dot_dcp(kernel_object: hls.HLSEval, attempt: int=0, dynarapid_feedback = None):
+    new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
+
+
+    dot_path  = f"{new_solution_path}/dcp_designs/{kernel_object.kernel_name}.dot"
+    dot_path2 = f"{new_solution_path}/dcp_designs/{kernel_object.kernel_name}/{kernel_object.kernel_name}.dot"
+    dcp_path  = f"{new_solution_path}/dcp_designs/{kernel_object.kernel_name}_routed.dcp"
+    dcp_path2 = f"{new_solution_path}/dcp_designs/{kernel_object.kernel_name}/{kernel_object.kernel_name}_routed.dcp"
 
 
     check_path_dot1 = pathlib.Path(dot_path)
@@ -321,7 +325,7 @@ def check_dot_dcp(test: hls.HLSEval, attempt: int=0, dynarapid_feedback = None):
     dynarapid_feedback['compile_feedback']["has_dcp"] = True if check_path_dcp1.exists() or check_path_dcp2.exists() else False
 
 
-    out_data_path = f"{test.solution_path}/{attempt+1}/{test.kernel_name}_data.json"
+    out_data_path = f"{new_solution_path}/{attempt+1}/{kernel_object.kernel_name}_data.json"
 
     parser.save_feedback_data(out_data_path, dynarapid_feedback)
     return dynarapid_feedback

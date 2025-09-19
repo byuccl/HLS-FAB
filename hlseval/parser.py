@@ -296,7 +296,3 @@ def save_feedback_data(out_data_path, feedback = None):
     except Exception as e:
         logger.error(f"Failed to save feedback data: {e}")
 
-    
-# # Example usage
-# if __name__ == "__main__":
-#     parse_synth_reports()

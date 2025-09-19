@@ -15,7 +15,7 @@ from hlseval.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DY
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-# logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
 
 
 # A single attempt to generate, test, and synthesize a kernel

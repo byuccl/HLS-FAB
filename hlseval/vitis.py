@@ -574,7 +574,7 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
     else: 
         logger.warning("No Testbench file skipping to next kernel.")
         #No Testebench was made skip this kernel. 
-        return 
+        return None, None
         
 def run_csynth(filepath, kernel_name):
     csynth_elapse_time = None
