@@ -28,8 +28,8 @@ def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
         dynarapid_feedback = parser.gather_parsed_data(kernel_object.kernel_name, hls_flow=kernel_object.hls_flow, model=kernel_object._model, attempt=attempt+1, iter=kernel_object._iter)
     
 
-    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_object, attempt=attempt)
-    dynarapid_feedback['sim_feedback']["returncode"] = returncode
+    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(test, attempt)
+    dynarapid_feedback['compile_feedback'] = {"returncode": returncode}
 
 
     dynarapid_feedback = check_dot_dcp(kernel_object, attempt, dynarapid_feedback)
