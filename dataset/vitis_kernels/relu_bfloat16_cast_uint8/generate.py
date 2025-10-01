@@ -35,7 +35,7 @@ inputs_info = [
 
 def behavioral(input_vector):
     relu = np.maximum(input_vector, 0)
-    rounded = np.round(relu)
+    rounded = np.floor(relu+(0.5))
     clipped = np.clip(rounded, 0, 255)
     return clipped.astype(np.uint8)
 

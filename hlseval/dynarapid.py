@@ -325,7 +325,7 @@ def check_dot_dcp(kernel_object: hls.HLSEval, attempt: int=0, dynarapid_feedback
     dynarapid_feedback['compile_feedback']["has_dcp"] = True if check_path_dcp1.exists() or check_path_dcp2.exists() else False
 
 
-    out_data_path = f"{new_solution_path}/{attempt+1}/{kernel_object.kernel_name}_data.json"
+    out_data_path = f"{new_solution_path}/{kernel_object.kernel_name}_data.json"
 
     parser.save_feedback_data(out_data_path, dynarapid_feedback)
     return dynarapid_feedback

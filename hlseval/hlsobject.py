@@ -14,8 +14,6 @@ from .vitis import run_csim, CsimTimeoutError
 from .prompts import SYSTEM_PROMPTS
 
 logger = logging.getLogger("HLSOBJECT")
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-OPENAI_URL="https://api.openai.com/v1/chat/completions"
 
 
 class HLSEval(HLSCoder):
@@ -32,7 +30,6 @@ class HLSEval(HLSCoder):
         super().__init__(
             hls_flow=hls_tool_chain, 
             system_prompt=SYSTEM_PROMPTS[f"{hls_tool_chain}"][f"skip_behavioral_{skip_behavioral}"], 
-            url=OPENAI_URL, 
             model=model, 
             temperature=0.0, 
             top_p=1.0, 
@@ -96,6 +93,8 @@ class HLSEval(HLSCoder):
         llm_completion_end = dt.now()
         llm_elapsed_time = llm_completion_end - llm_completion_begin
         logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
+
+
 
         with open(f"{new_solution_path}/{self.kernel_name}.json", "w") as file:
             json.dump(result, file, indent=4)

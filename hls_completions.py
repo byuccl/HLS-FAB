@@ -50,6 +50,53 @@ def run_kernel_attempt(
     )
     return returncode, feedback
 
+def cleanup_files(kernel_object, new_solution_path, attempt):
+    """
+    Deletes all files in the specified folder except those listed in files_to_keep.
+    
+    Args:
+        folder_path (str): The path to the folder to clean up.
+        files_to_keep (list): A list of file names (strings) to exclude from deletion.
+    """
+
+    files_to_keep = [f"{kernel_object.kernel_name}.cpp",
+                     f"{kernel_object.kernel_name}.json",
+                     f"{kernel_object.kernel_name}.h",
+                     f"{kernel_object.kernel_name}_tb.cpp",
+                     f"{kernel_object.kernel_name}_data.json",
+                    ]
+    
+    print(f"Starting cleanup in: {new_solution_path}")
+    deleted_count = 0
+
+    try:
+        # Get a list of all items (files and folders) in the directory
+        for item_name in os.listdir(new_solution_path):
+            item_path = os.path.join(new_solution_path, item_name)
+
+            # Check if the item is a file AND its name is NOT in the keep list
+            # We explicitly check that it's a file to avoid deleting sub-folders
+            if os.path.isfile(item_path) and item_name not in files_to_keep:
+                
+                print(f"  Deleting file: {item_name}")
+                # os.remove(item_path)
+                deleted_count += 1
+                
+            elif os.path.isdir(item_path):
+                print(f"  Skipping directory: {item_name}")
+            
+            elif item_name in files_to_keep:
+                print(f"  Keeping file: {item_name}")
+                
+        print(f"\nCleanup complete. Total files deleted: {deleted_count}")
+
+    except FileNotFoundError:
+        print(f"Error: Folder not found at {new_solution_path}")
+    except PermissionError:
+        print(f"Error: Permission denied to access files in {new_solution_path}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
 # A wrapper around the feedback loop process for each set of feedback-dependent generation attempts
 def process_kernel(kernel_object: HLSEval):
     prev_ret_code = -1
@@ -61,6 +108,9 @@ def process_kernel(kernel_object: HLSEval):
 
     # Use a feedback loop to iterate on a design n times
     for attempt in range(kernel_object._num_attempts):
+        new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
+        os.makedirs(new_solution_path, exist_ok=True)
+
         logger.info(f"Kernel: {kernel_object.kernel_name} Attempt: {attempt+1}")
 
         prev_ret_code, feedback = run_kernel_attempt(kernel_object, attempt, feedback)
@@ -71,6 +121,8 @@ def process_kernel(kernel_object: HLSEval):
 
         timestamp = datetime.now().strftime("%H:%M:%S")
         logger.debug(f"[{kernel_object._model}] Attempt {attempt+1} for kernel {kernel_object.kernel_name} ended at {timestamp}")
+
+        cleanup_files(kernel_object, new_solution_path, attempt)
 
     logger.info(f"All attempts completed for {kernel_object.kernel_name}")
 

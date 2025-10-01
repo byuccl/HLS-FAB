@@ -15,8 +15,25 @@ except ImportError:
     HuggingFaceEmbedding = None  
 
 
-api_key = os.environ["OPENAI_API_KEY"] # reads for the environment variable 'API_KEY'
-openrouter_api_key = os.environ["OPENROUTER_API_KEY"] # reads for the environment variable 'OPENROUTER_API_KEY'
+useOpenai = True
+useOpenrouter = True
+
+try:
+    api_key = os.environ["OPENAI_API_KEY"] # reads for the environment variable 'API_KEY'
+except Exception as e:
+    useOpenai = False
+    print(f"No Environment variable OPENAI_API_KEY found: {e}")
+
+try:
+    openrouter_api_key = os.environ["OPENROUTER_API_KEY"] # reads for the environment variable 'OPENROUTER_API_KEY'
+except Exception as e:
+    useOpenrouter = False
+    print(f"No Environment variable OPENROUTER_API_KEY found: {e}")
+
+
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENAI_URL="https://api.openai.com/v1/chat/completions"
+
 
 def count_tokens(text, model="gpt-4o"):
     """Estimate token count for a given text string."""
@@ -45,11 +62,11 @@ class HLSCoder:
     """A basic agent that talks via OpenAI APIs"""
     def __init__(  
         self, hls_flow, system_prompt, 
-        url="https://openrouter.ai/api/v1/chat/completions", model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1  
+        model="gpt-4o", temperature=0.0, top_p=1.0, attempts=1  
     ):  
         self.system_prompt=system_prompt  
         self.messages = [{"role": "system", "content": self.system_prompt}]  
-        self.model = model  
+        self.model = model  #Formats for model: company/model-0.0, gpt-0.0 Only on gpt models use openai api not openrouter
         self.temperature = temperature  
         self.top_p = top_p  
         self.attempts = attempts  
@@ -59,10 +76,27 @@ class HLSCoder:
             "prompt_tokens": 0,  
             "total_tokens": 0,  
         }
-        self.url=url  
-        self.headers = {"Authorization": f"Bearer {api_key}"
-                        , "Content-Type": "application/json" #Comment out when using the Openrouter key uncomment for OPenai
-                        }
+        # Make sure the API corresponds with what they are using. 
+        if (useOpenai and useOpenrouter):
+            if "gpt" in model: # Get rid of openai at front for openai api call
+                self.openrouter = False
+                self.model = model.split("/")[-1]
+                self.url = OPENAI_URL
+                self.headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json" }
+            else:
+                self.openrouter = True
+                self.url = OPENROUTER_URL
+                self.headers = {"Authorization": f"Bearer {openrouter_api_key}" }
+        elif (useOpenai and not useOpenrouter):
+            print("Just Openai")
+
+            self.openrouter = False
+            if ("openai" not in model):
+                raise RuntimeWarning("The model is not supported by OPENAI API")
+        elif (useOpenrouter and not useOpenai):
+            print("Just Openrouter")
+            self.openrouter = True
+
 
 
     def __call__(self, prompt):
@@ -101,7 +135,7 @@ class HLSCoder:
                     response = api_response["choices"][0]["message"]["content"]
                 else:
                     response = api_response["choices"][0].get("text", "")
-            
+
             # Check if this is a Gemini-style response
             elif "candidates" in api_response and len(api_response["candidates"]) > 0:
                 candidate = api_response["candidates"][0]
@@ -112,7 +146,8 @@ class HLSCoder:
                 else:
                     # Fallback if structure is different
                     response = str(candidate)
-            
+            elif "output" in api_response and len(api_response["output"]) > 0 :
+                response = api_response["output"][1]["content"][0]["text"]
             else:
                 # Fallback - try to extract any text we can find
                 logger.warning("HLS CODER: Unknown response format")
@@ -217,27 +252,33 @@ class HLSCoder:
         )
         # Flatten the list and filter out empty matches
         code_blocks = [block for match in code_blocks for block in match if block]
-        return code_blocks[0].strip() if code_blocks else None
+        return code_blocks[0].strip() if code_blocks else text
 
 
 # Function to call the LLM API  
 def call_llm_api(coder, tools=None):  
     """Call the LLM API directly"""
-    body = {  
-        "messages": coder.messages,  
-        "temperature": coder.temperature,  
-        "top_p": coder.top_p,  
+
+    openrouter_body = {
+        "model" : coder.model,
+        "messages": coder.messages, 
+        "temperature": coder.temperature,
+        "top_p": coder.top_p    
     }
+    gpt_5_body = {  
+        "model" : coder.model, # Comment when not using Openai
+        "messages": coder.messages,
+    }
+
+    body = openrouter_body if coder.openrouter else gpt_5_body 
+
     if tools:  
         body["tools"] = tools
     if "claude" in coder.url.lower() or "gemini" in coder.url.lower(): # The Claude models needed a max_tokens value
         body["max_tokens"] = 8000
     logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")
-    data = json.dumps({
-        "model": coder.model, 
-        "messages": coder.messages
-    })
-    response = requests.post(url=coder.url, data=data, headers=coder.headers)
+
+    response = requests.post(url=coder.url, json=body, headers=coder.headers) 
     # Log the raw response for debugging  
     logger.debug(f"API Response status: {response.status_code}")  
     try:  
