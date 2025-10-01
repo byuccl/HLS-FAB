@@ -182,7 +182,7 @@ if __name__ == "__main__":
             with open (f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
                 hlseval.write_table_header(logfile)
                 for kernel in kernels:
-                    logger.info(f"Running Model: {model} Kernel: {kernel["kernel_name"]} Pass: {iter+1}")
+                    logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
                     kernel_object = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile)
                     process_kernel(kernel_object)
                     
