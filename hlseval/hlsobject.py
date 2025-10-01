@@ -93,7 +93,8 @@ class HLSEval(HLSCoder):
         llm_completion_end = dt.now()
         llm_elapsed_time = llm_completion_end - llm_completion_begin
         logger.debug(f"LLM API call elapsed time: {llm_elapsed_time}")
-
+        
+        os.makedirs(new_solution_path, exist_ok=True) # Create directory if doesn't already exits
         with open(f"{new_solution_path}/{self.kernel_name}.json", "w") as file:
             json.dump(result, file, indent=4)
 
