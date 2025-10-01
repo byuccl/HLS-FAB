@@ -5,7 +5,7 @@ from hlseval import PromptConstructor, generate_examples
 # Constants
 vector_size = 64
 
-function_signature = "void dotproduct_bias_relu_bfloat16(ap_float<16,8>* in0, ap_float<16,8>* in1, ap_float<16,8>* out, ap_float<16,8> bias, uint32_t vector_size)"
+function_signature = "void dotproduct_bias_relu_bfloat16(ap_float<16,8>* in0, ap_float<16,8>* in1, ap_float<16,8>* out, ap_float<16,8> bias)"
 
 description = f"""
 This HLS kernel computes the dot product of two vectors of bfloat16 values, each of size {vector_size}. 
@@ -17,7 +17,7 @@ Parameters:
     - Second parameter: Pointer to the second input buffer of {vector_size} ap_float<16,8> values.
     - Third parameter: Pointer to the output buffer of a single ap_float<16,8> value.
     - Fourth parameter: A single ap_float<16,8> bias value.
-    - Fifth parameter: An unsigned integer representing the size of the vectors, which is {vector_size}.
+
 """
 
 inputs_info = [
@@ -43,7 +43,7 @@ inputs_info = [
     },
     {
         "name": "out",  # Name of the output buffer
-        "array_dimension": 1,  # Number of dimensions in the output buffer
+        "array_dimension": 0,  # Number of dimensions in the output buffer
         "shape": (1,),  # Shape of the output buffer
         "total_elements": 1,  # Total number of elements in the output buffer
         "dtype": "bfloat16",

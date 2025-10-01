@@ -48,9 +48,12 @@ inputs_info = [
 
 def behavioral(a, b):
     # Matrix multiplication for int8, result clamped to int8.
+    a = a.reshape((matrix_size, matrix_size))
+    b = b.reshape((matrix_size, matrix_size))
+    res = np.zeros((matrix_size,matrix_size, np.int32))
     res = np.matmul(a.astype(np.int32), b.astype(np.int32))
     res = np.clip(res, -128, 127).astype(np.int8)
-    return res
+    return res.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 

@@ -19,7 +19,7 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 #     tests = [json.loads(line) for line in f]
     
 # Function to collect all the synthesis data and warnings/errors to be used in the feedback
-def gather_feedback(synthesis_output=None, data=None, goals=None):
+def gather_feedback(synthesis_output=None, data=None):
     """Function to gather feedback from synthesis output. Holds Errors and Warnings and Performance data."""
     if synthesis_output is None:
         synthesis_output = ""
@@ -53,10 +53,9 @@ def gather_feedback(synthesis_output=None, data=None, goals=None):
             "ff": data["ff"],
             "lut": data["lut"]
         },
-        "goals": ["fix errors"]
+        "goals": ["fix errors"] #FIXME: What Hard coded goals would we like
     }
-    if goals is not None:
-        feedback["goals"].extend(goals)
+
 
     if feedback["latency"]["max"] == 0:
         feedback["errors"].append("The maximum latency is 0, which may indicate an issue with the synthesis process.")
@@ -195,13 +194,11 @@ def parse_sim_report(file_path=None):
     
     return feedback
 
-def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=None, iter=0):
+def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, iter=0):
     f""" 
         Send in the  kernel name and the model and attempt and it will search the solutions for the specific
         file where to parse data from.
-        
-        The goals is optional if you want to send in specific goals for the optimization of the HLS Code. 
-        Send the goals as ["new goal", "another new goal"]
+    
     """
     logger.info(f"Gathering parsed data for kernel: {kernel_name}, model: {model}, attempt: {attempt}")
     #Create all the files needed if not already created
@@ -242,10 +239,10 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, goals=No
                     log.write(report)
                     log.write("\n\n")
                     
-                synth_feedback = gather_feedback(old_log, summary, goals=goals)
+                synth_feedback = gather_feedback(old_log, summary)
 
         except FileNotFoundError:
-            synth_feedback = gather_feedback(old_log, goals=goals)
+            synth_feedback = gather_feedback(old_log)
             logger.warning(
                 f"The file {in_report_file} does not exist."
             )
@@ -299,7 +296,3 @@ def save_feedback_data(out_data_path, feedback = None):
     except Exception as e:
         logger.error(f"Failed to save feedback data: {e}")
 
-    
-# # Example usage
-# if __name__ == "__main__":
-#     parse_synth_reports()
