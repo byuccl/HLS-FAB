@@ -3,6 +3,7 @@ import subprocess
 import logging
 import time
 import json
+import glob
 from datetime import datetime
 import pathlib
 import hlseval.hlsobject as hls
@@ -12,6 +13,7 @@ import hlseval.vitis as vitis
 logger = logging.getLogger(__name__)
 
 def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
     if kernel_object._skip_behavioral:
         pass
@@ -28,11 +30,29 @@ def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
         dynarapid_feedback = parser.gather_parsed_data(kernel_object.kernel_name, hls_flow=kernel_object.hls_flow, model=kernel_object._model, attempt=attempt+1, iter=kernel_object._iter)
     
 
-    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(test, attempt)
+    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_object, attempt)
     dynarapid_feedback['compile_feedback'] = {"returncode": returncode}
 
 
     dynarapid_feedback = check_dot_dcp(kernel_object, attempt, dynarapid_feedback)
+    #Save Dynrapid Log in the same log as Sim
+    search_pattern = os.path.join(new_solution_path, "dynamatic_*.log")
+    matching_files = glob.glob(search_pattern)
+    dynarapid_report = matching_files[-1]
+    print(matching_files)
+    print(dynarapid_report)
+
+    log_file_dir = f"{new_solution_path}/synth_logs/"
+    log_file = f"{log_file_dir}/{kernel_object.kernel_name}_synth{timestamp}.log"
+    try:
+        with open(dynarapid_report, 'r') as file:
+            report = file.read()
+
+            with open(log_file, 'a') as log:
+                log.write("\n\n----------------- Dynarapid Log --------------------\n\n")
+                log.write(report)
+    except FileExistsError:
+        logger.warning(f"{log_file} or {dynarapid_report} Does not exist")
 
     return returncode, dynarapid_feedback, csim_elapsed_time, dynamatic_elapsed_time
 

@@ -6,6 +6,7 @@ import pathlib
 import subprocess
 import argparse
 from datetime import datetime
+import shutil
 import hlseval
 import csv
 from hlseval import HLSEval
@@ -50,6 +51,10 @@ def run_kernel_attempt(
     )
     return returncode, feedback
 
+
+
+
+
 def cleanup_files(kernel_object, new_solution_path, attempt):
     """
     Deletes all files in the specified folder except those listed in files_to_keep.
@@ -59,43 +64,97 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
         files_to_keep (list): A list of file names (strings) to exclude from deletion.
     """
 
-    files_to_keep = [f"{kernel_object.kernel_name}.cpp",
+    dyna_folders = ["hdl",
+                    "synth_logs",
+                    "test_data",
+                    "reports"
+                    ]
+    
+    dyna_files = [f"{kernel_object.kernel_name}.cpp",
+                     f"{kernel_object.kernel_name}.json",
+                     f"{kernel_object.kernel_name}.h",
+                     f"{kernel_object.kernel_name}_tb.cpp",
+                     f"{kernel_object.kernel_name}_data.json",
+                     f"{kernel_object.kernel_name}.png",
+                     f"{kernel_object.kernel_name}_bbgraph.png",
+                    ]
+    
+    vitis_folders = ["synth_logs",
+                       "test_data",
+                       "hls",
+                       "impl",
+                       "syn",]
+    
+    vitis_files = [f"{kernel_object.kernel_name}.cpp",
                      f"{kernel_object.kernel_name}.json",
                      f"{kernel_object.kernel_name}.h",
                      f"{kernel_object.kernel_name}_tb.cpp",
                      f"{kernel_object.kernel_name}_data.json",
                     ]
     
+    folders_to_keep = vitis_folders if kernel_object._hls_tool=="vitis" else dyna_folders
+    files_to_keep = vitis_files if kernel_object._hls_tool=="vitis" else dyna_files
+    
     print(f"Starting cleanup in: {new_solution_path}")
+    deleted_count_folders = 0
     deleted_count = 0
 
     try:
-        # Get a list of all items (files and folders) in the directory
-        for item_name in os.listdir(new_solution_path):
-            item_path = os.path.join(new_solution_path, item_name)
-
-            # Check if the item is a file AND its name is NOT in the keep list
-            # We explicitly check that it's a file to avoid deleting sub-folders
-            if os.path.isfile(item_path) and item_name not in files_to_keep:
-                
-                print(f"  Deleting file: {item_name}")
-                # os.remove(item_path)
-                deleted_count += 1
-                
-            elif os.path.isdir(item_path):
-                print(f"  Skipping directory: {item_name}")
+        for dirpath, dirnames, filenames in os.walk(new_solution_path, topdown=False):
             
-            elif item_name in files_to_keep:
-                print(f"  Keeping file: {item_name}")
-                
-        print(f"\nCleanup complete. Total files deleted: {deleted_count}")
+            relative_path = os.path.relpath(dirpath, new_solution_path)
+            print(relative_path)
+            dir_subdir = relative_path.split(os.sep)
+            subfolder = dir_subdir[-1]
 
+            subfolder2 = relative_path.split(os.sep)[-2] if len(dir_subdir)>1 else subfolder
+
+            print(subfolder)
+            # Check if this directory is within one of the explicitly kept root folders.
+            is_in_kept_folder = (subfolder2 in folders_to_keep) 
+
+
+                        # 2. Clean up FILES in the current directory (dirpath)
+            # 💡 ONLY PROCEED WITH FILE DELETION IF WE ARE NOT IN A KEPT FOLDER
+            if not is_in_kept_folder:
+                for file_name in filenames:
+                    # Skip the core kernel files even if they are in a folder not explicitly kept
+                    if file_name not in files_to_keep:
+                        file_path = os.path.join(dirpath, file_name)
+                        print(f"  Deleting file: {file_path}")
+                        os.remove(file_path) # Uncomment to actually delete
+                        deleted_count += 1
+                    else:
+                        print(f"  Keeping core file: {os.path.join(dirpath, file_name)}")
+            else:
+                print(f"  Skipping file cleanup in protected folder: {dirpath}")
+
+
+            # 3. Clean up FOLDERS (Only applies to immediate subfolders of the ROOT path)
+            if dirpath == new_solution_path:
+                folders_to_check = list(dirnames)
+                for folder_name in folders_to_check:
+                    if folder_name not in folders_to_keep:
+                        folder_path = os.path.join(dirpath, folder_name)
+                        print(f"  Deleting UNKEPT root subfolder and its contents: {folder_path}")
+                        shutil.rmtree(folder_path) # NOTE: Use shutil.rmtree for folders!
+                        deleted_count_folders += 1
+                    else:
+                        print(f"  Keeping root subfolder: {os.path.join(dirpath, folder_name)}")
+
+        print(f"\nCleanup complete. Total files deleted: {deleted_count}")
+        print(f"Total root subfolders deleted: {deleted_count_folders}")
     except FileNotFoundError:
         print(f"Error: Folder not found at {new_solution_path}")
     except PermissionError:
         print(f"Error: Permission denied to access files in {new_solution_path}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
+
+
+
+
 
 # A wrapper around the feedback loop process for each set of feedback-dependent generation attempts
 def process_kernel(kernel_object: HLSEval):

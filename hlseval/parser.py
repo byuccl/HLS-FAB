@@ -216,43 +216,13 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, iter=0):
     }
     synth_feedback = None
     sim_feedback = None
-    if hls_flow == "vitis":
-        # Read in the log file from the HLS synthesis attempt
-        try:
-            with open(f"{solutions_path}{saved_log_file}", "r") as f:
-                old_log = f.read()
-                with open(log_file, "w") as log:
-                    log.write(old_log)
-                    log.write("\n\n")
-        except FileNotFoundError:
-            logger.warning(
-                f"The file {solutions_path}{saved_log_file} does not exist."
-            )
-            old_log = None
-        # Check if the synthesis was successful then add the data to json
-        try:
-            with open(in_report_file, 'r') as file:
-                report = file.read()
-                summary = parse_synth_report(in_report_file)
-                with open(log_file, "a") as log:
-                    log.write("\n\n")
-                    log.write(report)
-                    log.write("\n\n")
-                    
-                synth_feedback = gather_feedback(old_log, summary)
 
-        except FileNotFoundError:
-            synth_feedback = gather_feedback(old_log)
-            logger.warning(
-                f"The file {in_report_file} does not exist."
-            )
-        final_feedback["synth_feedback"] = synth_feedback
-    
     # Check if the simulation was successful then add the data to json
     try:
         with open(old_sim_log_file, 'r') as file:
             report = file.read()
-            with open(log_file, "a") as log:
+            with open(log_file, "w") as log:
+                log.write("\n\n----------------- HLS Simulation --------------------")
                 log.write("\n\n")
                 log.write(report)
                 log.write("\n\n")
@@ -278,6 +248,41 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, iter=0):
         #     json.dump(feedback, of, indent=4)
 
     final_feedback["sim_feedback"] = sim_feedback
+
+    if hls_flow == "vitis":
+        # Read in the log file from the HLS synthesis attempt
+        try:
+            with open(f"{solutions_path}{saved_log_file}", "r") as f: # Save the Warnings and Errors Log File
+                old_log = f.read()
+                with open(log_file, "a") as log:
+                    log.write("\n\n----------------- HLS Synthesis --------------------")
+                    log.write(old_log)
+                    log.write("\n\n")
+        except FileNotFoundError:
+            logger.warning(
+                f"The file {solutions_path}{saved_log_file} does not exist."
+            )
+            old_log = None
+        # Check if the synthesis was successful then add the data to json
+        try:
+            with open(in_report_file, 'r') as file: # Save the report with all the timing and Utilization
+                report = file.read()
+                summary = parse_synth_report(in_report_file)
+                with open(log_file, "a") as log:
+                    log.write("\n\n")
+                    log.write(report)
+                    log.write("\n\n")
+                    
+                synth_feedback = gather_feedback(old_log, summary)
+
+        except FileNotFoundError:
+            synth_feedback = gather_feedback(old_log)
+            logger.warning(
+                f"The file {in_report_file} does not exist."
+            )
+        final_feedback["synth_feedback"] = synth_feedback
+    
+
         
     return final_feedback
 
