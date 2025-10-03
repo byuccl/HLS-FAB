@@ -144,6 +144,8 @@ if __name__ == "__main__":
     parser.add_argument("--hls_flow", type=str, choices=['vitis', 'dynarapid'], help="Whether to process HLS for vitis or dynarapid") 
     parser.add_argument("--rapidwright", action='store_true', help="Add this flag to enable RapidWright") 
     parser.add_argument("--skip_behavioral", action='store_true', help="Add this flag to skip Csim" ) 
+    parser.add_argument("--rag", action='store_true', help="Add this flag to use rag" ) 
+
     parser.add_argument("-k", type=int, default=1, dest="k", help="pass@k with k number of attempts")
     args = parser.parse_args()  
 
@@ -163,7 +165,7 @@ if __name__ == "__main__":
     logger.debug(f"Skipping Behavioral: {args.skip_behavioral}")
     # Setting to turn rag on and off
     rag = {}
-    rag["use_rag"]=True
+    rag["use_rag"]=args.rag
     logger.debug(f"Using RAG: {rag['use_rag']}")
 
  
