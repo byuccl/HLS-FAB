@@ -67,7 +67,7 @@ class HLSEval(HLSCoder):
     def get_canonical(self):
         return self._kernel["canonical_solution"]
 
-    def llm_call(self, attempt: int, feedback=None):
+    def llm_call(self, attempt: int, rag, feedback=None):
         logger.debug(f"Generating LLM Call for {self.kernel_name} attempt {attempt+1}")
         # Generate the Prompt for LLM
         if attempt > 0:
@@ -80,8 +80,41 @@ class HLSEval(HLSCoder):
             prompt = self._kernel["prompt"]
         
         llm_completion_begin = dt.now()
+        
+        if rag["use_rag"]:
+            rag["num_retrieved"] = [1] # change this to increase number of retrieved kernel examples
+            from llama_index.core import (
+                StorageContext,
+                load_index_from_storage,
+                VectorStoreIndex,
+                SimpleDirectoryReader
+            )
+            logger.debug(f"importeed llama-index")
+            rag["directory"] = "./rag/vector_database"
+            # Set up directory
+            if not os.path.exists(rag["directory"]):
+                # Index new directory
+                logger.debug("Indexing...")
+                documents = SimpleDirectoryReader("rag_data/kernels", recursive=True).load_data()
+                index = VectorStoreIndex.from_documents(documents)
+                index.storage_context.persist(persist_dir=rag["directory"])
+            else:
+                # Load existing directory
+                storage_context = StorageContext.from_defaults(persist_dir=rag["directory"])
+                index = load_index_from_storage(storage_context)
+            # Find the most similar nodes
+            retriever = index.as_retriever(similarity_top_k=2)
+            nodes = retriever.retrieve(prompt)
+
+            context_string = "Reference related hls kernel:\n"
+            for node in nodes:
+                logger.debug(f"rag reference kernel: {node.metadata['file_name']}")
+                context_string += node.node.text
+                prompt = prompt + "\n" + context_string + "\n\n"
+
 
         response = self(prompt)
+        
         result = {
             "code": self.extract_codeblock(response["response"]),
             "stats": {

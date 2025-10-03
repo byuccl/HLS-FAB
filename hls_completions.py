@@ -22,6 +22,7 @@ logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encodi
 def run_kernel_attempt(
     kernel_object: HLSEval,
     attempt: int, 
+    rag: dict,
     prev_feedback: dict=None, 
     ) -> tuple :
 
@@ -30,7 +31,7 @@ def run_kernel_attempt(
     csim_elapsed_time = None
     csynth_elapsed_time = None
 
-    llm_elapsed_time = kernel_object.llm_call(attempt, feedback=prev_feedback)
+    llm_elapsed_time = kernel_object.llm_call(attempt, rag, feedback=prev_feedback)
 
 
     if kernel_object.hls_flow == "vitis":
@@ -98,7 +99,7 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
         print(f"An unexpected error occurred: {e}")
 
 # A wrapper around the feedback loop process for each set of feedback-dependent generation attempts
-def process_kernel(kernel_object: HLSEval):
+def process_kernel(kernel_object: HLSEval, rag):
     prev_ret_code = -1
     testbench_status = "failure"
     testbench_match_status = ""
@@ -113,7 +114,7 @@ def process_kernel(kernel_object: HLSEval):
 
         logger.info(f"Kernel: {kernel_object.kernel_name} Attempt: {attempt+1}")
 
-        prev_ret_code, feedback = run_kernel_attempt(kernel_object, attempt, feedback)
+        prev_ret_code, feedback = run_kernel_attempt(kernel_object, attempt, rag, feedback)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -160,6 +161,12 @@ if __name__ == "__main__":
     logger.debug(f"Pass@k: k = {args.k}")
     logger.debug(f"Rapidwright Enabled: {args.rapidwright}")
     logger.debug(f"Skipping Behavioral: {args.skip_behavioral}")
+    # Setting to turn rag on and off
+    rag = {}
+    rag["use_rag"]=True
+    logger.debug(f"Using RAG: {rag['use_rag']}")
+
+ 
 
     passes = int(args.attempts)
     rapidwright = args.rapidwright
@@ -184,7 +191,7 @@ if __name__ == "__main__":
                 for kernel in kernels:
                     logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
                     kernel_object = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile)
-                    process_kernel(kernel_object)
+                    process_kernel(kernel_object, rag)
                     
                 hlseval.write_table_footer(logfile)
  
