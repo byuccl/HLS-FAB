@@ -25,7 +25,8 @@ class HLSEval(HLSCoder):
             num_attempts: int = 1,
             skip_behavioral: bool = False,
             rapidwright: bool = False,
-            logfile = None):
+            logfile = None,
+            rag=False):
         
         super().__init__(
             hls_flow=hls_tool_chain, 
@@ -45,8 +46,12 @@ class HLSEval(HLSCoder):
         self._rapidwright = rapidwright
         self._kernel_name = kernel["kernel_name"]
         self._logfile = logfile
+        self._rag = rag
 
-        self._solution_path = f"./results/solutions/{hls_tool_chain}/{model}/{self._iter+1}/{self._kernel_name}"
+        if self._rag:
+            self._solution_path = f"./results/solutions/{hls_tool_chain}/rag/{model}/{self._iter+1}/{self._kernel_name}"
+        else:
+            self._solution_path = f"./results/solutions/{hls_tool_chain}/no_rag/{model}/{self._iter+1}/{self._kernel_name}"
         pathlib.Path(self._solution_path).mkdir(parents=True, exist_ok=True)
 
     @property
@@ -82,7 +87,7 @@ class HLSEval(HLSCoder):
         llm_completion_begin = dt.now()
         
         if rag["use_rag"]:
-            rag["num_retrieved"] = [1] # change this to increase number of retrieved kernel examples
+            rag["num_retrieved"] = [2] # change this to increase number of retrieved kernel examples
             from llama_index.core import (
                 StorageContext,
                 load_index_from_storage,
