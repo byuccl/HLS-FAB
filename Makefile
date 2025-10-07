@@ -44,7 +44,7 @@ run_vitis_completions: dataset
 	python hls_completions.py --hls_flow vitis $(if $(LOG),--log $(LOG),) $(if $(ATTEMPTS),--attempts $(ATTEMPTS),) $(if $(K), -k $(K),) $(if $(SKIP_BEHAVIORAL), --skip_behavioral)
 run_dynarapid_completions: dataset
 	@echo "Running HLSEval With Dynarapid"
-	python hls_completions.py --hls_flow dynarapid $(if $(LOG),--log $(LOG),) $(if $(ATTEMPTS),--attempts $(ATTEMPTS),) $(if $(K), -k $(K),) $(if $(RAPIDWRITE),--rapidwrite)
+	python hls_completions.py --hls_flow dynarapid $(if $(LOG),--log $(LOG),) $(if $(ATTEMPTS),--attempts $(ATTEMPTS),) $(if $(K), -k $(K),) $(if $(RAPIDWRIGHT),--rapidwright)
 clean:  
 	make -C dataset/ clean  
 	rm -rf kernel.json temp.cc  

@@ -210,7 +210,7 @@ def gather_parsed_data(kernel_name, hls_flow, model="gpt4o", attempt=1, iter=0):
     pathlib.Path(log_file_dir).mkdir(parents=True, exist_ok=True)
     old_sim_log_file = f"{solutions_path}/logs/hls_run_csim.log"
     
-    log_file = f"{log_file_dir}/{kernel_name}_synth{timestamp}.log"
+    log_file = f"{log_file_dir}/{kernel_name}_{timestamp}.log"
     final_feedback = {
             "sim_feedback": None,
     }

@@ -67,7 +67,8 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
     dyna_folders = ["hdl",
                     "synth_logs",
                     "test_data",
-                    "reports"
+                    "reports",
+                    "dcp_designs"
                     ]
     
     dyna_files = [f"{kernel_object.kernel_name}.cpp",
@@ -103,25 +104,25 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
         for dirpath, dirnames, filenames in os.walk(new_solution_path, topdown=False):
             
             relative_path = os.path.relpath(dirpath, new_solution_path)
-            print(relative_path)
+            # print(relative_path)
             dir_subdir = relative_path.split(os.sep)
             subfolder = dir_subdir[-1]
 
             subfolder2 = relative_path.split(os.sep)[-2] if len(dir_subdir)>1 else subfolder
 
-            print(subfolder)
+            # print(subfolder)
             # Check if this directory is within one of the explicitly kept root folders.
             is_in_kept_folder = (subfolder2 in folders_to_keep) 
 
 
-                        # 2. Clean up FILES in the current directory (dirpath)
+            # 2. Clean up FILES in the current directory (dirpath)
             # 💡 ONLY PROCEED WITH FILE DELETION IF WE ARE NOT IN A KEPT FOLDER
             if not is_in_kept_folder:
                 for file_name in filenames:
                     # Skip the core kernel files even if they are in a folder not explicitly kept
                     if file_name not in files_to_keep:
                         file_path = os.path.join(dirpath, file_name)
-                        print(f"  Deleting file: {file_path}")
+                        # print(f"  Deleting file: {file_path}")
                         os.remove(file_path) # Uncomment to actually delete
                         deleted_count += 1
                     else:
@@ -136,7 +137,7 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
                 for folder_name in folders_to_check:
                     if folder_name not in folders_to_keep:
                         folder_path = os.path.join(dirpath, folder_name)
-                        print(f"  Deleting UNKEPT root subfolder and its contents: {folder_path}")
+                        # print(f"  Deleting UNKEPT root subfolder and its contents: {folder_path}")
                         shutil.rmtree(folder_path) # NOTE: Use shutil.rmtree for folders!
                         deleted_count_folders += 1
                     else:

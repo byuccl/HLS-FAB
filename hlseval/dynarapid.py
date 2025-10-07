@@ -16,10 +16,11 @@ def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
     if kernel_object._skip_behavioral:
+        print("Skipping Behavioral")
         pass
     else:
     # Run CSIM    
-
+        print("Running CSIM for Dynarapid")
         try:
             logger.info("Starting Dynarapid Simulation")
             dsim_output, csim_elapsed_time = vitis.run_csim(new_solution_path, kernel_object.kernel_name, hls_flow=kernel_object.hls_flow)
