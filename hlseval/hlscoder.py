@@ -27,7 +27,7 @@ except Exception as e:
 try:
     openrouter_api_key = os.environ["OPENROUTER_API_KEY"] # reads for the environment variable 'OPENROUTER_API_KEY'
 except Exception as e:
-    useOpenrouter = False
+    useOpenrouter = True
     print(f"No Environment variable OPENROUTER_API_KEY found: {e}")
 
 

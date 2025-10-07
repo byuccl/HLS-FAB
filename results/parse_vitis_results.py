@@ -137,7 +137,7 @@ def create_csv(base_dir, output_file):
                     
                     # Process each attempt
                     rows_for_kernel = []
-                    for attempt in range(1, 4):
+                    for attempt in range(1, 2):
                         attempt_dir = kernel_path / f"attempts_{attempt}"
                         if not attempt_dir.exists():
                             print(f"    Skipping attempt directory (not found): {attempt_dir}")
@@ -230,6 +230,7 @@ def create_csv(base_dir, output_file):
     print(f"CSV file created successfully: {output_file}")
 
 # Execute the script
-base_directory = "./results/solutions/vitis"
+base_directory = "./results/solutions/vitis/rag"
+# base_directory = "./results/solutions/vitis/no_rag" #TODO: Make this operate dynamically
 output_csv = "results_summary.csv"
 create_csv(base_directory, output_csv)
