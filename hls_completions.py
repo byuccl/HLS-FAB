@@ -167,6 +167,10 @@ if __name__ == "__main__":
     rag = {}
     rag["use_rag"]=args.rag
     logger.debug(f"Using RAG: {rag['use_rag']}")
+    if args.rag:
+        rag_flag = "rag"
+    else: 
+        rag_flag = "no_rag"
 
  
 
@@ -187,8 +191,8 @@ if __name__ == "__main__":
     for model in models:
         for iter in range(args.k):
             logger.info("--------------------------------------------------------------")
-            pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
-            with open (f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
+            pathlib.Path(f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
+            with open (f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
                 hlseval.write_table_header(logfile)
                 for kernel in kernels:
                     logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
