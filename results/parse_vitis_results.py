@@ -71,7 +71,7 @@ def create_csv(base_dir, output_file):
     # Define the models to process
     with open("./dataset/llm_models.txt", "r") as f:
         lines = f.readlines()
-    lines = ["x-ai/grok-4","openai/gpt-5", "google/gemini-2.5-pro"]
+    lines = ["x-ai/grok-4","openai/gpt-5", "google/gemini-2.5-pro", "anthropic/claude-sonnet-4.5"]
     models = [line.strip() for line in lines]
     with open("./dataset/kernel_list.txt", "r") as f:
         kernels = f.readlines()
