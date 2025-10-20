@@ -194,30 +194,29 @@ def parse_sim_report(file_path=None):
     
     return feedback
 
-def gather_parsed_data(kernel_object, attempt=1):
-    #FIXME Fix this so that it takes in the kernel_object 
+def gather_parsed_data(hlsobject, attempt=1):
     f""" 
         Send in the  kernel name and the model and attempt and it will search the solutions for the specific
         file where to parse data from.
     
     """
-    logger.info(f"Gathering parsed data for kernel: {kernel_object.kernel_name}, model: {kernel_object.model_name}, attempt: {attempt}") # FIXME So the kernel object is used
+    logger.info(f"Gathering parsed data for kernel: {hlsobject.kernel_name}, model: {hlsobject.model}, attempt: {attempt}")
     #Create all the files needed if not already created
-    solutions_path = f"{kernel_object.solution_path}/attempts_{attempt+1}" #FIXME Instead of recreating the solutions path have it dynamic witht he kernel objects solution path
+    solutions_path = f"{hlsobject.solution_path}/attempts_{attempt+1}" 
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
     
-    in_report_file = f"{solutions_path}{in_file_path_mid}{kernel_object.kernel_name}{rpt_file_end}"
+    in_report_file = f"{solutions_path}{in_file_path_mid}{hlsobject.kernel_name}{rpt_file_end}"
     log_file_dir = f"{solutions_path}{log_folder_path}"
     pathlib.Path(log_file_dir).mkdir(parents=True, exist_ok=True)
     old_sim_log_file = f"{solutions_path}/logs/hls_run_csim.log"
     
-    log_file = f"{log_file_dir}/{kernel_object.kernel_name}_synth{timestamp}.log"
+    log_file = f"{log_file_dir}/{hlsobject.kernel_name}_synth{timestamp}.log"
     final_feedback = {
             "sim_feedback": None,
     }
     synth_feedback = None
     sim_feedback = None
-    if kernel_object._hls_tool == "vitis":
+    if hlsobject.hls_flow == "vitis":
         # Read in the log file from the HLS synthesis attempt
         try:
             with open(f"{solutions_path}{saved_log_file}", "r") as f:

@@ -66,6 +66,14 @@ class HLSEval(HLSCoder):
     def solution_path(self):
         return self._solution_path
     
+    @property 
+    def rag(self):
+        return self._rag
+    
+    @property 
+    def iter(self):
+        return self._iter
+    
     def get_prompt(self):
         return self._kernel["prompt"]
 
@@ -173,13 +181,13 @@ class HLSEval(HLSCoder):
             try:
                 logger.info("--- Running CSYNTH ---")
                 synth_output, csynth_elapsed_time = run_csynth(new_solution_path, self.kernel_name)
-                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt)
+                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1) #FIXME: Redo the gather parsed data thing
                 synth_returncode = synth_output.returncode 
 
                 logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
             except CsynthTimeoutError as e:
                 logger.warning(" Vitis timed out")
-                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt)
+                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1)
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
@@ -188,7 +196,7 @@ class HLSEval(HLSCoder):
                 ])
                 synth_returncode = 1
         else:
-            vitis_feedback = parser.gather_parsed_data(self, attempt=attempt)
+            vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1)
             vitis_feedback['sim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   
