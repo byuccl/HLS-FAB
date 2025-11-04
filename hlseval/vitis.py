@@ -115,6 +115,7 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
         f.write(f"#endif // {guard_macro}\n")
 
     logger.info(f"Header file generated at: {h_file_path}")
+
 def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="vitis"):
     """
     Generates a C++ testbench file (`testbench.cpp`) that reads test data from a JSON file,
@@ -137,7 +138,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
 
     if not os.path.exists(cpp_kernel_file_abs_path):
         logger.error(f"C++ kernel file not found: {cpp_kernel_file_abs_path}")
-        return None, test_data_json_path, f"FAILED: C++ kernel file not found: {cpp_kernel_file_abs_path}"
+        return None, test_data_json_path, f"FAILED: C++ kernel file not found: {cpp_kernel_file_abs_path}", None
 
     # Create the path for the testbench file
     testbench_cpp_file_path = os.path.join(model_dir, f"{kernel_name}_tb.cpp")
@@ -171,7 +172,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
         generate_h_file(kernel_code, model_dir, kernel_name)
     except Exception as e:
         logger.error(f"Error writing C++ testbench file: {e}")
-        return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
+        return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}", None
     
     # --- C++ Testbench Code Generation ---
     testbench_code = []
@@ -358,13 +359,14 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
         with open(testbench_cpp_file_path, "w") as f:
             f.write("\n".join(testbench_code))
         logger.info(f"Generated C++ testbench source file: {testbench_cpp_file_path}")
-        return testbench_cpp_file_path, test_data_json_path, "SUCCESS"
+        return testbench_cpp_file_path, test_data_json_path, "SUCCESS", all_var_metadata
     except FileExistsError as e:
         logger.warning(f"C++ Testbench {testbench_cpp_file_path} already exists.")
-        return testbench_cpp_file_path, test_data_json_path, f"SUCCESS: Testbench already exists: {e}"
+        return testbench_cpp_file_path, test_data_json_path, f"SUCCESS: Testbench already exists: {e}", all_var_metadata
     except Exception as e:
         logger.error(f"Error writing C++ testbench file: {e}")
-        return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}"
+        return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}", all_var_metadata
+    
 def write_json_test_data(filename, test_cases_list):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
@@ -381,6 +383,7 @@ def write_json_test_data(filename, test_cases_list):
     except Exception as e:
         logger.error(f"Error writing test data to {filename}: {e}")
         raise
+
 def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0, hls_flow="vitis"):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
@@ -396,6 +399,7 @@ def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempt
         IOError: If there's an issue opening or writing to the file.
         TypeError: If the data cannot be serialized to JSON.
     """
+    logger.debug(f"model_dir: {model_dir}")
     project_root = (os.path.dirname(os.path.dirname(__file__)))
     kernel_dir = os.path.join(project_root, "dataset", "kernels")
     if kernel_name is None:
@@ -489,7 +493,7 @@ def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempt
             all_results[name] = {"status": "error", "message": f"JSON write error: {e}"}
             continue
         logger.info(f"Generating C++ testbench source file for {name}")
-        testbench_cpp_path, json_filename_basename, generation_status = create_testbench(
+        testbench_cpp_path, json_filename_basename, generation_status, var_metadata= create_testbench(
             kernel_name=name,
             test_data_json_path=json_output_filename, # This is the full path to the source JSON
             model_dir=model_dir,
@@ -514,11 +518,11 @@ def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempt
                 "message": generation_status
             }
 
-    return all_results
+    return all_results, var_metadata
 
 def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kernel_name=None, hls_flow="vitis"):
     logger.info("Preparing CSIM")
-    result = prepare_csim(kernel_name, model_dir, seed=45, hls_flow=hls_flow)
+    result, var_metadata = prepare_csim(kernel_name, model_dir, seed=45, hls_flow=hls_flow)
     
     project_dir = model_dir
     kernel_code_path = os.path.join(project_dir, f"{kernel_name}.cpp")
@@ -556,7 +560,7 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
             sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
             sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
             csim_elapsed_time = dt.now() - csim_begin
-            return sim_result, csim_elapsed_time
+            return sim_result, csim_elapsed_time, var_metadata
         except subprocess.TimeoutExpired as e:
             logger.warning(f"Timeout occured: {e}")
             # IMPORTANT: Access stdout and stderr from the exception object 'e'
@@ -570,28 +574,41 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
             logger.error(f"An unexpected error occurred during CSIM: {e}")
             csim_elapsed_time = dt.now() - csim_begin
 
-            return e, csim_elapsed_time
+            return e, csim_elapsed_time, var_metadata
     else: 
         logger.warning("No Testbench file skipping to next kernel.")
         #No Testebench was made skip this kernel. 
         csim_elapsed_time = dt.now() - csim_begin
 
-        return "Testbench creation failed", csim_elapsed_time
+        return "Testbench creation failed", csim_elapsed_time, var_metadata
         
-def run_csynth(filepath, kernel_name):
+def run_csynth(filepath, kernel_name, variable_metadata):
+    # Add an axi or axilite bus for each of the parameters to they don't get optimized away
+    axi_interfaces = ""
+    var_num = 0
+    for var_info in variable_metadata:
+        var_name = var_info["name"]
+        array_dimension = var_info["array_dimension"]
+        if array_dimension == 0: # axilite for single-value variables
+            next_line = f"syn.directive.interface={kernel_name} -mode s_axilite port={var_name}\n"
+        else: # axi for data arrays
+            next_line = f"syn.directive.interface={kernel_name} -mode m_axi -offset slave port={var_name} bundle=gmem{var_num}\n"
+            var_num += 1
+        axi_interfaces += next_line
     csynth_elapse_time = None
     csynth_begin = dt.now()
     with open("vitis_config.cfg", "w") as file:
         file.write(
             f"""
-        part=xazu1eg-sbva484-1-i
+part=xazu1eg-sbva484-1-i
 
-        [hls]
-        flow_target=vivado
-        package.output.format=ip_catalog
-        package.output.syn=false
-        syn.top={kernel_name}
-        syn.file={filepath}/{kernel_name}.cpp
+[hls]
+flow_target=vivado
+package.output.format=ip_catalog
+package.output.syn=false
+syn.top={kernel_name}
+syn.file={filepath}/{kernel_name}.cpp
+{axi_interfaces}
         """
         )
     try:
