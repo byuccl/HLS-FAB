@@ -1,1 +1,2 @@
-gpt-4.1-mini
+anthropic/claude-sonnet-4.5
+openai/gpt-5

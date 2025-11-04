@@ -202,7 +202,7 @@ def gather_parsed_data(hlsobject, attempt=1):
     """
     logger.info(f"Gathering parsed data for kernel: {hlsobject.kernel_name}, model: {hlsobject.model}, attempt: {attempt}")
     #Create all the files needed if not already created
-    solutions_path = f"{hlsobject.solution_path}/attempts_{attempt+1}" 
+    solutions_path = f"{hlsobject.solution_path}/attempts_{attempt}" 
     pathlib.Path(solutions_path).mkdir(parents=True, exist_ok=True)
     
     in_report_file = f"{solutions_path}{in_file_path_mid}{hlsobject.kernel_name}{rpt_file_end}"

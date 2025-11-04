@@ -71,7 +71,8 @@ def create_csv(base_dir, output_file):
     # Define the models to process
     with open("./dataset/llm_models.txt", "r") as f:
         lines = f.readlines()
-    lines = ["x-ai/grok-4","openai/gpt-5", "google/gemini-2.5-pro", "anthropic/claude-sonnet-4.5"]
+    lines = ["anthropic/claude-sonnet-4.5", "openai/gpt-5"] # "x-ai/grok-4","openai/gpt-5", "google/gemini-2.5-pro",
+    # lines = ["openai/gpt-4.1-mini", "qwen/qwen3-coder", "google/gemini-2.5-flash", "deepseek/deepseek-chat-v3-0324", "deepseek/deepseek-r1-0528", "x-ai/grok-code-fast-1"]
     models = [line.strip() for line in lines]
     with open("./dataset/kernel_list.txt", "r") as f:
         kernels = f.readlines()
@@ -231,7 +232,7 @@ def create_csv(base_dir, output_file):
     print(f"CSV file created successfully: {output_file}")
 
 # Execute the script
-base_directory = "./results/solutions/vitis/rag"
+base_directory = "./results/solutions_no_rag_oneshot/run5/vitis/no_rag"
 # base_directory = "./results/solutions/vitis/no_rag" #TODO: Make this operate dynamically
 output_csv = "results_summary.csv"
 create_csv(base_directory, output_csv)

@@ -1,0 +1,203 @@
+model,iteration,kernel,attempts,llm_time,status,match,errors,csim_time,synth_errors,fmax,latency,bram,dsp,ff,lut,csynth_time
+openai/gpt-5,1,hardsigmoid_bfloat16,1,0:00:48.346582,passed,match,-,0:00:21.957783,-,7.3,275,3,0,1996,2503,0:00:30.883208
+openai/gpt-5,1,vectorsubtract_bfloat16,1,0:00:46.599454,passed,match,-,0:00:22.051975,"""The maximum latency is 0, which may indicate an issue with the synthesis process.""",6.55,0,0,0,0,343,0:00:30.410976
+openai/gpt-5,1,cast_bfloat16_to_int8,1,0:01:12.205028,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:22.525874,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,cast_float32_to_bfloat16,1,0:01:06.517132,passed,match,-,0:00:22.505322,-,7.3,273,3,0,1951,1965,0:00:31.928735
+openai/gpt-5,1,hardsigmoid_int8,1,0:01:45.317545,passed,match,-,0:00:16.821848,-,7.3,274,3,0,1981,2082,0:00:17.671862
+openai/gpt-5,1,log2_bfloat16,1,0:01:18.825868,passed,match,-,0:00:22.773067,-,7.3,287,3,16,2273,2332,0:00:30.941234
+openai/gpt-5,1,negate_bfloat16,1,0:00:55.127287,passed,match,-,0:00:22.027420,-,7.3,273,3,0,1961,1981,0:00:30.947958
+openai/gpt-5,1,conv1d_k2_s1_bias_relu_bfloat16,1,0:01:02.917474,passed,match,-,0:00:23.473415,"""Address computation on scalar port 'kernel' is not supported (attempts_1/conv1d_k2_s1_bias_relu_bfloat16.cpp:8:0)""",,-,,,,,0:00:31.166893
+openai/gpt-5,1,conv2d_int32,1,0:01:23.531092,passed,match,-,0:00:17.202936,-,5.839,1781,0,4,592,604,0:00:17.783160
+openai/gpt-5,1,argmax_int32,1,0:00:51.252663,passed,match,-,0:00:17.147136,-,7.3,282,4,0,1528,1448,0:00:17.446838
+openai/gpt-5,1,add_offset_int8,1,0:00:41.680269,passed,match,-,0:00:17.068826,-,7.3,273,3,0,2127,2182,0:00:17.926527
+openai/gpt-5,1,cast_bfloat16_to_float32,1,0:00:37.039281,passed,match,-,0:00:21.584439,-,7.3,529,4,0,1950,1964,0:00:32.833828
+openai/gpt-5,1,dotproduct_bias_relu_int8,1,0:00:46.537968,passed,match,-,0:00:16.778830,"""The maximum latency is 0, which may indicate an issue with the synthesis process.""",5.162,0,0,0,0,127,0:00:17.237614
+openai/gpt-5,1,inverse_uint8,1,0:00:52.449267,failed,mismatch,"""{'file': '../../../inverse_uint8_tb.cpp', 'line': 67, 'column': 9, 'message': ""no matching function for call to 'inverse_uint8'""}""",0:00:14.436329,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,dotproduct_bfloat16,1,0:01:17.419008,passed,match,-,0:00:21.660932,-,7.3,152,5,0,2705,3617,0:00:30.832578
+openai/gpt-5,1,sign_int8,1,0:00:44.336301,passed,match,-,0:00:16.609171,-,7.3,273,3,0,1962,2051,0:00:17.539258
+openai/gpt-5,1,floor_bfloat16,1,0:01:53.499693,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:22.944979,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,silu_bfloat16,1,0:01:23.259322,passed,match,-,0:00:21.547518,-,7.3,300,3,12,3560,2855,0:00:30.358190
+openai/gpt-5,1,avgpool2d_bfloat16,1,0:01:29.177867,passed,match,-,0:00:21.816101,-,7.3,1831,3,0,2111,3756,0:00:30.792007
+openai/gpt-5,1,avgpool1d_relu_bfloat16,1,0:00:58.047283,passed,match,-,0:00:21.614989,-,7.3,274,3,0,2014,3214,0:00:30.452007
+openai/gpt-5,1,relu6_bfloat16,1,0:01:01.637538,passed,match,-,0:00:21.932353,-,7.3,273,3,0,1960,2093,0:00:30.381532
+openai/gpt-5,1,gather_bfloat16_int32idx,1,0:01:23.698730,passed,match,-,0:00:21.217714,-,7.3,536,7,0,2660,3186,0:00:30.707125
+openai/gpt-5,1,elementwise_min_bfloat16,1,0:00:49.355999,passed,match,-,0:00:21.830541,-,7.3,273,5,0,2806,2918,0:00:30.469595
+openai/gpt-5,1,compare_equal_bfloat16,1,0:01:00.820404,passed,match,-,0:00:20.833586,-,7.3,273,5,0,2804,2928,0:00:30.618923
+openai/gpt-5,1,negate_int8,1,0:00:51.666034,passed,match,-,0:00:16.427090,-,7.3,273,3,0,1292,1277,0:00:17.325959
+openai/gpt-5,1,pad2d_int32,1,0:00:52.253090,passed,match,-,0:00:16.478871,-,7.3,904,4,0,2081,2880,0:00:18.039089
+openai/gpt-5,1,softmax_bfloat16,1,0:01:03.154845,passed,match,-,0:00:22.082295,-,7.3,374,3,12,7282,5060,0:00:31.983950
+openai/gpt-5,1,bitwiseor_uint8,1,0:00:43.488322,passed,match,-,0:00:16.858563,-,7.3,2065,3,0,1430,1608,0:00:17.328483
+openai/gpt-5,1,relu_bfloat16,1,0:00:42.353718,passed,match,-,0:00:22.060314,-,7.3,273,3,0,1960,2036,0:00:30.424327
+openai/gpt-5,1,dotproduct_int32,1,0:00:50.192448,passed,match,-,0:00:16.735493,-,7.3,273,6,4,2700,2597,0:00:17.610337
+openai/gpt-5,1,matmul_16x16_int8,1,0:00:59.850388,passed,match,-,0:00:16.554505,-,5.031,4363,2,1,240,595,0:00:17.490175
+openai/gpt-5,1,log10_bfloat16,1,0:00:49.488849,passed,match,-,0:00:21.521697,-,6.991,14,0,16,773,1065,0:00:29.819497
+openai/gpt-5,1,pad1d_int32,1,0:02:19.779306,passed,match,-,0:00:16.447911,-,7.3,277,4,0,2198,1817,0:00:17.309605
+openai/gpt-5,1,argmax_bfloat16,1,0:00:36.908511,passed,match,-,0:00:20.725763,-,7.3,90,4,0,2013,2105,0:00:30.439159
+openai/gpt-5,1,sqrt_bfloat16,1,0:00:47.037073,passed,match,-,0:00:21.954993,-,7.3,284,3,0,2241,2322,0:00:30.367563
+openai/gpt-5,1,max_abs_bfloat16,1,0:01:01.736881,passed,match,-,0:00:22.064010,-,7.3,273,3,0,1772,2034,0:00:30.238349
+openai/gpt-5,1,bitcount_uint8,1,0:01:10.994593,passed,match,-,0:00:16.597410,-,7.3,273,3,0,1964,2096,0:00:17.540962
+openai/gpt-5,1,conv1d_k2_s2_bias_int16,1,0:01:02.673354,passed,match,-,0:00:16.831459,-,7.3,152,5,2,2790,3117,0:00:17.774494
+openai/gpt-5,1,gelu_bfloat16,1,0:01:00.765349,passed,match,-,0:00:21.424713,-,7.214,77,5,32,2772,5179,0:00:31.180583
+openai/gpt-5,1,cast_int8_to_int32,1,0:00:37.744537,passed,match,-,0:00:16.411232,-,7.3,272,4,0,1918,1902,0:00:17.354839
+openai/gpt-5,1,conv1d_bias_relu_bfloat16,1,0:01:48.230046,passed,match,-,0:00:21.865653,"""Address computation on scalar port 'kernel' is not supported (attempts_1/conv1d_bias_relu_bfloat16.cpp:9:0)""",,-,,,,,0:00:29.708304
+openai/gpt-5,1,vectorsubtract_int8,1,0:00:44.621688,passed,match,-,0:00:16.436971,-,7.3,1041,3,0,1429,1612,0:00:17.265911
+openai/gpt-5,1,maxpool1d_uint8,1,0:00:43.193726,passed,match,-,0:00:16.295903,-,7.3,1041,3,0,1970,2086,0:00:17.326800
+openai/gpt-5,1,dotproduct_bias_relu_bfloat16,1,0:01:32.489917,passed,match,-,0:00:21.827048,-,7.3,83,5,0,2703,3638,0:00:30.439323
+openai/gpt-5,1,argmin_bfloat16,1,0:01:16.892312,passed,match,-,0:00:20.989157,-,7.3,282,4,0,2017,2111,0:00:30.190463
+openai/gpt-5,1,leaky_relu_bfloat16,1,0:01:06.640835,passed,match,-,0:00:21.522343,-,7.3,273,3,0,1960,2108,0:00:30.228805
+openai/gpt-5,1,rsqrt_bfloat16,1,0:01:12.625208,passed,match,-,0:00:21.698691,-,6.492,279,0,5,656,839,0:00:29.955363
+openai/gpt-5,1,reducemin_bfloat16,1,0:00:46.171796,passed,match,-,0:00:21.574503,-,2.274,64,0,0,24,131,0:00:30.244139
+openai/gpt-5,1,round_bfloat16,1,0:01:17.512223,failed,mismatch,"""{'file': '../../../round_bfloat16.cpp', 'line': 22, 'column': 24, 'message': ""no matching conversion for C-style cast from 'ap_float<16, 8>' to 'ap_int<64>'""}""",0:00:21.960490,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,bitwisenot_uint8,1,0:00:35.295367,passed,match,-,0:00:16.554403,-,7.3,1041,3,0,1294,1274,0:00:17.112691
+openai/gpt-5,1,variance_bfloat16,1,0:00:43.815209,passed,match,-,0:00:21.824195,-,7.3,807,3,8,2820,3448,0:00:30.473649
+openai/gpt-5,1,elementwise_max_int8,1,0:00:39.358710,passed,match,-,0:00:16.597079,-,7.3,529,5,0,2818,2958,0:00:17.609030
+openai/gpt-5,1,vectoradd_int16,1,0:00:41.641569,passed,match,-,0:00:16.479518,-,7.3,273,5,0,2806,2884,0:00:17.648688
+openai/gpt-5,1,euclidean_dist_bfloat16,1,0:02:08.390813,passed,match,-,0:00:21.729238,-,7.3,339,5,7,3813,4344,0:00:30.676779
+openai/gpt-5,1,vectormatrix_mult_int32,1,0:01:22.795116,passed,match,-,0:00:16.447304,-,7.3,322,6,4,4700,3551,0:00:18.238062
+openai/gpt-5,1,reciprocal_bfloat16,1,0:01:04.355912,passed,match,-,0:00:21.719254,-,7.3,277,3,0,2105,2380,0:00:30.350109
+openai/gpt-5,1,sin_bfloat16,1,0:01:36.086757,passed,match,-,0:00:21.766701,-,7.3,318,3,29,4873,4677,0:00:30.322533
+openai/gpt-5,1,cos_bfloat16,1,0:01:00.809471,passed,match,-,0:00:21.905083,-,6.585,264,0,13,1286,2854,0:00:30.686119
+openai/gpt-5,1,relu_bfloat16_cast_uint8,1,0:01:03.832505,passed,match,-,0:00:20.997674,-,7.221,266,0,2,365,1211,0:00:30.010331
+openai/gpt-5,1,conv1d_bfloat16,1,0:01:01.082242,passed,match,-,0:00:21.811260,-,7.3,277,5,0,2927,4212,0:00:30.466834
+openai/gpt-5,1,matrixvector_mult_int8,1,0:00:44.296350,passed,match,-,0:00:16.321852,-,7.3,299,6,1,2777,3224,0:00:17.707017
+openai/gpt-5,1,cumsum_int16,1,0:01:13.629718,passed,match,-,0:00:16.586826,-,7.3,273,3,0,2002,2143,0:00:17.305410
+openai/gpt-5,1,mish_bfloat16,1,0:00:58.836401,passed,match,-,0:00:21.773366,-,7.3,352,8,67,10362,9735,0:00:31.801904
+openai/gpt-5,1,mse_loss_bfloat16,1,0:01:21.203508,passed,match,-,0:00:21.644113,-,6.588,355,0,5,1236,1723,0:00:30.334652
+openai/gpt-5,1,elementwise_max_bfloat16,1,0:00:48.141888,passed,match,-,0:00:21.666960,-,7.3,273,5,0,2806,2918,0:00:30.418604
+openai/gpt-5,1,compare_equal_int32,1,0:00:45.141261,passed,match,-,0:00:17.103500,-,7.3,273,5,0,2786,2732,0:00:17.978609
+openai/gpt-5,1,bitcount_uint16,1,0:00:50.386476,passed,match,-,0:00:17.186824,-,7.3,273,3,0,1949,2143,0:00:17.921977
+openai/gpt-5,1,hardswish_bfloat16,1,0:00:49.014928,passed,match,-,0:00:22.662183,-,7.3,275,3,0,2060,2588,0:00:30.944423
+openai/gpt-5,1,ceil_bfloat16,1,0:00:50.566242,passed,match,-,0:00:22.154605,-,7.3,274,3,0,2080,2378,0:00:31.580495
+openai/gpt-5,1,log_bfloat16,1,0:01:02.060948,passed,match,-,0:00:22.392558,-,7.3,285,3,13,1965,2096,0:00:30.884392
+openai/gpt-5,1,compare_gt_int8,1,0:00:41.315949,passed,match,-,0:00:16.907517,-,7.3,273,5,0,2810,2948,0:00:18.747810
+openai/gpt-5,1,conv2d_k2_s1_bias_relu_bfloat16,1,0:01:36.285571,passed,match,-,0:00:21.997332,"""Address computation on scalar port 'kernel' is not supported (attempts_1/conv2d_k2_s1_bias_relu_bfloat16.cpp:4:0)""",,-,,,,,0:00:30.083043
+openai/gpt-5,1,bitwiseand_uint8,1,0:01:00.333339,passed,match,-,0:00:16.393971,-,7.3,2065,3,0,1430,1608,0:00:17.211954
+openai/gpt-5,1,tanh_bfloat16,1,0:01:50.727486,passed,match,-,0:00:21.559665,-,7.3,280,3,0,2385,3567,0:00:30.723838
+openai/gpt-5,1,hingeloss_bfloat16,1,0:00:56.103236,passed,match,-,0:00:21.413008,-,7.3,275,5,0,2842,3333,0:00:30.370006
+openai/gpt-5,1,relu_int8,1,0:01:11.710966,passed,match,-,0:00:16.487805,-,7.3,1041,3,0,1294,1278,0:00:17.145454
+openai/gpt-5,1,avgpool2d_relu_bfloat16,1,0:01:02.355662,passed,match,-,0:00:21.846632,-,7.3,1043,3,0,2220,3576,0:00:30.362318
+openai/gpt-5,1,maxpool2d_relu_int8,1,0:01:10.689235,passed,match,-,0:00:16.483463,-,7.3,575,3,0,2463,3054,0:00:18.248336
+openai/gpt-5,1,tan_bfloat16,1,0:00:47.898876,passed,match,-,0:00:21.401847,-,7.3,292,3,16,4309,5315,0:00:31.153884
+openai/gpt-5,1,maxpool2d_relu_bfloat16,1,0:01:34.484224,passed,match,-,0:00:21.322543,-,7.3,1783,3,0,4059,3539,0:00:31.425583
+openai/gpt-5,1,vectormult_bfloat16,1,0:00:46.993159,passed,match,-,0:00:21.676370,-,7.3,81,5,0,2842,2993,0:00:30.400443
+openai/gpt-5,1,add_offset_uint8,1,0:00:47.510475,passed,match,-,0:00:16.407259,-,7.3,1041,3,0,2056,2095,0:00:17.251049
+openai/gpt-5,1,sigmoid_bfloat16,1,0:00:36.336386,failed,mismatch,"""Failed to complete Csim. Csim did not run successfully.""",0:00:00.000121,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,elementwise_min_int8,1,0:01:01.210862,passed,match,-,0:00:16.356236,-,7.3,529,3,0,1428,1617,0:00:17.196498
+openai/gpt-5,1,compare_lt_int8,1,0:01:04.946954,passed,match,-,0:00:16.337798,-,7.3,273,5,0,2810,2948,0:00:17.485195
+openai/gpt-5,1,avgpool1d_bfloat16,1,0:00:58.300522,passed,match,-,0:00:21.782038,-,7.3,1042,3,0,1987,2501,0:00:30.268555
+openai/gpt-5,1,conv1d_k4_s1_bias_relu_bfloat16,1,0:01:24.841871,passed,match,-,0:00:22.634423,-,7.3,278,5,0,2969,4858,0:00:30.791886
+openai/gpt-5,1,maxpool2d_bfloat16,1,0:01:16.525080,passed,match,-,0:00:21.384229,-,15.758,3087,3,0,2004,2495,0:00:30.390777
+openai/gpt-5,1,complexabs_bfloat16,1,0:01:10.943162,passed,match,-,0:00:21.703003,-,7.3,100,5,8,3461,3592,0:00:30.616584
+openai/gpt-5,1,conv2d_k4_s2_bias_relu_bfloat16,1,0:01:57.375150,passed,match,-,0:00:21.563972,-,7.3,361,5,0,7960,13159,0:00:34.752723
+openai/gpt-5,1,cumsum_bfloat16,1,0:00:36.208250,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:21.863444,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,conv2d_bfloat16,1,0:01:23.270194,passed,match,-,0:00:21.596252,-,7.3,522,3,0,5695,6005,0:00:33.545155
+openai/gpt-5,1,divide_bfloat16,1,0:00:57.373308,passed,match,-,0:00:21.943596,-,7.3,277,5,0,3015,3351,0:00:30.513679
+openai/gpt-5,1,exp_bfloat16,1,0:00:49.604656,passed,match,-,0:00:22.086736,-,7.3,90,3,7,1699,2303,0:00:30.878262
+openai/gpt-5,1,vectoradd_relu_bfloat16,1,0:00:55.069475,passed,match,-,0:00:21.627618,-,7.3,274,5,0,2824,3256,0:00:30.454887
+openai/gpt-5,1,reduce_add_relu_int8,1,0:00:53.898838,passed,match,-,0:00:16.694352,-,7.3,145,3,0,1243,1322,0:00:17.279026
+openai/gpt-5,1,abs_int8,1,0:00:42.047409,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:17.630483,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,conv1d_int32,1,0:01:16.893326,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:17.213846,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+openai/gpt-5,1,bitwisexor_uint8,1,0:00:52.690041,passed,match,-,0:00:16.300503,-,7.3,2065,3,0,1430,1608,0:00:17.165180
+openai/gpt-5,1,vectoradd_bfloat16,1,0:00:47.121379,passed,match,-,0:00:21.913371,-,7.3,529,3,0,1439,1906,0:00:29.992762
+openai/gpt-5,1,l1_norm_bfloat16,1,0:01:15.041914,passed,match,-,0:00:22.699412,-,7.3,274,3,0,1789,2315,0:00:30.174089
+anthropic/claude-sonnet-4.5,1,hardsigmoid_bfloat16,1,0:00:19.813758,passed,match,-,0:00:23.530563,-,7.3,275,3,0,1996,2503,0:00:30.321736
+anthropic/claude-sonnet-4.5,1,vectorsubtract_bfloat16,1,0:00:16.079906,passed,match,-,0:00:21.783601,-,7.3,273,5,0,2853,4310,0:00:30.095124
+anthropic/claude-sonnet-4.5,1,cast_bfloat16_to_int8,1,0:00:17.879329,failed,mismatch,"""{'file': '../../../cast_bfloat16_to_int8.cpp', 'line': 7, 'column': 28, 'message': ""no template named 'ap_float'""}""",0:00:22.057682,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,cast_float32_to_bfloat16,1,0:00:17.377411,passed,match,-,0:00:21.496786,-,7.3,273,3,0,1951,1965,0:00:29.861395
+anthropic/claude-sonnet-4.5,1,hardsigmoid_int8,1,0:00:23.021484,failed,mismatch,"""{'file': '../../../hardsigmoid_int8.cpp', 'line': 28, 'column': 35, 'message': ""use of overloaded operator '/' is ambiguous (with operand types 'ap_fixed<16, 8>' and 'double')""}""",0:00:16.322430,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,log2_bfloat16,1,0:00:18.474017,passed,match,-,0:00:21.424188,-,7.3,287,3,16,2938,3059,0:00:30.735821
+anthropic/claude-sonnet-4.5,1,negate_bfloat16,1,0:00:15.928006,passed,match,-,0:00:21.225167,-,7.3,273,3,0,1961,1981,0:00:29.919256
+anthropic/claude-sonnet-4.5,1,conv1d_k2_s1_bias_relu_bfloat16,1,0:00:19.881081,passed,match,-,0:00:21.569554,-,7.3,536,6,0,2797,4521,0:00:30.503998
+anthropic/claude-sonnet-4.5,1,conv2d_int32,1,0:00:21.999443,passed,match,-,0:00:16.474220,-,7.3,486,15,27,3921,5628,0:00:18.489799
+anthropic/claude-sonnet-4.5,1,argmax_int32,1,0:00:18.044798,passed,match,-,0:00:16.097728,-,7.3,282,4,0,2040,2028,0:00:17.292084
+anthropic/claude-sonnet-4.5,1,add_offset_int8,1,0:00:17.044072,passed,match,-,0:00:16.295234,-,7.3,273,3,0,2127,2182,0:00:17.607781
+anthropic/claude-sonnet-4.5,1,cast_bfloat16_to_float32,1,0:00:16.198469,passed,match,-,0:00:20.810295,-,7.3,529,4,0,1950,1964,0:00:29.940401
+anthropic/claude-sonnet-4.5,1,dotproduct_bias_relu_int8,1,0:00:19.483155,passed,match,-,0:00:16.689519,-,7.3,278,5,1,2754,3174,0:00:17.685846
+anthropic/claude-sonnet-4.5,1,inverse_uint8,1,0:00:14.874396,failed,mismatch,"""{'file': '../../../inverse_uint8_tb.cpp', 'line': 67, 'column': 9, 'message': ""no matching function for call to 'inverse_uint8'""}""",0:00:14.001848,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,dotproduct_bfloat16,1,0:00:20.179380,passed,match,-,0:00:21.775395,-,7.3,104,5,0,2845,4942,0:00:30.303338
+anthropic/claude-sonnet-4.5,1,sign_int8,1,0:00:15.108110,passed,match,-,0:00:16.330219,-,7.3,273,3,0,1962,2049,0:00:17.467804
+anthropic/claude-sonnet-4.5,1,floor_bfloat16,1,0:00:24.964593,failed,mismatch,"""{'file': '../../../floor_bfloat16.cpp', 'line': 19, 'column': 24, 'message': ""type 'ap_float<16, 8>' does not provide a subscript operator""}""",0:00:21.089189,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,silu_bfloat16,1,0:00:17.401281,failed,mismatch,"""{'file': '../../../silu_bfloat16.cpp', 'line': 27, 'column': 46, 'message': ""no viable conversion from 'ap_float<16, 8>' to 'float'""}""",0:00:20.647846,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,avgpool2d_bfloat16,1,0:00:22.909856,passed,match,-,0:00:21.689897,-,7.3,2217,3,0,2219,4192,0:00:30.263972
+anthropic/claude-sonnet-4.5,1,avgpool1d_relu_bfloat16,1,0:00:18.489296,passed,match,-,0:00:21.846344,-,7.3,278,3,0,2154,3890,0:00:29.896629
+anthropic/claude-sonnet-4.5,1,relu6_bfloat16,1,0:00:16.206833,passed,match,-,0:00:21.857400,-,7.3,273,3,0,1960,2094,0:00:29.947034
+anthropic/claude-sonnet-4.5,1,gather_bfloat16_int32idx,1,0:00:21.003513,passed,match,-,0:00:21.210136,-,7.3,283,5,0,3354,2959,0:00:29.925459
+anthropic/claude-sonnet-4.5,1,elementwise_min_bfloat16,1,0:00:16.286231,passed,match,-,0:00:21.081849,-,7.3,273,5,0,2806,2918,0:00:30.094505
+anthropic/claude-sonnet-4.5,1,compare_equal_bfloat16,1,0:00:16.633851,passed,match,-,0:00:20.451759,-,7.3,273,5,0,2798,2928,0:00:30.046133
+anthropic/claude-sonnet-4.5,1,negate_int8,1,0:00:14.363555,passed,match,-,0:00:16.268239,-,7.3,273,3,0,1968,2043,0:00:17.257271
+anthropic/claude-sonnet-4.5,1,pad2d_int32,1,0:00:18.823856,passed,match,-,0:00:16.160268,-,7.3,417,4,0,2344,2143,0:00:17.274772
+anthropic/claude-sonnet-4.5,1,softmax_bfloat16,1,0:00:20.341444,passed,match,-,0:00:21.328003,-,7.3,507,3,10,4451,6352,0:00:30.782391
+anthropic/claude-sonnet-4.5,1,bitwiseor_uint8,1,0:00:16.165414,passed,match,-,0:00:16.206773,-,7.3,1041,5,0,2819,2945,0:00:17.434886
+anthropic/claude-sonnet-4.5,1,relu_bfloat16,1,0:00:15.250363,passed,match,-,0:00:21.297319,-,7.3,273,3,0,1960,2036,0:00:29.723763
+anthropic/claude-sonnet-4.5,1,dotproduct_int32,1,0:00:19.364393,passed,match,-,0:00:16.422993,-,7.3,273,6,4,2700,2597,0:00:17.332005
+anthropic/claude-sonnet-4.5,1,matmul_16x16_int8,1,0:00:22.213102,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:16.439777,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,log10_bfloat16,1,0:00:17.469651,failed,mismatch,"""{'file': '../../../log10_bfloat16.cpp', 'line': 26, 'column': 21, 'message': ""no member named 'sign' in 'ap_float<16, 8>'""}""",0:00:20.695714,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,pad1d_int32,1,0:00:17.174548,passed,match,-,0:00:16.017376,-,7.3,292,4,0,1909,2318,0:00:17.623050
+anthropic/claude-sonnet-4.5,1,argmax_bfloat16,1,0:00:16.074800,passed,match,-,0:00:20.540362,-,7.3,90,4,0,2013,2105,0:00:29.783201
+anthropic/claude-sonnet-4.5,1,sqrt_bfloat16,1,0:00:16.135735,failed,mismatch,"""{'file': '../../../sqrt_bfloat16.cpp', 'line': 27, 'column': 33, 'message': ""no viable conversion from 'ap_float<16, 8>' to 'float'""}""",0:00:20.941264,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,max_abs_bfloat16,1,0:00:16.382158,passed,match,-,0:00:21.649586,-,7.3,273,3,0,1772,2034,0:00:29.838639
+anthropic/claude-sonnet-4.5,1,bitcount_uint8,1,0:00:16.646480,passed,match,-,0:00:16.418842,-,7.3,273,3,0,1964,2096,0:00:17.199144
+anthropic/claude-sonnet-4.5,1,conv1d_k2_s2_bias_int16,1,0:00:21.015894,passed,match,-,0:00:16.622302,-,7.3,158,5,2,2913,3381,0:00:17.634885
+anthropic/claude-sonnet-4.5,1,gelu_bfloat16,1,0:00:19.897194,failed,mismatch,"""{'file': '../../../gelu_bfloat16.cpp', 'line': 38, 'column': 35, 'message': ""no matching function for call to 'tanh'""}""",0:00:20.792923,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,cast_int8_to_int32,1,0:00:17.548913,passed,match,-,0:00:16.285189,-,7.3,272,4,0,1918,1902,0:00:17.226782
+anthropic/claude-sonnet-4.5,1,conv1d_bias_relu_bfloat16,1,0:00:19.775738,passed,match,-,0:00:21.190447,-,7.3,546,5,0,2950,5340,0:00:30.327650
+anthropic/claude-sonnet-4.5,1,vectorsubtract_int8,1,0:00:17.221192,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:16.388756,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,maxpool1d_uint8,1,0:00:16.905517,passed,match,-,0:00:16.157068,-,7.3,1041,3,0,1970,2084,0:00:17.165288
+anthropic/claude-sonnet-4.5,1,dotproduct_bias_relu_bfloat16,1,0:00:17.689365,passed,match,-,0:00:21.423895,-,7.3,83,5,0,2703,3638,0:00:30.102259
+anthropic/claude-sonnet-4.5,1,argmin_bfloat16,1,0:00:17.689075,passed,match,-,0:00:20.352459,-,7.3,282,4,0,2017,2111,0:00:29.763483
+anthropic/claude-sonnet-4.5,1,leaky_relu_bfloat16,1,0:00:16.222846,passed,match,-,0:00:21.395086,-,7.3,273,3,0,1960,2108,0:00:29.796879
+anthropic/claude-sonnet-4.5,1,rsqrt_bfloat16,1,0:00:16.891576,passed,match,-,0:00:21.495984,-,7.3,294,3,0,2659,2245,0:00:29.943894
+anthropic/claude-sonnet-4.5,1,reducemin_bfloat16,1,0:00:18.013633,passed,match,-,0:00:20.929459,-,7.3,90,3,0,1923,2119,0:00:29.787479
+anthropic/claude-sonnet-4.5,1,round_bfloat16,1,0:00:17.560464,passed,match,-,0:00:22.132206,-,7.3,274,3,0,1994,3592,0:00:29.902476
+anthropic/claude-sonnet-4.5,1,bitwisenot_uint8,1,0:00:14.638314,passed,match,-,0:00:16.021654,-,7.3,1041,3,0,1970,2040,0:00:17.230813
+anthropic/claude-sonnet-4.5,1,variance_bfloat16,1,0:00:18.268226,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:22.212542,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,elementwise_max_int8,1,0:00:15.489961,passed,match,-,0:00:16.051314,-,7.3,529,5,0,2818,2958,0:00:17.395774
+anthropic/claude-sonnet-4.5,1,vectoradd_int16,1,0:00:15.513737,passed,match,-,0:00:16.372559,-,7.3,273,5,0,2806,2884,0:00:17.325138
+anthropic/claude-sonnet-4.5,1,euclidean_dist_bfloat16,1,0:00:19.482628,passed,match,-,0:00:21.412951,-,7.3,806,5,5,3356,3912,0:00:30.027209
+anthropic/claude-sonnet-4.5,1,vectormatrix_mult_int32,1,0:00:20.795604,passed,match,-,0:00:16.334792,-,7.3,556,7,3,2754,3327,0:00:17.823930
+anthropic/claude-sonnet-4.5,1,reciprocal_bfloat16,1,0:00:15.211782,passed,match,-,0:00:21.019354,-,7.3,277,3,0,2105,2380,0:00:29.936848
+anthropic/claude-sonnet-4.5,1,sin_bfloat16,1,0:00:19.991443,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:20.951961,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,cos_bfloat16,1,0:00:15.966450,passed,match,-,0:00:21.089083,-,7.3,280,3,13,3153,4731,0:00:30.817337
+anthropic/claude-sonnet-4.5,1,relu_bfloat16_cast_uint8,1,0:00:18.202463,passed,match,-,0:00:21.037810,-,7.3,279,3,2,2246,3044,0:00:30.199533
+anthropic/claude-sonnet-4.5,1,conv1d_bfloat16,1,0:00:18.517281,passed,match,-,0:00:21.084890,-,7.3,545,5,0,2756,4002,0:00:30.252135
+anthropic/claude-sonnet-4.5,1,matrixvector_mult_int8,1,0:00:20.768388,passed,match,-,0:00:16.380607,-,7.3,586,7,1,3042,3687,0:00:17.906832
+anthropic/claude-sonnet-4.5,1,cumsum_int16,1,0:00:19.460759,passed,match,-,0:00:16.362085,-,7.3,273,3,0,1994,2103,0:00:17.130669
+anthropic/claude-sonnet-4.5,1,mish_bfloat16,1,0:00:19.368976,failed,mismatch,"""{'file': '../../../mish_bfloat16.cpp', 'line': 22, 'column': 42, 'message': ""no viable conversion from 'ap_float<16, 8>' to 'float'""}""",0:00:20.714893,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,mse_loss_bfloat16,1,0:00:17.645945,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:21.765334,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,elementwise_max_bfloat16,1,0:00:15.998697,passed,match,-,0:00:21.182204,-,7.3,273,5,0,2806,2918,0:00:30.154881
+anthropic/claude-sonnet-4.5,1,compare_equal_int32,1,0:00:15.220405,passed,match,-,0:00:16.475632,-,7.3,273,5,0,2786,2732,0:00:17.412485
+anthropic/claude-sonnet-4.5,1,bitcount_uint16,1,0:00:17.238250,passed,match,-,0:00:16.287307,-,7.3,273,3,0,1949,2127,0:00:17.169342
+anthropic/claude-sonnet-4.5,1,hardswish_bfloat16,1,0:00:18.245292,passed,match,-,0:00:21.372760,-,7.3,275,3,0,2012,2576,0:00:29.838606
+anthropic/claude-sonnet-4.5,1,ceil_bfloat16,1,0:00:17.285032,passed,match,-,0:00:22.367436,-,7.3,275,3,0,2076,3444,0:00:30.037650
+anthropic/claude-sonnet-4.5,1,log_bfloat16,1,0:00:16.184664,passed,match,-,0:00:21.229318,-,7.3,284,3,13,2594,2758,0:00:29.603003
+anthropic/claude-sonnet-4.5,1,compare_gt_int8,1,0:00:15.772950,passed,match,-,0:00:16.301006,-,7.3,273,5,0,2810,2948,0:00:17.394701
+anthropic/claude-sonnet-4.5,1,conv2d_k2_s1_bias_relu_bfloat16,1,0:00:21.674641,passed,match,-,0:00:21.142545,-,7.3,938,5,0,3030,5582,0:00:30.277074
+anthropic/claude-sonnet-4.5,1,bitwiseand_uint8,1,0:00:15.093479,passed,match,-,0:00:16.132488,-,7.3,1041,5,0,2819,2945,0:00:17.595577
+anthropic/claude-sonnet-4.5,1,tanh_bfloat16,1,0:00:17.632574,passed,match,-,0:00:21.468615,-,7.3,321,8,40,8425,7456,0:00:31.216607
+anthropic/claude-sonnet-4.5,1,hingeloss_bfloat16,1,0:00:17.204369,passed,match,-,0:00:21.439069,-,7.3,275,5,0,2842,3333,0:00:30.151860
+anthropic/claude-sonnet-4.5,1,relu_int8,1,0:00:14.448037,failed,mismatch,"""{'file': '../../../relu_int8.cpp', 'line': 16, 'column': 35, 'message': ""conditional expression is ambiguous; 'ap_int<8>' can be converted to 'int' and vice versa""}""",0:00:16.375119,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,avgpool2d_relu_bfloat16,1,0:00:23.026079,passed,match,-,0:00:21.448924,-,7.3,1486,3,0,1926,3838,0:00:30.282168
+anthropic/claude-sonnet-4.5,1,maxpool2d_relu_int8,1,0:00:19.589214,passed,match,-,0:00:16.199846,-,7.3,273,3,0,2066,2484,0:00:17.355788
+anthropic/claude-sonnet-4.5,1,tan_bfloat16,1,0:00:16.922380,passed,match,-,0:00:21.333089,-,7.3,291,3,16,4196,5283,0:00:30.823484
+anthropic/claude-sonnet-4.5,1,maxpool2d_relu_bfloat16,1,0:00:20.748958,passed,match,-,0:00:21.107879,-,7.3,1041,3,0,2096,2523,0:00:29.996888
+anthropic/claude-sonnet-4.5,1,vectormult_bfloat16,1,0:00:16.721458,passed,match,-,0:00:21.166927,-,7.3,81,5,0,2842,2993,0:00:30.065385
+anthropic/claude-sonnet-4.5,1,add_offset_uint8,1,0:00:16.053045,passed,match,-,0:00:16.386405,-,7.3,1041,3,0,2128,2151,0:00:17.221348
+anthropic/claude-sonnet-4.5,1,sigmoid_bfloat16,1,0:00:18.193128,passed,match,-,0:00:21.092412,-,7.3,298,3,9,3423,3409,0:00:29.862513
+anthropic/claude-sonnet-4.5,1,elementwise_min_int8,1,0:00:15.343917,passed,match,-,0:00:15.985864,-,7.3,273,5,0,2817,2956,0:00:17.511957
+anthropic/claude-sonnet-4.5,1,compare_lt_int8,1,0:00:15.685088,passed,match,-,0:00:16.172893,-,7.3,273,5,0,2810,2948,0:00:17.539411
+anthropic/claude-sonnet-4.5,1,avgpool1d_bfloat16,1,0:00:17.841418,passed,match,-,0:00:21.637181,-,7.3,1046,3,0,2128,3186,0:00:30.025569
+anthropic/claude-sonnet-4.5,1,conv1d_k4_s1_bias_relu_bfloat16,1,0:00:20.500110,passed,match,-,0:00:21.240173,-,7.3,1050,5,0,2951,5342,0:00:30.345000
+anthropic/claude-sonnet-4.5,1,maxpool2d_bfloat16,1,0:00:20.192177,passed,match,-,0:00:21.062679,-,7.3,1255,3,0,2024,2482,0:00:30.056052
+anthropic/claude-sonnet-4.5,1,complexabs_bfloat16,1,0:00:17.652415,passed,match,-,0:00:21.180837,-,7.3,86,5,0,2950,3597,0:00:30.017430
+anthropic/claude-sonnet-4.5,1,conv2d_k4_s2_bias_relu_bfloat16,1,0:00:24.446574,passed,match,-,0:00:20.997566,-,7.3,342,5,0,4007,11649,0:00:30.918571
+anthropic/claude-sonnet-4.5,1,cumsum_bfloat16,1,0:00:18.164284,success,mismatch,"""[SIM 211-100] 'csim_design' failed: nonzero return value.""",0:00:21.404959,"""Synthesis not run due to failed C Simulation.""",,-,,,,,
+anthropic/claude-sonnet-4.5,1,conv2d_bfloat16,1,0:00:20.130548,passed,match,-,0:00:21.398985,-,7.3,1149,5,0,2911,5129,0:00:30.388044
+anthropic/claude-sonnet-4.5,1,divide_bfloat16,1,0:00:15.860357,passed,match,-,0:00:21.424798,-,7.3,277,5,0,3015,3351,0:00:30.120359
+anthropic/claude-sonnet-4.5,1,exp_bfloat16,1,0:00:17.473420,passed,match,-,0:00:21.199577,-,7.3,90,3,7,2364,3046,0:00:29.978036
+anthropic/claude-sonnet-4.5,1,vectoradd_relu_bfloat16,1,0:00:16.769274,passed,match,-,0:00:21.319317,-,7.3,274,5,0,2824,3256,0:00:30.059734
+anthropic/claude-sonnet-4.5,1,reduce_add_relu_int8,1,0:00:17.078543,passed,match,-,0:00:16.273227,-,7.3,145,3,0,1791,2022,0:00:17.250954
+anthropic/claude-sonnet-4.5,1,abs_int8,1,0:00:15.223328,passed,match,-,0:00:16.256658,-,7.3,1041,3,0,1971,2055,0:00:17.126765
+anthropic/claude-sonnet-4.5,1,conv1d_int32,1,0:00:18.316027,passed,match,-,0:00:16.157237,-,7.3,797,6,3,2848,3031,0:00:17.767375
+anthropic/claude-sonnet-4.5,1,bitwisexor_uint8,1,0:00:15.621285,passed,match,-,0:00:16.313787,-,7.3,1041,5,0,2819,2945,0:00:17.468862
+anthropic/claude-sonnet-4.5,1,vectoradd_bfloat16,1,0:00:15.406942,passed,match,-,0:00:21.171845,-,7.3,273,5,0,2806,3199,0:00:30.000738
+anthropic/claude-sonnet-4.5,1,l1_norm_bfloat16,1,0:00:16.337283,passed,match,-,0:00:21.585131,-,7.3,274,3,0,1789,2315,0:00:29.823809
