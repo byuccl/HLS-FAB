@@ -162,12 +162,14 @@ class HLSEval(HLSCoder):
         csynth_elapsed_time = None
         if self._skip_behavioral:
             logger.info("Skipping CSIM")
+            csim_output, csim_elapsed_time, var_metadata = run_csim(new_solution_path, self.kernel_name)
             sim_returncode = 0 # report that csim was successful
         else:
             # Run CSIM    
             try:
                 logger.info("Starting Vitis Run")
-                csim_output, csim_elapsed_time = run_csim(new_solution_path, self.kernel_name)
+                csim_output, csim_elapsed_time, var_metadata = run_csim(new_solution_path, self.kernel_name)
+                logger.debug(var_metadata)
                 sim_returncode = csim_output.returncode if (csim_output is not None) else 1
             except CsimTimeoutError as e:
                 sim_returncode = 1
@@ -180,7 +182,7 @@ class HLSEval(HLSCoder):
         # Run Synthesis only if CSIM was successful
             try:
                 logger.info("--- Running CSYNTH ---")
-                synth_output, csynth_elapsed_time = run_csynth(new_solution_path, self.kernel_name)
+                synth_output, csynth_elapsed_time = run_csynth(new_solution_path, self.kernel_name, var_metadata)
                 vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1) #FIXME: Redo the gather parsed data thing
                 synth_returncode = synth_output.returncode 
 

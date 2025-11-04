@@ -20,7 +20,7 @@ def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
 
         try:
             logger.info("Starting Dynarapid Simulation")
-            dsim_output, csim_elapsed_time = vitis.run_csim(new_solution_path, kernel_object.kernel_name, hls_flow=kernel_object.hls_flow)
+            dsim_output, csim_elapsed_time, var_metadata = vitis.run_csim(new_solution_path, kernel_object.kernel_name, hls_flow=kernel_object.hls_flow)
             logger.debug(dsim_output)
         except vitis.CsimTimeoutError as e:
             logger.warning("Vitis timed out on Simulation")

@@ -209,13 +209,13 @@ if __name__ == "__main__":
         logger.debug(f"Error: File 'kernel.json' not found.")
     except Exception as e:
         logger.debug(f"An error occurred: {e}")
-    try:
-        os.remove("vitis_config.cfg")
-        logger.debug(f"File 'vitis_config.cfg' deleted successfully.")
-    except FileNotFoundError:
-        logger.debug(f"Error: File 'vitis_config.cfg' not found.")
-    except Exception as e:
-        logger.debug(f"An error occurred: {e}")
+    # try:
+        # os.remove("vitis_config.cfg")
+        # logger.debug(f"File 'vitis_config.cfg' deleted successfully.")
+    # except FileNotFoundError:
+    #     logger.debug(f"Error: File 'vitis_config.cfg' not found.")
+    # except Exception as e:
+    #     logger.debug(f"An error occurred: {e}")
 
 
 
