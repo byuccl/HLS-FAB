@@ -22,7 +22,7 @@
 # #Include your own absolute path to the blas folder in the Vitis_Libraries
 # export XF_PROJ_PATH ?= /home/hoodoo17/Desktop/HLSPractice/VitisLibraries/Vitis_Libraries/blas
 
-# all: dataset
+all: dataset
 
 ifeq ($(VITIS),ON)
 all: run_vitis_completions
