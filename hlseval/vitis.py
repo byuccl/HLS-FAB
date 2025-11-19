@@ -4,6 +4,7 @@ import numpy as np
 import re  
 import subprocess  
 import json
+from pathlib import Path
 from datetime import datetime as dt
 from hlseval.utils import get_ap_cpp_type_str, import_module_members, get_std_cpp_type_str, generate_inputs
 
@@ -115,8 +116,278 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
         f.write(f"#endif // {guard_macro}\n")
 
     logger.info(f"Header file generated at: {h_file_path}")
+    return func_signature
 
-def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="vitis"):
+
+
+def fix_include_paths_relative(content, external_testbench_dir, local_testbench_dir):
+    """
+    Fix include paths to be relative to the HLS compilation directory.
+    
+    Args:
+        external_testbench_dir: Directory containing external testbench
+        local_testbench_dir: Directory where modified testbench will be saved
+                            (this is where the .cpp file will be)
+    """
+    external_dir = os.path.abspath(external_testbench_dir)
+    local_dir = os.path.abspath(local_testbench_dir)
+    
+    # HLS compiles from hls/csim/build directory (3 levels down from testbench)
+    hls_compile_dir = os.path.join(local_dir, "hls", "csim", "build")
+    
+    print(f"External testbench directory: {external_dir}")
+    print(f"Local testbench directory: {local_dir}")
+    print(f"HLS compilation directory: {hls_compile_dir}")
+    
+    def fix_include_path(match):
+        original_path = match.group(1)
+        
+        # Check if this is xf_headers.hpp (common headers)
+        if "xf_headers.hpp" in original_path:
+            # Always use the standard location for common headers
+            header_absolute = os.path.normpath(
+                os.path.join(external_dir, "../../include/common/xf_headers.hpp")
+            )
+        else:
+            # Regular path resolution
+            header_absolute = os.path.normpath(
+                os.path.join(external_dir, original_path)
+            )
+        
+        # Calculate relative path FROM THE HLS COMPILATION DIRECTORY
+        relative_str = os.path.relpath(header_absolute, hls_compile_dir)
+        relative_str = relative_str.replace('\\', '/')
+        
+        return f'#include "{relative_str}"'
+    
+    content = re.sub(r'#include\s+"([^"]+)"', fix_include_path, content)
+    return content
+
+
+# Complete modification function
+def modify_testbench_complete(testbench_code, kernel_name, external_testbench_dir, 
+                              local_testbench_dir, remove_args=None):
+    """
+    Complete testbench modification:
+    1. Replace function call
+    2. Remove specified arguments
+    3. Fix include paths relative to new location
+    
+    Args:
+        testbench_code: String containing testbench code
+        kernel_name: Name of the kernel
+        external_testbench_dir: Directory of external testbench
+        local_testbench_dir: Directory where modified testbench will be saved
+        remove_args: List of argument names to remove
+    """
+    if isinstance(testbench_code, list):
+        content = ''.join(testbench_code)
+    else:
+        content = testbench_code
+    
+    # Step 1: Replace function call and remove arguments
+    logger.debug("CSIM: replace_function_call_remove_args")
+    content = replace_function_call_remove_args(content, kernel_name, external_testbench_dir, remove_args)
+    
+    # Step 2: Fix include paths to be relative to new location
+    logger.debug("CSIM: fix_include_paths_relative")
+    content = fix_include_paths_relative(content, external_testbench_dir, local_testbench_dir)
+    
+    return content
+
+def replace_function_call_remove_args(testbench_code, kernel_name, external_dir, remove_args=None):
+    """
+    Replace {kernel_name}_accel with {kernel_name}_vitis and optionally remove specific arguments.
+    Handles multi-line function calls and nested parentheses.
+    
+    Args:
+        testbench_code: String or list of strings containing testbench code
+        kernel_name: Name of the kernel (e.g., 'accumulate', 'autowhitebalance')
+        external_dir: Path to external testbench directory (where headers are located)
+        remove_args: List of argument variable names to remove (e.g., ['height', 'width'])
+    
+    Returns:
+        Modified testbench code as a string
+    """
+    if isinstance(testbench_code, list):
+        content = ''.join(testbench_code)
+    else:
+        content = testbench_code
+    logger.debug("CSIM: 1")
+
+    # Pattern to match the entire function call across multiple lines
+    # Matches: kernel_name_accel(...); including nested parentheses
+    pattern = rf'\b{kernel_name}_accel\s*\('
+    
+    # Find all function calls
+    matches = []
+    pos = 0
+    while True:
+        match = re.search(pattern, content[pos:])
+        if not match:
+            break
+        
+        start_pos = pos + match.start()
+        call_start = pos + match.end()  # Position after opening '('
+        
+        # Find matching closing parenthesis
+        paren_count = 1
+        i = call_start
+        while i < len(content) and paren_count > 0:
+            if content[i] == '(':
+                paren_count += 1
+            elif content[i] == ')':
+                paren_count -= 1
+            i += 1
+        
+        end_pos = i  # Position after closing ')'
+        
+        # Find the semicolon
+        semicolon_pos = content.find(';', end_pos)
+        if semicolon_pos == -1:
+            semicolon_pos = end_pos
+        else:
+            semicolon_pos += 1
+        
+        matches.append((start_pos, semicolon_pos, call_start, end_pos - 1))
+        pos = semicolon_pos
+    logger.debug("CSIM: 2")
+
+    # Process matches in reverse order to maintain positions
+    for start_pos, semicolon_pos, args_start, args_end in reversed(matches):
+        # Extract the arguments string
+        args_str = content[args_start:args_end]
+        
+        # Replace function name and filter arguments if needed
+        if remove_args:
+            # Parse arguments (handling nested parentheses and casts)
+            filtered_args = parse_and_filter_args(args_str, remove_args)
+            new_call = f'{kernel_name}_vitis({filtered_args})'
+        else:
+            new_call = f'{kernel_name}_vitis({args_str})'
+        
+        # Add semicolon if it was present
+        if content[semicolon_pos - 1:semicolon_pos] == ';':
+            new_call += ';'
+        
+        # Replace in content
+        content = content[:start_pos] + new_call + content[semicolon_pos:]
+    
+    def fix_include_path(match):
+        logger.debug("CSIM: 3.1")
+
+        original_path = match.group(1)
+        logger.debug(f"CSIM: 3.2: {external_dir}, {original_path}")
+
+        # Resolve the path relative to external testbench directory
+        # This handles paths like "../../include/common/xf_headers.hpp"
+
+        absolute_path = os.path.abspath(
+            os.path.join(external_dir, original_path)
+        )
+        logger.debug("CSIM: 3.3")
+
+        # Normalize path separators for cross-platform compatibility
+        absolute_path = absolute_path.replace('\\', '/')
+        
+        return f'#include "{absolute_path}"'
+    logger.debug("CSIM: 3")
+
+    # Replace local includes (with double quotes)
+    content = re.sub(r'#include\s+"([^"]+)"', fix_include_path, content)
+    logger.debug("CSIM: 4")
+
+    return content
+
+
+def parse_and_filter_args(args_str, remove_args):
+    """
+    Parse function arguments and remove specified ones.
+    Handles nested parentheses, casts, and multi-line formatting.
+    
+    Args:
+        args_str: String containing all function arguments
+        remove_args: List of argument names to remove
+    
+    Returns:
+        Filtered arguments string
+    """
+    # Split arguments by commas, but respect nested parentheses
+    args = []
+    current_arg = []
+    paren_depth = 0
+    
+    for char in args_str:
+        if char == '(':
+            paren_depth += 1
+            current_arg.append(char)
+        elif char == ')':
+            paren_depth -= 1
+            current_arg.append(char)
+        elif char == ',' and paren_depth == 0:
+            # End of argument
+            args.append(''.join(current_arg).strip())
+            current_arg = []
+        else:
+            current_arg.append(char)
+    
+    # Add last argument
+    if current_arg:
+        args.append(''.join(current_arg).strip())
+    
+    # Filter out unwanted arguments
+    filtered_args = []
+    for arg in args:
+        should_remove = False
+        for remove_arg in remove_args:
+            # Check if this argument contains the variable name to remove
+            # Match word boundaries to avoid partial matches
+            if re.search(rf'\b{remove_arg}\b', arg):
+                should_remove = True
+                break
+        
+        if not should_remove:
+            filtered_args.append(arg)
+    
+    # Reconstruct arguments string
+    return ', '.join(filtered_args)
+
+def generate_hls_config(kernel_name, external_testbench_dir, opencv_path='~/opencv4.4/install'):
+    """
+    Generate HLS config file with proper flags.
+    """
+    # Calculate include directories
+    include_dirs = [
+        os.path.abspath(external_testbench_dir),
+        os.path.abspath(os.path.join(external_testbench_dir, '../../include'))
+    ]
+    
+    cflags = ' '.join([f'-I{d}' for d in include_dirs])
+    ldflags = (
+        f'-L{opencv_path}/lib/ '
+        f'-Wl,-rpath,{opencv_path}/lib/ '
+        f'-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui '
+        f'-pthread'
+    )
+    
+    # Generate config file
+    config_content = f"""
+[hls]
+syn.file=./{kernel_name}.cpp
+syn.top={kernel_name}_vitis
+
+tb.file=./testbench.cpp
+tb.cflags={cflags}
+tb.ldflags={ldflags}
+
+csim.enable=true
+csynth.enable=true
+"""
+    
+    with open('hls_config.cfg', 'w') as f:
+        f.write(config_content)
+
+def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="vitis", external_testbench_path=None):
     """
     Generates a C++ testbench file (`testbench.cpp`) that reads test data from a JSON file,
     executes the specified kernel, and compares its outputs to expected results.
@@ -133,6 +404,11 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
                json_file_path (str): Path to the JSON test data file it relies on.
                status_message (str): "SUCCESS" if file generated, "FAILED" otherwise.
     """
+
+    # TODO: Need a way to set external_testbench_path
+    # TODO: Need to set compilation flags to set the include directories
+    external_testbench_path = "../Vitis_Libraries/vision/L1/examples/accumulate/"
+    testbench_filename = "xf_accumulate_image_tb.cpp"
     mismatches_to_report = 10
     cpp_kernel_file_abs_path = os.path.join(model_dir, f"{kernel_name}.cpp")
 
@@ -169,195 +445,210 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     # Generating H File
     logger.info("CSIM: Generating H File for CSIM")
     try:
-        generate_h_file(kernel_code, model_dir, kernel_name)
+        func_signature = generate_h_file(kernel_code, model_dir, kernel_name)
     except Exception as e:
         logger.error(f"Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}", None
     
-    # --- C++ Testbench Code Generation ---
     testbench_code = []
+    if external_testbench_path is None:
+        # --- C++ Testbench Code Generation ---
+        logger.info("CSIM: No testbench path provided, creating one")
 
-    # Required Headers
-    testbench_code.append("#include <iostream>")
-    testbench_code.append("#include <fstream>")
-    testbench_code.append("#include <vector>")
-    testbench_code.append("#include <string>")
-    testbench_code.append("#include <cmath>") # For std::abs
-    if hls_flow == "vitis":
-        testbench_code.append("#include <ap_int.h>") # For ap_int
-        testbench_code.append("#include <ap_float.h>") # For ap_float
-    testbench_code.append("#include <limits>") # For numeric_limits epsilon
-    testbench_code.append("#include \"nlohmann/json.hpp\"") # Assuming nlohmann/json.hpp is available in include path
-    testbench_code.append("#include \"utils.hpp\"")    # Floating-point comparison helper function
-    testbench_code.append("#include \"nlohmann/apint_serializer.hpp\"")    # ap_int serializer
-    # Include the actual kernel file 
-    testbench_code.append(f"#include \"{kernel_name}.h\"\n\n")
-    testbench_code.append("using json = nlohmann::json;")
-    testbench_code.append("using namespace std;\n\n")
-    testbench_code.append("int main() {")
-    testbench_code.append(f"    std::ifstream ifs(\"{test_data_json_path}\");")
-    testbench_code.append("    if (!ifs.is_open()) {")
-    testbench_code.append(f"        std::cerr << \"Error: Could not open test data file {json_filename_only}. Make sure it's in the executable's directory.\" << std::endl;")
-    testbench_code.append("        return 1;")
-    testbench_code.append("    }")
-    testbench_code.append("    json test_cases_json;")
-    testbench_code.append("    try {")
-    testbench_code.append("        ifs >> test_cases_json;")
-    testbench_code.append("    } catch (const json::parse_error& e) {")
-    testbench_code.append("        std::cerr << \"JSON parse error: \" << e.what() << std::endl;")
-    testbench_code.append("        return 1;")
-    testbench_code.append("    }")
-    testbench_code.append("\n    int total_tests = 0;")
-    testbench_code.append("    int failed_tests = 0;")
-    testbench_code.append("    int flat_idx = 0;")
-    testbench_code.append("    float percent_error = 0.0;")
-    testbench_code.append("    uint32_t num_mismatches = 0;")
-    # Loop through each test case
-    testbench_code.append("\n    for (const auto& test_case : test_cases_json) {")
-    testbench_code.append("        total_tests++;")
-    testbench_code.append("        std::string test_id = test_case.at(\"test_id\").get<std::string>();")
-    testbench_code.append("        std::cout << \"\\n--- Running Test Case: \" << test_id << \" ---\" << std::endl;")
+        # Required Headers
+        testbench_code.append("#include <iostream>")
+        testbench_code.append("#include <fstream>")
+        testbench_code.append("#include <vector>")
+        testbench_code.append("#include <string>")
+        testbench_code.append("#include <cmath>") # For std::abs
+        if hls_flow == "vitis":
+            testbench_code.append("#include <ap_int.h>") # For ap_int
+            testbench_code.append("#include <ap_float.h>") # For ap_float
+        testbench_code.append("#include <limits>") # For numeric_limits epsilon
+        testbench_code.append("#include \"nlohmann/json.hpp\"") # Assuming nlohmann/json.hpp is available in include path
+        testbench_code.append("#include \"utils.hpp\"")    # Floating-point comparison helper function
+        testbench_code.append("#include \"nlohmann/apint_serializer.hpp\"")    # ap_int serializer
+        # Include the actual kernel file 
+        testbench_code.append(f"#include \"{kernel_name}.h\"\n\n")
+        testbench_code.append("using json = nlohmann::json;")
+        testbench_code.append("using namespace std;\n\n")
+        testbench_code.append("int main() {")
+        testbench_code.append(f"    std::ifstream ifs(\"{test_data_json_path}\");")
+        testbench_code.append("    if (!ifs.is_open()) {")
+        testbench_code.append(f"        std::cerr << \"Error: Could not open test data file {json_filename_only}. Make sure it's in the executable's directory.\" << std::endl;")
+        testbench_code.append("        return 1;")
+        testbench_code.append("    }")
+        testbench_code.append("    json test_cases_json;")
+        testbench_code.append("    try {")
+        testbench_code.append("        ifs >> test_cases_json;")
+        testbench_code.append("    } catch (const json::parse_error& e) {")
+        testbench_code.append("        std::cerr << \"JSON parse error: \" << e.what() << std::endl;")
+        testbench_code.append("        return 1;")
+        testbench_code.append("    }")
+        testbench_code.append("\n    int total_tests = 0;")
+        testbench_code.append("    int failed_tests = 0;")
+        testbench_code.append("    int flat_idx = 0;")
+        testbench_code.append("    float percent_error = 0.0;")
+        testbench_code.append("    uint32_t num_mismatches = 0;")
+        # Loop through each test case
+        testbench_code.append("\n    for (const auto& test_case : test_cases_json) {")
+        testbench_code.append("        total_tests++;")
+        testbench_code.append("        std::string test_id = test_case.at(\"test_id\").get<std::string>();")
+        testbench_code.append("        std::cout << \"\\n--- Running Test Case: \" << test_id << \" ---\" << std::endl;")
 
-    # Declarations, Allocations, and Initialization of Inputs/Outputs for C++
-    kernel_call_args = []
-    cleanup_deallocations = [] # To store delete[] statements for current test case
+        # Declarations, Allocations, and Initialization of Inputs/Outputs for C++
+        kernel_call_args = []
+        cleanup_deallocations = [] # To store delete[] statements for current test case
 
-    for var_info in all_var_metadata:
-        var_name = var_info["name"]
-        array_dimension = var_info["array_dimension"]
-        in_out_status = var_info["iotype"]
-        dtype_str = var_info["dtype"] # e.g., "int32", "float64", "int", "float"
-        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
-        shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
-        total_elements = var_info.get('total_elements', 1) # Total elements for flattening
-        # Handle scalar (dimension 0)
-        if array_dimension == 0:
-            if in_out_status in ["in", "inout"]:
-                testbench_code.append(f"        {cpp_base_type} {var_name}_val = test_case.at(\"inputs\").at(\"{var_name}\").get<{cpp_base_type}>();")
-                kernel_call_args.append(var_name + "_val")
+        for var_info in all_var_metadata:
+            var_name = var_info["name"]
+            array_dimension = var_info["array_dimension"]
+            in_out_status = var_info["iotype"]
+            dtype_str = var_info["dtype"] # e.g., "int32", "float64", "int", "float"
+            cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
+            shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
+            total_elements = var_info.get('total_elements', 1) # Total elements for flattening
+            # Handle scalar (dimension 0)
+            if array_dimension == 0:
+                if in_out_status in ["in", "inout"]:
+                    testbench_code.append(f"        {cpp_base_type} {var_name}_val = test_case.at(\"inputs\").at(\"{var_name}\").get<{cpp_base_type}>();\n")
+                    kernel_call_args.append(var_name + "_val")
+                if in_out_status in ["out", "inout"]:
+                    # For outputs, declare a variable and pass its address
+                    testbench_code.append(f"        {cpp_base_type} {var_name}_out_actual = 0; // Initialize for output clarity\n")
+                    kernel_call_args.append(f"&{var_name}_out_actual") # Pass by address for output
+            elif array_dimension >= 1:
+                # Declare and allocate flattened array
+                testbench_code.append(f"        {cpp_base_type}* {var_name}_arr = new {cpp_base_type}[{total_elements}];\n")
+                cleanup_deallocations.append(f"        delete[] {var_name}_arr;")
+                if in_out_status in ["in", "inout"]:
+                    testbench_code.append(f"\n        // Initialize {var_name}_arr from JSON input\n")
+                    testbench_code.append(f"        auto {var_name}_json_data = test_case.at(\"inputs\").at(\"{var_name}\");\n")
+                    testbench_code.append(f"        uint32_t flat_idx_for_{var_name} = 0;\n")
+                    testbench_code.append(f"        for (const auto& val : {var_name}_json_data) {{\n")
+                    testbench_code.append(f"            if (flat_idx_for_{var_name} >= {total_elements}) {{\n")
+                    testbench_code.append(f"                std::cerr << \"Error: {var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;\n")
+                    testbench_code.append(f"                return 1;\n")
+                    testbench_code.append(f"            }}\n")
+                    testbench_code.append(f"            {var_name}_arr[flat_idx_for_{var_name}++] = val.get<{cpp_base_type}>();\n")
+                    testbench_code.append("        }\n")
+                    testbench_code.append(f"        if (flat_idx_for_{var_name} != {total_elements}) {{\n")
+                    testbench_code.append(f"            std::cerr << \"Error: {var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;\n")
+                    testbench_code.append(f"            return 1;\n")
+                    testbench_code.append(f"        }}\n")      
+                elif in_out_status == "out":
+                    testbench_code.append(f"\n        // Initialize output array {var_name}_arr to zeros\n")
+                    testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{\n")
+                    testbench_code.append(f"            {var_name}_arr[i] = 0; // Or appropriate default value\n")
+                    testbench_code.append("        }\n")
+                kernel_call_args.append(var_name + "_arr")
+        testbench_code.append(f"\n        // Call the kernel function\n")
+        testbench_code.append(f"        {kernel_name}({', '.join(kernel_call_args)});\n")
+        testbench_code.append("\n        bool test_case_passed = true;\n")
+        testbench_code.append("        std::cout << \"Comparing results...\" << std::endl;\n")
+
+        # Compare outputs based on all_var_metadata
+        for var_info in all_var_metadata:
+            var_name = var_info["name"]
+            array_dimension = var_info["array_dimension"]
+            in_out_status = var_info["iotype"]
+            dtype_str = var_info["dtype"]
+            cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
+            shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
+            total_elements = var_info.get('total_elements', 1) # Total elements for flattening
+            
             if in_out_status in ["out", "inout"]:
-                # For outputs, declare a variable and pass its address
-                testbench_code.append(f"        {cpp_base_type} {var_name}_out_actual = 0; // Initialize for output clarity")
-                kernel_call_args.append(f"&{var_name}_out_actual") # Pass by address for output
-        elif array_dimension >= 1:
-            # Declare and allocate flattened array
-            testbench_code.append(f"        {cpp_base_type}* {var_name}_arr = new {cpp_base_type}[{total_elements}];")
-            cleanup_deallocations.append(f"        delete[] {var_name}_arr;")
-            if in_out_status in ["in", "inout"]:
-                testbench_code.append(f"\n        // Initialize {var_name}_arr from JSON input")
-                testbench_code.append(f"        auto {var_name}_json_data = test_case.at(\"inputs\").at(\"{var_name}\");")
-                testbench_code.append(f"        uint32_t flat_idx_for_{var_name} = 0;")
-                testbench_code.append(f"        for (const auto& val : {var_name}_json_data) {{")
-                testbench_code.append(f"            if (flat_idx_for_{var_name} >= {total_elements}) {{")
-                testbench_code.append(f"                std::cerr << \"Error: {var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;")
-                testbench_code.append(f"                return 1;")
-                testbench_code.append(f"            }}")
-                testbench_code.append(f"            {var_name}_arr[flat_idx_for_{var_name}++] = val.get<{cpp_base_type}>();")
-                testbench_code.append("        }")
-                testbench_code.append(f"        if (flat_idx_for_{var_name} != {total_elements}) {{")
-                testbench_code.append(f"            std::cerr << \"Error: {var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;")
-                testbench_code.append(f"            return 1;")
-                testbench_code.append(f"        }}")      
-            elif in_out_status == "out":
-                testbench_code.append(f"\n        // Initialize output array {var_name}_arr to zeros")
-                testbench_code.append(f"        for (int i = 0; i < {total_elements}; ++i) {{")
-                testbench_code.append(f"            {var_name}_arr[i] = 0; // Or appropriate default value")
-                testbench_code.append("        }")
-            kernel_call_args.append(var_name + "_arr")
-    testbench_code.append(f"\n        // Call the kernel function")
-    testbench_code.append(f"        {kernel_name}({', '.join(kernel_call_args)});")
-    testbench_code.append("\n        bool test_case_passed = true;")
-    testbench_code.append("        std::cout << \"Comparing results...\" << std::endl;")
+                # Get expected values from JSON
+                testbench_code.append(f"\n        num_mismatches = 0;\n")
+                testbench_code.append(f"\n        // Get expected values for {var_name}\n")
+                testbench_code.append(f"        auto {var_name}_expected_json = test_case.at(\"expected_outputs\").at(\"{var_name}\");\n")
 
-    # Compare outputs based on all_var_metadata
-    for var_info in all_var_metadata:
-        var_name = var_info["name"]
-        array_dimension = var_info["array_dimension"]
-        in_out_status = var_info["iotype"]
-        dtype_str = var_info["dtype"]
-        cpp_base_type = get_ap_cpp_type_str(dtype_str) if hls_flow == "vitis" else get_std_cpp_type_str(dtype_str)
-        shape = var_info.get('shape', []) # Shape from metadata (e.g., [10, 20])
-        total_elements = var_info.get('total_elements', 1) # Total elements for flattening
-        
-        if in_out_status in ["out", "inout"]:
-            # Get expected values from JSON
-            testbench_code.append(f"\n        num_mismatches = 0;")
-            testbench_code.append(f"\n        // Get expected values for {var_name}")
-            testbench_code.append(f"        auto {var_name}_expected_json = test_case.at(\"expected_outputs\").at(\"{var_name}\");")
+                if array_dimension == 0: # Scalar comparison
+                    testbench_code.append(f"        {cpp_base_type} {var_name}_expected_val = {var_name}_expected_json.get<{cpp_base_type}>();\n")
+                    testbench_code.append(f"        if (!compare_numeric({var_name}_out_actual, {var_name}_expected_val)) {{\n")
+                    testbench_code.append(f"            if (num_mismatches < {mismatches_to_report}){{\n")
+                    testbench_code.append(f"                std::cout << \"  FAIL: Scalar '{var_name}' - Expected: \" << {var_name}_expected_val << \", Actual: \" << {var_name}_out_actual << std::endl;\n")
+                    testbench_code.append("             }\n")
+                    testbench_code.append("             num_mismatches++;\n")
+                    testbench_code.append("             test_case_passed = false;\n")
+                    testbench_code.append("         }\n")
+                    testbench_code.append(f"        else {{ std::cout << \"  PASS: Scalar '{var_name}' matches.\" << std::endl; }}\n")
+                elif array_dimension >= 1: # Unified array comparison (flattened)
+                    testbench_code.append(f"        if (!{var_name}_expected_json.is_array() || {var_name}_expected_json.size() < {shape[0]}) {{\n")
+                    testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements expected: {shape[0]} has: \" << {var_name}_expected_json.size() << \").\" << std::endl;\n")
+                    testbench_code.append(f"            return 1;\n")
+                    testbench_code.append("        }\n")
+                    testbench_code.append(f"\n        // Compare array {var_name} (flattened)\n")
+                    testbench_code.append(f"        uint32_t flat_{var_name}_idx = 0;\n")
+                    testbench_code.append(f"        for (const auto& expected_val_json : {var_name}_expected_json) {{\n")
+                    testbench_code.append(f"            if (flat_{var_name}_idx >= {total_elements}) {{\n")
+                    testbench_code.append(f"                std::cerr << \"Error: expected_outputs.{var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;\n")
+                    testbench_code.append(f"                return 1;\n")
+                    testbench_code.append(f"            }}\n")
+                    testbench_code.append(f"            {cpp_base_type} expected_val = expected_val_json.get<{cpp_base_type}>();\n")
+                    testbench_code.append(f"            if (!compare_numeric({var_name}_arr[flat_{var_name}_idx], expected_val)) {{\n")                
+                    testbench_code.append(f"                if (num_mismatches < {mismatches_to_report}){{\n")
+                    testbench_code.append(f"                    std::cout << \"  FAIL: Array '{var_name}' at flattened index [\" << flat_{var_name}_idx << \"] - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr[flat_{var_name}_idx] << std::endl;\n")
+                    testbench_code.append("                 }\n")
+                    testbench_code.append("                 num_mismatches++;\n")
+                    testbench_code.append("                 test_case_passed = false;\n")
+                    testbench_code.append("                 // break; // Uncomment to stop on first mismatch for this array\n")
+                    testbench_code.append("             }\n")
+                    testbench_code.append(f"            flat_{var_name}_idx++;\n")
+                    testbench_code.append("         }\n")
+                    testbench_code.append(f"        if (flat_{var_name}_idx != {total_elements}) {{\n")
+                    testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;\n")
+                    testbench_code.append(f"            return 1;\n")
+                    testbench_code.append(f"        }}\n")
+                    testbench_code.append(f"        if (num_mismatches == 0) std::cout << \"  PASS: Array '{var_name}' matches.\" << std::endl;\n")
+        testbench_code.append("\n        if (test_case_passed) {\n")
+        testbench_code.append("            std::cout << \"Test Case PASSED: \" << test_id << std::endl;\n")
+        testbench_code.append("        } else {\n")
+        testbench_code.append("            std::cout << \"Test Case FAILED: \" << test_id << std::endl;\n")
+        testbench_code.append("            failed_tests++;\n")
+        testbench_code.append("        }\n")
+        # Cleanup dynamic memory for current test case
+        for cleanup_line in cleanup_deallocations:
+            testbench_code.append(cleanup_line)
+        #Calculate the Percent Error FIXME: FInd out if we will even use this number because sometimes it is wrong and we dont even care because its just wrong.
+        testbench_code.append("        if (num_mismatches > 0) {\n")
+        testbench_code.append(f"            percent_error = ((float)num_mismatches / {total_elements}) * 100.0;\n")
+        testbench_code.append("        } else {\n")
+        testbench_code.append("            percent_error = 0.0;\n")
+        testbench_code.append("        }\n")
+        testbench_code.append("    }\n") # End of for-loop for test_cases_json
+        testbench_code.append("\n    std::cout << \"\\n--- Test Summary ---\" << std::endl;\n")
+        testbench_code.append("    std::cout << \"Compilation Status: success\" << std::endl;\n")
+        testbench_code.append("    std::cout << \"Total Tests: \" << total_tests << std::endl;\n")
+        testbench_code.append("    std::cout << \"Failed Tests: \" << failed_tests << std::endl;\n")
+        testbench_code.append("    std::cout << \"Percent Error: \" << percent_error << \"%\" << std::endl;\n")
+        testbench_code.append("    if (failed_tests == 0) {\n")
+        testbench_code.append("        std::cout << \"ALL TESTS PASSED!\" << std::endl;\n")
+        testbench_code.append("        return 0;\n")
+        testbench_code.append("    } else {\n")
+        testbench_code.append("        std::cout << \"SOME TESTS FAILED!\" << std::endl;\n")
+        testbench_code.append("        return 1;\n")
+        testbench_code.append("    }\n")
+        testbench_code.append("}\n") # End of main
+    elif external_testbench_path:
+        logger.info("CSIM: Testbench path provided, copying testbench to project")
 
-            if array_dimension == 0: # Scalar comparison
-                testbench_code.append(f"        {cpp_base_type} {var_name}_expected_val = {var_name}_expected_json.get<{cpp_base_type}>();")
-                testbench_code.append(f"        if (!compare_numeric({var_name}_out_actual, {var_name}_expected_val)) {{")
-                testbench_code.append(f"            if (num_mismatches < {mismatches_to_report}){{")
-                testbench_code.append(f"                std::cout << \"  FAIL: Scalar '{var_name}' - Expected: \" << {var_name}_expected_val << \", Actual: \" << {var_name}_out_actual << std::endl;")
-                testbench_code.append("             }")
-                testbench_code.append("             num_mismatches++;")
-                testbench_code.append("             test_case_passed = false;")
-                testbench_code.append("         }")
-                testbench_code.append(f"        else {{ std::cout << \"  PASS: Scalar '{var_name}' matches.\" << std::endl; }}")
-            elif array_dimension >= 1: # Unified array comparison (flattened)
-                testbench_code.append(f"        if (!{var_name}_expected_json.is_array() || {var_name}_expected_json.size() < {shape[0]}) {{")
-                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} is not a {array_dimension}D array (wrong number of outer elements expected: {shape[0]} has: \" << {var_name}_expected_json.size() << \").\" << std::endl;")
-                testbench_code.append(f"            return 1;")
-                testbench_code.append("        }")
-                testbench_code.append(f"\n        // Compare array {var_name} (flattened)")
-                testbench_code.append(f"        uint32_t flat_{var_name}_idx = 0;")
-                testbench_code.append(f"        for (const auto& expected_val_json : {var_name}_expected_json) {{")
-                testbench_code.append(f"            if (flat_{var_name}_idx >= {total_elements}) {{")
-                testbench_code.append(f"                std::cerr << \"Error: expected_outputs.{var_name} JSON data has more elements than expected ({total_elements}).\" << std::endl;")
-                testbench_code.append(f"                return 1;")
-                testbench_code.append(f"            }}")
-                testbench_code.append(f"            {cpp_base_type} expected_val = expected_val_json.get<{cpp_base_type}>();")
-                testbench_code.append(f"            if (!compare_numeric({var_name}_arr[flat_{var_name}_idx], expected_val)) {{")                
-                testbench_code.append(f"                if (num_mismatches < {mismatches_to_report}){{")
-                testbench_code.append(f"                    std::cout << \"  FAIL: Array '{var_name}' at flattened index [\" << flat_{var_name}_idx << \"] - Expected: \" << expected_val << \", Actual: \" << {var_name}_arr[flat_{var_name}_idx] << std::endl;")
-                testbench_code.append("                 }")
-                testbench_code.append("                 num_mismatches++;")
-                testbench_code.append("                 test_case_passed = false;")
-                testbench_code.append("                 // break; // Uncomment to stop on first mismatch for this array")
-                testbench_code.append("             }")
-                testbench_code.append(f"            flat_{var_name}_idx++;")
-                testbench_code.append("         }")
-                testbench_code.append(f"        if (flat_{var_name}_idx != {total_elements}) {{")
-                testbench_code.append(f"            std::cerr << \"Error: expected_outputs.{var_name} JSON data has fewer elements than expected ({total_elements}).\" << std::endl;")
-                testbench_code.append(f"            return 1;")
-                testbench_code.append(f"        }}")
-                testbench_code.append(f"        if (num_mismatches == 0) std::cout << \"  PASS: Array '{var_name}' matches.\" << std::endl;")
-    testbench_code.append("\n        if (test_case_passed) {")
-    testbench_code.append("            std::cout << \"Test Case PASSED: \" << test_id << std::endl;")
-    testbench_code.append("        } else {")
-    testbench_code.append("            std::cout << \"Test Case FAILED: \" << test_id << std::endl;")
-    testbench_code.append("            failed_tests++;")
-    testbench_code.append("        }")
-    # Cleanup dynamic memory for current test case
-    for cleanup_line in cleanup_deallocations:
-        testbench_code.append(cleanup_line)
-    #Calculate the Percent Error FIXME: FInd out if we will even use this number because sometimes it is wrong and we dont even care because its just wrong.
-    testbench_code.append("        if (num_mismatches > 0) {")
-    testbench_code.append(f"            percent_error = ((float)num_mismatches / {total_elements}) * 100.0;")
-    testbench_code.append("        } else {")
-    testbench_code.append("            percent_error = 0.0;")
-    testbench_code.append("        }")
-    testbench_code.append("    }") # End of for-loop for test_cases_json
-    testbench_code.append("\n    std::cout << \"\\n--- Test Summary ---\" << std::endl;")
-    testbench_code.append("    std::cout << \"Compilation Status: success\" << std::endl;")
-    testbench_code.append("    std::cout << \"Total Tests: \" << total_tests << std::endl;")
-    testbench_code.append("    std::cout << \"Failed Tests: \" << failed_tests << std::endl;")
-    testbench_code.append("    std::cout << \"Percent Error: \" << percent_error << \"%\" << std::endl;")
-    testbench_code.append("    if (failed_tests == 0) {")
-    testbench_code.append("        std::cout << \"ALL TESTS PASSED!\" << std::endl;")
-    testbench_code.append("        return 0;")
-    testbench_code.append("    } else {")
-    testbench_code.append("        std::cout << \"SOME TESTS FAILED!\" << std::endl;")
-    testbench_code.append("        return 1;")
-    testbench_code.append("    }")
-    testbench_code.append("}") # End of main
+        generate_hls_config(kernel_name, external_testbench_path) # TODO: Add opencv path
+        # Currently only supports the vitis vision library
+        logger.debug("CSIM: Reading external testbench")
 
+        with open(f"{external_testbench_path}{testbench_filename}", "r") as f: 
+            testbench_code = f.read()
 
+        logger.debug("CSIM: Modifying testbench includes")
+        testbench_code = modify_testbench_complete(testbench_code, kernel_name, external_testbench_path, ".", remove_args=["height", "width"])
+        logger.debug("CSIM: Modifying testbench includes successful")
+
+    logger.info(f"CSIM: writing testbench: {testbench_cpp_file_path}")
     # --- Write the generated testbench.cpp file ---
     try:
         with open(testbench_cpp_file_path, "w") as f:
-            f.write("\n".join(testbench_code))
+            f.write("".join(testbench_code))
         logger.info(f"Generated C++ testbench source file: {testbench_cpp_file_path}")
         return testbench_cpp_file_path, test_data_json_path, "SUCCESS", all_var_metadata
     except FileExistsError as e:
