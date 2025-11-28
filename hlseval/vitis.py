@@ -540,8 +540,9 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
         syn.top={kernel_name}
         syn.file={kernel_code_path}
         tb.file={kernel_testbench_path}
-        tb.cflags=-std=c++17 -fexceptions -I./include 
+        tb.cflags=-std=c++14 -fexceptions -I./include 
         csim.clean=true
+        csim.compiler=clang
         """ )
     
     sim_cmd = ["vitis-run", "--mode", "hls", "--csim", "--config", "vitis_config_csim.cfg", "--work_dir", project_dir]
