@@ -253,8 +253,8 @@ def generate_types(inputs):
 def write_table_header(logfile):
     """Write the header of the ASCII table to the logfile."""
     # Define headers and column widths
-    headers = ["Kernel", "LLM Time", "Dynamatic time", "Vitis CSIM time", "Vitis CSYNTH time"]
-    col_widths = [45, 20, 20, 20, 20]
+    headers = ["Kernel", "LLM Time", "Dynamatic time", "Vitis CSIM time", "Vitis CSYNTH time", "Total time"]
+    col_widths = [45, 20, 20, 20, 20, 20]
     
     # Create top border
     border = "+"
@@ -271,13 +271,13 @@ def write_table_header(logfile):
     # Write separator after headers
     logfile.write(border + "\n")
     logfile.flush()
-def add_table_row(logfile, kernel, attempt=1, llm_time = "-", dynamatic_time = "-", vitis_csim_time = "-", vitis_csynth_time = "-"):
+def add_table_row(logfile, kernel, attempt=1, llm_time = "-", dynamatic_time = "-", vitis_csim_time = "-", vitis_csynth_time = "-", total_time = "-"):
     """Add a row to the ASCII table in the logfile."""
-    col_widths = [45, 20, 20, 20, 20]
+    col_widths = [45, 20, 20, 20, 20, 20]
     
     # Prepare the data
     kernel_attempt = f"{kernel}_attempt_{attempt+1}"
-    data = [kernel_attempt, llm_time, dynamatic_time, vitis_csim_time, vitis_csynth_time]
+    data = [kernel_attempt, llm_time, dynamatic_time, vitis_csim_time, vitis_csynth_time, total_time]
     
     # Create the data row
     data_row = "|"
@@ -290,7 +290,7 @@ def add_table_row(logfile, kernel, attempt=1, llm_time = "-", dynamatic_time = "
     logfile.flush()
 def write_table_footer(logfile):
     """Write the footer (bottom border) of the ASCII table to the logfile."""
-    col_widths = [45, 20, 20, 20, 20]
+    col_widths = [45, 20, 20, 20, 20, 20]
     
     # Create bottom border
     border = "+"

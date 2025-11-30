@@ -568,6 +568,8 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
             # Decode them just like you would from the result object
             sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
             sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
+            csim_elapsed_time = dt.now() - csim_begin
+
             raise CsimTimeoutError(
                 f"CSIM timed out after {e.timeout} seconds. Output: {sim_stdout}, Error: {sim_stderr}"
             )

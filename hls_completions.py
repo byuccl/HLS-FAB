@@ -11,6 +11,7 @@ import csv
 from hlseval import HLSEval
 import hlseval.utils as utils
 import hlseval.dynarapid as dynarapid
+from datetime import datetime as dt
 from hlseval.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DYNARAPID_SYSTEM_PROMPT, SYSTEM_PROMPTS, feedback_prompt_dyarapid, feedback_prompt_vitis
 
 logger = logging.getLogger("COMPLETIONS")
@@ -25,6 +26,7 @@ def run_kernel_attempt(
     rag: dict,
     prev_feedback: dict=None, 
     ) -> tuple :
+    kernel_start = dt.now()
 
     llm_elapsed_time = None
     dynamatic_elapsed_time = None
@@ -39,7 +41,7 @@ def run_kernel_attempt(
 
     elif kernel_object.hls_flow == "dynarapid":
         returncode, feedback, csim_elapsed_time, dynamatic_elapsed_time = dynarapid.run_dynarapid_w_feedback(kernel_object, attempt)
-
+    kernel_elapsed_time =  dt.now() - kernel_start
     utils.add_table_row(
         kernel_object._logfile,
         kernel_object.kernel_name, 
@@ -47,7 +49,8 @@ def run_kernel_attempt(
         llm_elapsed_time, 
         dynamatic_elapsed_time, 
         csim_elapsed_time, 
-        csynth_elapsed_time
+        csynth_elapsed_time,
+        kernel_elapsed_time
     )
     return returncode, feedback
 
@@ -158,6 +161,8 @@ if __name__ == "__main__":
     logger.info("--------------------------------------------------------------")
     logger.info(f"-  Beginning HLSEval:    {date}                ")
     logger.info("--------------------------------------------------------------")
+    hlseval_elapsed_time = None
+    hlseval_begin = dt.now()
     logger.debug(f"HLS Tool Chain: {args.hls_flow}")
     logger.debug(f"Attempts: {args.attempts}")
     logger.debug(f"Pass@k: k = {args.k}")
@@ -198,7 +203,11 @@ if __name__ == "__main__":
                     logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
                     kernel_object = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
                     process_kernel(kernel_object, rag)
-                    
+
+                hlseval_elapsed_time = dt.now() - hlseval_begin
+                utils.add_table_row(logfile=logfile, kernel="hlseval (all kernels)", total_time=hlseval_elapsed_time)
+
+
                 hlseval.write_table_footer(logfile)
  
     # Delete the unecessary files after running the completions

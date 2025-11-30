@@ -40,7 +40,7 @@ dataset:
 
 run_vitis_completions: 
 	@echo "Running HLSEval with Vitis"
-	python hls_completions.py --hls_flow vitis $(if $(LOG),--log $(LOG),) $(if $(N),--attempts $(N),) $(if $(K), -k $(K),) $(if $(SKIP_BEHAVIORAL), --skip_behavioral) $(if $(RAG), --rag)
+	python3 hls_completions.py --hls_flow vitis $(if $(LOG),--log $(LOG),) $(if $(N),--attempts $(N),) $(if $(K), -k $(K),) $(if $(SKIP_BEHAVIORAL), --skip_behavioral) $(if $(RAG), --rag)
 run_dynarapid_completions: 
 	@echo "Running HLSEval With Dynarapid"
 	python hls_completions.py --hls_flow dynarapid $(if $(LOG),--log $(LOG),) $(if $(N),--attempts $(N),) $(if $(K), -k $(K),) $(if $(RAPIDWRITE),--rapidwrite)
