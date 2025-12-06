@@ -7,7 +7,7 @@ import json
 from datetime import datetime as dt
 from hlseval.utils import get_ap_cpp_type_str, import_module_members, get_std_cpp_type_str, generate_inputs
 
-logger = logging.getLogger("CSIM")
+# logger = logging.getLogger("CSIM")
 
 class CsimTimeoutError(Exception):
     """Raised when Vitis HLS times out."""
@@ -36,7 +36,7 @@ class CsynthTimeoutError(Exception):
     """Raised when Vitis HLS times out."""
     pass
 
-def generate_h_file(kernel_code, model_dir, kernel_name):
+def generate_h_file(kernel_code, model_dir, kernel_name, logger):
     """
     Parses C++ kernel code to extract the function signature and generates a corresponding .h header file.
     This version is more robust to multi-line function declarations and whitespace.
@@ -116,7 +116,7 @@ def generate_h_file(kernel_code, model_dir, kernel_name):
 
     logger.info(f"Header file generated at: {h_file_path}")
 
-def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="vitis"):
+def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="vitis", logger=None):
     """
     Generates a C++ testbench file (`testbench.cpp`) that reads test data from a JSON file,
     executes the specified kernel, and compares its outputs to expected results.
@@ -169,7 +169,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
     # Generating H File
     logger.info("CSIM: Generating H File for CSIM")
     try:
-        generate_h_file(kernel_code, model_dir, kernel_name)
+        generate_h_file(kernel_code, model_dir, kernel_name, logger)
     except Exception as e:
         logger.error(f"Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}", None
@@ -367,7 +367,7 @@ def create_testbench(kernel_name, test_data_json_path, model_dir, hls_flow="viti
         logger.error(f"Error writing C++ testbench file: {e}")
         return None, test_data_json_path, f"FAILED: Error writing C++ testbench file: {e}", all_var_metadata
     
-def write_json_test_data(filename, test_cases_list):
+def write_json_test_data(filename, test_cases_list, logger):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
     """
@@ -384,7 +384,7 @@ def write_json_test_data(filename, test_cases_list):
         logger.error(f"Error writing test data to {filename}: {e}")
         raise
 
-def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0, hls_flow="vitis"):
+def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempts_1", seed=0, hls_flow="vitis", logger=None):
     """
     Writes a list of test cases (inputs and expected outputs) to a JSON file.
     Each test case should be a dictionary with at least 'test_id', 'inputs',
@@ -485,8 +485,8 @@ def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempt
         json_output_filename = os.path.abspath(os.path.join(model_dir, f"{name}_test_data.json"))
         copy_json_output_filename = os.path.abspath(os.path.join(copy_model_dir, f"{name}_test_data_copy.json"))
         try:
-            write_json_test_data(json_output_filename, [current_test_case])
-            write_json_test_data(copy_json_output_filename, [current_test_case]  )
+            write_json_test_data(json_output_filename, [current_test_case], logger)
+            write_json_test_data(copy_json_output_filename, [current_test_case], logger)
             logger.info(f"Generated JSON test data for {name} at: {json_output_filename}")
         except Exception as e:
             logger.error(f"Failed to write JSON test data for {name}: {e}")
@@ -497,7 +497,8 @@ def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempt
             kernel_name=name,
             test_data_json_path=json_output_filename, # This is the full path to the source JSON
             model_dir=model_dir,
-            hls_flow=hls_flow
+            hls_flow=hls_flow,
+            logger=logger
         )
         if generation_status == "SUCCESS" and testbench_cpp_path:
             all_results[name] = {
@@ -520,16 +521,16 @@ def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempt
 
     return all_results, var_metadata
 
-def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kernel_name=None, hls_flow="vitis"):
+def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kernel_name=None, hls_flow="vitis", logger=None):
     logger.info("Preparing CSIM")
-    result, var_metadata = prepare_csim(kernel_name, model_dir, seed=45, hls_flow=hls_flow)
+    result, var_metadata = prepare_csim(kernel_name, model_dir, seed=45, hls_flow=hls_flow, logger=logger)
     
     project_dir = model_dir
-    kernel_code_path = os.path.join(project_dir, f"{kernel_name}.cpp")
-    kernel_testbench_path = os.path.join(project_dir, f"{kernel_name}_tb.cpp")
+    kernel_code_path = os.path.join(f"./{kernel_name}.cpp")
+    kernel_testbench_path = os.path.join(f"./{kernel_name}_tb.cpp")
     csim_elapsed_time = None
     csim_begin = dt.now()
-    with open("vitis_config_csim.cfg", "w") as file:
+    with open(f"{model_dir}/vitis_config_csim.cfg", "w") as file:
         file.write(
             f"""
         part=xazu1eg-sbva484-1-i
@@ -540,12 +541,12 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
         syn.top={kernel_name}
         syn.file={kernel_code_path}
         tb.file={kernel_testbench_path}
-        tb.cflags=-std=c++14 -fexceptions -I./include 
+        tb.cflags=-std=c++17 -fexceptions -I../../../../../../../../include 
         csim.clean=true
         csim.compiler=clang
         """ )
     
-    sim_cmd = ["vitis-run", "--mode", "hls", "--csim", "--config", "vitis_config_csim.cfg", "--work_dir", project_dir]
+    sim_cmd = ["vitis-run", "--mode", "hls", "--csim", "--config", f"{model_dir}/vitis_config_csim.cfg", "--work_dir", project_dir]
     # vitis-run --mode hls --csim --config vitis_config_csim.cfg --work_dir ./results/solutions/gpt-4o/conv2d_int16/attempts_1
     # Run the vitis_hls and capture the output
     result_success = "success" in result[kernel_name]["status"]
@@ -585,7 +586,7 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
 
         return "Testbench creation failed", csim_elapsed_time, var_metadata
         
-def run_csynth(filepath, kernel_name, variable_metadata):
+def run_csynth(filepath, kernel_name, variable_metadata, logger):
     # Add an axi or axilite bus for each of the parameters to they don't get optimized away
     axi_interfaces = ""
     var_num = 0
@@ -600,7 +601,8 @@ def run_csynth(filepath, kernel_name, variable_metadata):
         axi_interfaces += next_line
     csynth_elapse_time = None
     csynth_begin = dt.now()
-    with open("vitis_config.cfg", "w") as file:
+    logger.info(f"synth_filepath: {filepath}")
+    with open(f"{filepath}/vitis_config.cfg", "w") as file:
         file.write(
             f"""
 part=xazu1eg-sbva484-1-i
@@ -610,7 +612,7 @@ flow_target=vivado
 package.output.format=ip_catalog
 package.output.syn=false
 syn.top={kernel_name}
-syn.file={filepath}/{kernel_name}.cpp
+syn.file={kernel_name}.cpp
 {axi_interfaces}
         """
         )
@@ -622,7 +624,7 @@ syn.file={filepath}/{kernel_name}.cpp
                 "--mode",
                 "hls",
                 "--config",
-                "vitis_config.cfg",
+                f"{filepath}/vitis_config.cfg",
                 "--work_dir",
                 filepath,
             ], 

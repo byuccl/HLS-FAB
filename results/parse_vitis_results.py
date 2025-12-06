@@ -71,7 +71,7 @@ def create_csv(base_dir, output_file):
     # Define the models to process
     with open("./dataset/llm_models.txt", "r") as f:
         lines = f.readlines()
-    lines = ["x-ai/grok-4","openai/gpt-5", "google/gemini-2.5-pro", "anthropic/claude-sonnet-4.5"]
+    lines = ["gpt-4.1-mini"]
     models = [line.strip() for line in lines]
     with open("./dataset/kernel_list.txt", "r") as f:
         kernels = f.readlines()
@@ -106,8 +106,8 @@ def create_csv(base_dir, output_file):
             print(f"Processing model: {model}")
             
             # Parse timing log (now might be in different locations depending on structure)
-            model_timing_log_path = model_dir / 'logs' / 'timing.log'
-            model_timing_data = parse_timing_log(str(model_timing_log_path))
+            # model_timing_log_path = model_dir / 'logs' / 'timing.log'
+            # model_timing_data = parse_timing_log(str(model_timing_log_path))
             
             # Get all iteration directories for this model
             iterations = get_iterations(model_dir)
@@ -117,11 +117,11 @@ def create_csv(base_dir, output_file):
                 iteration_dir = model_dir / str(iteration)
                 
                 # Iteration might have its own timing log
-                iteration_timing_log_path = iteration_dir / 'logs' / 'timing.log'
-                iteration_timing_data = parse_timing_log(str(iteration_timing_log_path))
+                # iteration_timing_log_path = iteration_dir / 'logs' / 'timing.log'
+                # iteration_timing_data = parse_timing_log(str(iteration_timing_log_path))
                 
                 # Combine timing data, with iteration data taking precedence
-                timing_data = {**model_timing_data, **iteration_timing_data}
+                # timing_data = {**model_timing_data, **iteration_timing_data}
                 
                 # Get all kernel directories for this iteration
                 kernel_dirs = kernels
@@ -178,10 +178,10 @@ def create_csv(base_dir, output_file):
                             synth_errors_str = '-'
                         
                         # Extract timing data
-                        timing_key = f"{kernel_dir}_{attempt}"
-                        llm_time = timing_data.get(timing_key, {}).get('llm_time', '-')
-                        csim_time = timing_data.get(timing_key, {}).get('csim_time', '-')
-                        csynth_time = timing_data.get(timing_key, {}).get('csynth_time', '-')
+                        # timing_key = f"{kernel_dir}_{attempt}"
+                        # llm_time = timing_data.get(timing_key, {}).get('llm_time', '-')
+                        # csim_time = timing_data.get(timing_key, {}).get('csim_time', '-')
+                        # csynth_time = timing_data.get(timing_key, {}).get('csynth_time', '-')
                         
                         # Extract synthesis data
                         fmax = data.get('synth_feedback', {}).get('fmax', '-')
@@ -207,11 +207,9 @@ def create_csv(base_dir, output_file):
                             iteration,
                             kernel_dir,
                             attempt,
-                            llm_time,
                             status,
                             match,
                             errors,
-                            csim_time,
                             synth_errors_str,
                             fmax,
                             latency,
@@ -219,7 +217,6 @@ def create_csv(base_dir, output_file):
                             dsp,
                             ff,
                             lut,
-                            csynth_time
                         ]
                         
                         rows_for_kernel.append(row)
@@ -231,7 +228,7 @@ def create_csv(base_dir, output_file):
     print(f"CSV file created successfully: {output_file}")
 
 # Execute the script
-base_directory = "./results/solutions/vitis/rag"
-# base_directory = "./results/solutions/vitis/no_rag" #TODO: Make this operate dynamically
+# base_directory = "./results/solutions/vitis/rag"
+base_directory = "./results/solutions/vitis/no_rag" #TODO: Make this operate dynamically
 output_csv = "results_summary.csv"
 create_csv(base_directory, output_csv)
