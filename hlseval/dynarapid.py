@@ -25,10 +25,10 @@ def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
         except vitis.CsimTimeoutError as e:
             logger.warning("Vitis timed out on Simulation")
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = parser.gather_parsed_data(kernel_object.kernel_name, hls_flow=kernel_object.hls_flow, model=kernel_object._model, attempt=attempt+1, iter=kernel_object._iter)
+        dynarapid_feedback = parser.gather_parsed_data(kernel_object, attempt=attempt+1)
     
 
-    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(test, attempt)
+    returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_object, attempt)
     dynarapid_feedback['compile_feedback'] = {"returncode": returncode}
 
 
@@ -43,9 +43,10 @@ def run_dynarapid(kernel_object: hls.HLSEval, attempt: int=0):
     new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
     # Extract the relevant part of the path
     # Get the path from solutions_path that matches the container's structure
-    if "/results/solutions/dynarapid/" in new_solution_path:
+    mount_path = "/results/solutions/dynarapid/rag" if kernel_object.rag else "/results/solutions/dynarapid/no_rag"
+    if mount_path in new_solution_path:
         # Extract the path starting from /results/...
-        container_path = "/mount" + new_solution_path[new_solution_path.find("/results/solutions/dynarapid/"):]
+        container_path = "/mount" + new_solution_path[new_solution_path.find(mount_path):]
     else:
         # Use the full path as fallback
         container_path = f"/mount{new_solution_path}"
@@ -164,7 +165,8 @@ exit
             logger.info("Running Java GenerateDesign command...")
             
             # Define the target directory for this attempt with new structure
-            attempt_dir = f"/mount/results/solutions/dynarapid/{kernel_object._model}/{kernel_object._iter+1}/{kernel_object.kernel_name}/attempts_{attempt+1}/dcp_designs"
+            ragStr = "rag" if kernel_object.rag else "no_rag"
+            attempt_dir = f"/mount/results/solutions/dynarapid/{ragStr}/{kernel_object._model}/{kernel_object._iter+1}/{kernel_object.kernel_name}/attempts_{attempt+1}/dcp_designs"
             
             # Create the target directory
             mkdir_cmd = f"docker exec dynarapid_container bash -c 'mkdir -p {attempt_dir}'"

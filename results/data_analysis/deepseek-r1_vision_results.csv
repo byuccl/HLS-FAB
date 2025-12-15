@@ -1,1 +1,0 @@
-model,iteration,kernel,attempts,llm_time,status,match,errors,csim_time,synth_errors,fmax,latency,bram,dsp,ff,lut,csynth_time
