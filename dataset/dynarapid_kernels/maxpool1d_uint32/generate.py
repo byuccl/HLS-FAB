@@ -6,18 +6,18 @@ window_size = 2
 stride = 2
 output_length = (num_values - window_size) // stride + 1
 
-function_signature = "void maxpool1d_uint32(ap_uint<32> *in_buffer, ap_uint<32> *out_buffer)"
+function_signature = "void maxpool1d_uint32(uint32_t *in_buffer, uint32_t *out_buffer)"
 
 short_description = f"A kernel that performs a 1D maxpool operation on an input vector with window_size and stride as runtime parameters."
 
 description = f"""
 An HLS kernel that performs a 1D max pooling operation on an input vector with window_size and stride as runtime parameters.
-    First parameter: Pointer to the input buffer of {num_values} int32_t values.
-    Second parameter: Pointer to the output buffer of int32_t values.
+    First parameter: Pointer to the input buffer of {num_values} uint32_t values.
+    Second parameter: Pointer to the output buffer of uint32_t values.
 The kernel computes the maximum value of each window of size {window_size} in the input buffer,
 with a stride of {stride}, and stores the result in the output buffer.
 The output buffer will have a length of (input_length - window_size) // stride + 1.
-The input buffer is expected to be at least {num_values} int32_t values.
+The input buffer is expected to be at least {num_values} uint32_t values.
 """
 
 inputs_info = [

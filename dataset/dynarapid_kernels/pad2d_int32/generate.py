@@ -16,8 +16,6 @@ This HLS kernel performs a 2D padding operation on an input matrix of 32-bit int
 Parameters to the function include:
     - A pointer to the input matrix of dimensions {input_rows}x{input_cols}.
     - A pointer to the output padded matrix.
-    - An integer pad_size indicating the number of padding layers to add around the input matrix.
-    - An integer pad_value which is used to fill the padding layers.
 The output matrix will have dimensions ({input_rows} + 2 * pad_size) x ({input_cols} + 2 * pad_size).
 """
 
@@ -44,13 +42,20 @@ inputs_info = [
 ]
 
 # Behavioral function to simulate the kernel's operation
-def behavioral(input_matrix, pad_size=pad_size, pad_value=pad_value):
-    input_matrix = input_matrix.reshape(input_rows, input_cols)
+def behavioral(input_matrix, pad_size=pad_size, pad_value=pad_value):  
+    n_rows = int(np.sqrt(len(input_matrix)))  # This assumes a square matrix
+    n_cols = n_rows
+    
+    # Reshape to original 2D form
+    input_matrix = input_matrix.reshape(n_rows, n_cols)
+    
+    # Now proceed with padding as before
+    input_rows, input_cols = input_matrix.shape
     padded_rows = input_rows + 2 * pad_size
     padded_cols = input_cols + 2 * pad_size
     padded_matrix = np.full((padded_rows, padded_cols), pad_value, dtype=input_matrix.dtype)
     padded_matrix[pad_size:pad_size + input_rows, pad_size:pad_size + input_cols] = input_matrix
-    return padded_matrix
+    return padded_matrix.flatten()
 
 # Generate examples for testing
 examples = generate_examples(inputs_info=inputs_info)
