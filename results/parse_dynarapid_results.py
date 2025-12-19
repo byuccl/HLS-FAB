@@ -3,6 +3,7 @@ import os
 import csv
 from pathlib import Path
 import re
+from hlseval import parser
 
 def parse_timing_log(log_path):
     """Parse the timing.log file to extract csim and csynth times."""
@@ -44,6 +45,19 @@ def parse_timing_log(log_path):
         }
     return timing_data
 
+def check_csim(dir_path):
+    compilation_status = False
+    match_status = False
+    
+    #Check the folder and look for the log to see if it passed CSIM or failed and for what reason
+    feedback = parser.parse_sim_report(dir_path)
+
+    compilation_status = feedback['status']
+    match_status = feedback['match']
+
+
+    return compilation_status, match_status
+
 def search_files(base_dir, k=1, attempts=1):
     """
     Search for .dot and _routed.dcp files in the given directory structure
@@ -55,6 +69,16 @@ def search_files(base_dir, k=1, attempts=1):
     with open("./dataset/dynarapid_kernel_list.txt", "r") as f:
         kernels = f.readlines()
     kernels = [kernel.strip() for kernel in kernels]
+    # models = ['openai/gpt-4.1-mini',
+    #         'x-ai/grok-code-fast-1',
+    #         'google/gemini-2.5-flash',
+    #         'deepseek/deepseek-chat-v3-0324',
+    #         'deepseek/deepseek-r1-0528',
+    #         'qwen/qwen3-coder',
+    #         'x-ai/grok-4',
+    #         'google/gemini-2.5-pro',
+    #         'anthropic/claude-sonnet-4.5',
+    #         'openai/gpt-5']
     
     results = []
     for rag in ("rag", "no_rag"):
@@ -83,6 +107,7 @@ def search_files(base_dir, k=1, attempts=1):
                         continue
                         
                     for attempt in range(attempts):  # 0 to 3
+
                         attempt_path = kernel_path / f"attempts_{attempt+1}" / "dcp_designs"
                         # print(attempt_path)
                         if not attempt_path.exists():
@@ -110,6 +135,8 @@ def search_files(base_dir, k=1, attempts=1):
                         # Look for the .dcp file
                         dcp_file = search_path / f"{kernel}_routed.dcp"
                         has_dcp = dcp_file.exists()
+
+                        compilation_status, match_status = check_csim(kernel_path / f"attempts_{attempt+1}" / "logs" / "hls_run_csim.log")
                         
                         # Record the result
                         results.append({
@@ -118,6 +145,8 @@ def search_files(base_dir, k=1, attempts=1):
                             'kernel': kernel,
                             'run': p+1,
                             'attempt': attempt+1,
+                            'compiled': compilation_status,
+                            'matched': match_status,
                             'has_dot': has_dot,
                             'has_dcp': has_dcp,
                             'llm_time': llm_time,
@@ -130,7 +159,7 @@ def search_files(base_dir, k=1, attempts=1):
 def write_csv(results, output_file):
     """Write the results to a CSV file."""
     with open(output_file, 'w', newline='') as csvfile:
-        fieldnames = ['model', 'rag', 'kernel', 'run', 'attempt', 'has_dot', 'has_dcp', 'llm_time', 'sim_time', 'dynarapid_time']
+        fieldnames = ['model', 'rag', 'kernel', 'run', 'attempt','compiled', 'matched', 'has_dot', 'has_dcp', 'llm_time', 'sim_time', 'dynarapid_time']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
