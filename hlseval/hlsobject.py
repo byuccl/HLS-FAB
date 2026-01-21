@@ -9,7 +9,7 @@ from typing import Any
 from hlseval.hlscoder import HLSCoder
 import hlseval.prompts as prompts
 import hlseval.parser as parser
-from .vitis import CsynthTimeoutError, run_csynth
+from .vitis import CsynthTimeoutError, CsynthFormatError, run_csynth
 from .vitis import run_csim, CsimTimeoutError
 from .prompts import SYSTEM_PROMPTS
 
@@ -69,6 +69,10 @@ class HLSEval(HLSCoder):
     @property 
     def rag(self):
         return self._rag
+
+    @property 
+    def skip_behavioral(self):
+        return self._skip_behavioral
     
     @property 
     def iter(self):
@@ -160,9 +164,9 @@ class HLSEval(HLSCoder):
         new_solution_path = f"{self.solution_path}/attempts_{attempt+1}"
         csim_elapsed_time = None
         csynth_elapsed_time = None
-        if self._skip_behavioral:
+        if self.skip_behavioral:
             logger.info("Skipping CSIM")
-            csim_output, csim_elapsed_time, var_metadata = run_csim(new_solution_path, self.kernel_name)
+            csim_output, csim_elapsed_time, var_metadata = run_csim(new_solution_path, self.kernel_name, skip=True)
             sim_returncode = 0 # report that csim was successful
         else:
             # Run CSIM    
@@ -195,6 +199,16 @@ class HLSEval(HLSCoder):
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
                 vitis_feedback['synth_feedback']['goals'].extend([
                     "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining."
+                ])
+                synth_returncode = 1
+            except CsynthFormatError as e:
+                logger.warning(" Code formatted incorrectly")
+                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1)
+                logger.debug(vitis_feedback)
+                logger.debug("vitis Feedback before Adding new Errors")
+                vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis failed due to code formatting errors"])
+                vitis_feedback['synth_feedback']['goals'].extend([
+                    "Ensure code is contained in a single block with no main or examples."
                 ])
                 synth_returncode = 1
         else:

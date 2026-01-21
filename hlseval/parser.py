@@ -215,7 +215,7 @@ def gather_parsed_data(hlsobject, attempt=1):
             "sim_feedback": None,
     }
     synth_feedback = None
-    sim_feedback = None
+    sim_feedback = "No Simulation feedback"
     if hlsobject.hls_flow == "vitis":
         # Read in the log file from the HLS synthesis attempt
         try:
@@ -249,33 +249,34 @@ def gather_parsed_data(hlsobject, attempt=1):
         final_feedback["synth_feedback"] = synth_feedback
     
     # Check if the simulation was successful then add the data to json
-    try:
-        with open(old_sim_log_file, 'r') as file:
-            report = file.read()
+    if not hlsobject.skip_behavioral:
+        try:
+            with open(old_sim_log_file, 'r') as file:
+                report = file.read()
+                with open(log_file, "a") as log:
+                    log.write("\n\n")
+                    log.write(report)
+                    log.write("\n\n")
+                    
+                sim_feedback = parse_sim_report(old_sim_log_file)
+                # with open(out_data_path, 'w') as of:
+                #     json.dump(feedback, of, indent=4)
+        except UnicodeDecodeError:
+            logger.warning(f"UnicodeDecodeError: Trying to read {old_sim_log_file} with latin-1 encoding.")
+            with open(old_sim_log_file, 'r', encoding='latin-1') as file:
+                report = file.read()
             with open(log_file, "a") as log:
                 log.write("\n\n")
                 log.write(report)
                 log.write("\n\n")
-                
             sim_feedback = parse_sim_report(old_sim_log_file)
+        except FileNotFoundError:
+            logger.warning(
+                f"The file {old_sim_log_file} does not exist."
+            )
+            sim_feedback = parse_sim_report()
             # with open(out_data_path, 'w') as of:
             #     json.dump(feedback, of, indent=4)
-    except UnicodeDecodeError:
-        logger.warning(f"UnicodeDecodeError: Trying to read {old_sim_log_file} with latin-1 encoding.")
-        with open(old_sim_log_file, 'r', encoding='latin-1') as file:
-            report = file.read()
-        with open(log_file, "a") as log:
-            log.write("\n\n")
-            log.write(report)
-            log.write("\n\n")
-        sim_feedback = parse_sim_report(old_sim_log_file)
-    except FileNotFoundError:
-        logger.warning(
-            f"The file {old_sim_log_file} does not exist."
-        )
-        sim_feedback = parse_sim_report()
-        # with open(out_data_path, 'w') as of:
-        #     json.dump(feedback, of, indent=4)
 
     final_feedback["sim_feedback"] = sim_feedback
         

@@ -36,6 +36,10 @@ class CsynthTimeoutError(Exception):
     """Raised when Vitis HLS times out."""
     pass
 
+class CsynthFormatError(Exception):
+    """Raised when The code passed to Csynth is formatted incorrectly."""
+    pass
+
 def generate_h_file(kernel_code, model_dir, kernel_name):
     """
     Parses C++ kernel code to extract the function signature and generates a corresponding .h header file.
@@ -520,7 +524,7 @@ def prepare_csim(kernel_name=None, model_dir="./results/solutions/gpt-4o/attempt
 
     return all_results, var_metadata
 
-def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kernel_name=None, hls_flow="vitis"):
+def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kernel_name=None, hls_flow="vitis", skip=False):
     logger.info("Preparing CSIM")
     result, var_metadata = prepare_csim(kernel_name, model_dir, seed=45, hls_flow=hls_flow)
     
@@ -529,60 +533,68 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
     kernel_testbench_path = os.path.join(project_dir, f"{kernel_name}_tb.cpp")
     csim_elapsed_time = None
     csim_begin = dt.now()
-    with open("vitis_config_csim.cfg", "w") as file:
-        file.write(
-            f"""
-        part=xazu1eg-sbva484-1-i
+    if not skip:
+        with open("vitis_config_csim.cfg", "w") as file:
+            file.write(
+                f"""
+            part=xazu1eg-sbva484-1-i
+            
+            [hls]
+            flow_target=vitis
+            package.output.format=xo
+            syn.top={kernel_name}
+            syn.file={kernel_code_path}
+            tb.file={kernel_testbench_path}
+            tb.cflags=-std=c++17 -fexceptions -I./include 
+            csim.clean=true
+            """ )
         
-        [hls]
-        flow_target=vitis
-        package.output.format=xo
-        syn.top={kernel_name}
-        syn.file={kernel_code_path}
-        tb.file={kernel_testbench_path}
-        tb.cflags=-std=c++17 -fexceptions -I./include 
-        csim.clean=true
-        """ )
-    
-    sim_cmd = ["vitis-run", "--mode", "hls", "--csim", "--config", "vitis_config_csim.cfg", "--work_dir", project_dir]
-    # vitis-run --mode hls --csim --config vitis_config_csim.cfg --work_dir ./results/solutions/gpt-4o/conv2d_int16/attempts_1
-    # Run the vitis_hls and capture the output
-    result_success = "success" in result[kernel_name]["status"]
-    if result_success:
-        try:
-            logger.info("Running CSIM")
-            sim_result = subprocess.run(
-                sim_cmd,
-                capture_output=True,
-                check=False,
-                timeout=180,  # Timeout after 3 minutes
-            )
-            sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
-            sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
-            csim_elapsed_time = dt.now() - csim_begin
-            return sim_result, csim_elapsed_time, var_metadata
-        except subprocess.TimeoutExpired as e:
-            logger.warning(f"Timeout occured: {e}")
-            # IMPORTANT: Access stdout and stderr from the exception object 'e'
-            # Decode them just like you would from the result object
-            sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
-            sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-            raise CsimTimeoutError(
-                f"CSIM timed out after {e.timeout} seconds. Output: {sim_stdout}, Error: {sim_stderr}"
-            )
-        except Exception as e:
-            logger.error(f"An unexpected error occurred during CSIM: {e}")
+        sim_cmd = ["vitis-run", "--mode", "hls", "--csim", "--config", "vitis_config_csim.cfg", "--work_dir", project_dir]
+        # vitis-run --mode hls --csim --config vitis_config_csim.cfg --work_dir ./results/solutions/gpt-4o/conv2d_int16/attempts_1
+        # Run the vitis_hls and capture the output
+        result_success = "success" in result[kernel_name]["status"]
+        if result_success:
+            try:
+                logger.info("Running CSIM")
+                sim_result = subprocess.run(
+                    sim_cmd,
+                    capture_output=True,
+                    check=False,
+                    timeout=180,  # Timeout after 3 minutes
+                )
+                sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
+                sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
+                csim_elapsed_time = dt.now() - csim_begin
+                return sim_result, csim_elapsed_time, var_metadata
+            except subprocess.TimeoutExpired as e:
+                logger.warning(f"Timeout occured: {e}")
+                # IMPORTANT: Access stdout and stderr from the exception object 'e'
+                # Decode them just like you would from the result object
+                sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+                sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
+                raise CsimTimeoutError(
+                    f"CSIM timed out after {e.timeout} seconds. Output: {sim_stdout}, Error: {sim_stderr}"
+                )
+            except Exception as e:
+                logger.error(f"An unexpected error occurred during CSIM: {e}")
+                csim_elapsed_time = dt.now() - csim_begin
+
+                return e, csim_elapsed_time, var_metadata
+        else: 
+            logger.warning("No Testbench file skipping to next kernel.")
+            #No Testebench was made skip this kernel. 
             csim_elapsed_time = dt.now() - csim_begin
 
-            return e, csim_elapsed_time, var_metadata
-    else: 
-        logger.warning("No Testbench file skipping to next kernel.")
-        #No Testebench was made skip this kernel. 
+            return "Testbench creation failed", csim_elapsed_time, var_metadata
+    else:
         csim_elapsed_time = dt.now() - csim_begin
+        logger.debug("Testbench creation skipped")
+        return "Testbench creation skipped. No feedback available", csim_elapsed_time, var_metadata
 
-        return "Testbench creation failed", csim_elapsed_time, var_metadata
         
 def run_csynth(filepath, kernel_name, variable_metadata):
+    if variable_metadata is None:
+        raise CsynthFormatError("The provided code was formatted incorrectly.")
     # Add an axi or axilite bus for each of the parameters to they don't get optimized away
     axi_interfaces = ""
     var_num = 0

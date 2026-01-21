@@ -7,7 +7,7 @@ height = 128
 width = 128
 num_values = height * width
 
-function_signature = "void accumulate_opencv(ap_uint<8> *src1, ap_uint<8> *src2, ap_uint<16> *dst)"
+function_signature = "void accumulate_vitis(ap_uint<8> *src1, ap_uint<8> *src2, ap_uint<16> *dst)"
 
 description = f"""
 This HLS kernel implements a function to accumulate two images. 
