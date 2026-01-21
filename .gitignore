@@ -1,7 +1,7 @@
 .venv/
 **.cfg
 .practice/
-results/solutions/
+results/solutions*
 results/solutions_backup/
 **__pycache__**
 **.vscode/
@@ -24,3 +24,5 @@ results/tests_wo_rag/*
 **.log
 results/dcp_designs/
 **venv**
+design_files_status.csv
+vitis_results.csv

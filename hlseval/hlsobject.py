@@ -9,7 +9,7 @@ from typing import Any
 from hlseval.hlscoder import HLSCoder
 import hlseval.prompts as prompts
 import hlseval.parser as parser
-from .vitis import CsynthTimeoutError, run_csynth
+from .vitis import CsynthTimeoutError, CsynthFormatError, run_csynth
 from .vitis import run_csim, CsimTimeoutError
 from .prompts import SYSTEM_PROMPTS
 
@@ -25,7 +25,8 @@ class HLSEval(HLSCoder):
             num_attempts: int = 1,
             skip_behavioral: bool = False,
             rapidwright: bool = False,
-            logfile = None):
+            logfile = None,
+            rag=False):
         
         super().__init__(
             hls_flow=hls_tool_chain, 
@@ -45,8 +46,12 @@ class HLSEval(HLSCoder):
         self._rapidwright = rapidwright
         self._kernel_name = kernel["kernel_name"]
         self._logfile = logfile
+        self._rag = rag
 
-        self._solution_path = f"./results/solutions/{hls_tool_chain}/{model}/{self._iter+1}/{self._kernel_name}"
+        if self._rag:
+            self._solution_path = f"./results/solutions/{hls_tool_chain}/rag/{model}/{self._iter+1}/{self._kernel_name}"
+        else:
+            self._solution_path = f"./results/solutions/{hls_tool_chain}/no_rag/{model}/{self._iter+1}/{self._kernel_name}"
         pathlib.Path(self._solution_path).mkdir(parents=True, exist_ok=True)
 
     @property
@@ -61,13 +66,25 @@ class HLSEval(HLSCoder):
     def solution_path(self):
         return self._solution_path
     
+    @property 
+    def rag(self):
+        return self._rag
+
+    @property 
+    def skip_behavioral(self):
+        return self._skip_behavioral
+    
+    @property 
+    def iter(self):
+        return self._iter
+    
     def get_prompt(self):
         return self._kernel["prompt"]
 
     def get_canonical(self):
         return self._kernel["canonical_solution"]
 
-    def llm_call(self, attempt: int, feedback=None):
+    def llm_call(self, attempt: int, rag, feedback=None):
         logger.debug(f"Generating LLM Call for {self.kernel_name} attempt {attempt+1}")
         # Generate the Prompt for LLM
         if attempt > 0:
@@ -80,8 +97,41 @@ class HLSEval(HLSCoder):
             prompt = self._kernel["prompt"]
         
         llm_completion_begin = dt.now()
+        
+        if rag["use_rag"]:
+            rag["num_retrieved"] = [2] # change this to increase number of retrieved kernel examples
+            from llama_index.core import (
+                StorageContext,
+                load_index_from_storage,
+                VectorStoreIndex,
+                SimpleDirectoryReader
+            )
+            logger.debug(f"importeed llama-index")
+            rag["directory"] = "./rag/vector_database"
+            # Set up directory
+            if not os.path.exists(rag["directory"]):
+                # Index new directory
+                logger.debug("Indexing...")
+                documents = SimpleDirectoryReader("rag_data/kernels", recursive=True).load_data()
+                index = VectorStoreIndex.from_documents(documents)
+                index.storage_context.persist(persist_dir=rag["directory"])
+            else:
+                # Load existing directory
+                storage_context = StorageContext.from_defaults(persist_dir=rag["directory"])
+                index = load_index_from_storage(storage_context)
+            # Find the most similar nodes
+            retriever = index.as_retriever(similarity_top_k=2)
+            nodes = retriever.retrieve(prompt)
+
+            context_string = "Reference related hls kernel:\n"
+            for node in nodes:
+                logger.debug(f"rag reference kernel: {node.metadata['file_name']}")
+                context_string += node.node.text
+                prompt = prompt + "\n" + context_string + "\n\n"
+
 
         response = self(prompt)
+        
         result = {
             "code": self.extract_codeblock(response["response"]),
             "stats": {
@@ -114,14 +164,16 @@ class HLSEval(HLSCoder):
         new_solution_path = f"{self.solution_path}/attempts_{attempt+1}"
         csim_elapsed_time = None
         csynth_elapsed_time = None
-        if self._skip_behavioral:
+        if self.skip_behavioral:
             logger.info("Skipping CSIM")
+            csim_output, csim_elapsed_time, var_metadata = run_csim(new_solution_path, self.kernel_name, skip=True)
             sim_returncode = 0 # report that csim was successful
         else:
             # Run CSIM    
             try:
                 logger.info("Starting Vitis Run")
-                csim_output, csim_elapsed_time = run_csim(new_solution_path, self.kernel_name)
+                csim_output, csim_elapsed_time, var_metadata = run_csim(new_solution_path, self.kernel_name)
+                logger.debug(var_metadata)
                 sim_returncode = csim_output.returncode if (csim_output is not None) else 1
             except CsimTimeoutError as e:
                 sim_returncode = 1
@@ -134,14 +186,14 @@ class HLSEval(HLSCoder):
         # Run Synthesis only if CSIM was successful
             try:
                 logger.info("--- Running CSYNTH ---")
-                synth_output, csynth_elapsed_time = run_csynth(new_solution_path, self.kernel_name)
-                vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, iter=self._iter) #FIXME: Redo the gather parsed data thing
+                synth_output, csynth_elapsed_time = run_csynth(new_solution_path, self.kernel_name, var_metadata)
+                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1) #FIXME: Redo the gather parsed data thing
                 synth_returncode = synth_output.returncode 
 
                 logger.debug(f"CYNTH elapsed time: {csynth_elapsed_time}")  
             except CsynthTimeoutError as e:
                 logger.warning(" Vitis timed out")
-                vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, iter=self._iter)
+                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1)
                 logger.debug(vitis_feedback)
                 logger.debug("vitis Feedback before Adding new Errors")
                 vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis took too long due to exploding instructions and resources utilization"])
@@ -149,8 +201,18 @@ class HLSEval(HLSCoder):
                     "Try pipelining inside of loops rather than outside to ensure loop pipelining not function pipelining."
                 ])
                 synth_returncode = 1
+            except CsynthFormatError as e:
+                logger.warning(" Code formatted incorrectly")
+                vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1)
+                logger.debug(vitis_feedback)
+                logger.debug("vitis Feedback before Adding new Errors")
+                vitis_feedback['synth_feedback']['errors'].extend(["Failed to complete Synthesis. Synthesis failed due to code formatting errors"])
+                vitis_feedback['synth_feedback']['goals'].extend([
+                    "Ensure code is contained in a single block with no main or examples."
+                ])
+                synth_returncode = 1
         else:
-            vitis_feedback = parser.gather_parsed_data(self.kernel_name, self.hls_flow, self._model, attempt=attempt+1, iter=self._iter)
+            vitis_feedback = parser.gather_parsed_data(self, attempt=attempt+1)
             vitis_feedback['sim_feedback']['errors'].extend(["Failed to complete Csim. Csim did not run successfully."])
             vitis_feedback['synth_feedback']['errors'].extend(["Synthesis not run due to failed C Simulation."])
             synth_returncode = 1   

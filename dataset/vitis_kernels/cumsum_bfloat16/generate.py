@@ -36,7 +36,7 @@ inputs_info = [
 ]
 
 def behavioral(input_buffer):
-    return np.cumsum(input_buffer.astype(np.float32)).astype(bfloat16)
+    return np.cumsum(input_buffer.astype(bfloat16)).astype(bfloat16)
 
 examples = generate_examples(inputs_info=inputs_info)
 

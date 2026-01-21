@@ -22,6 +22,7 @@ logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encodi
 def run_kernel_attempt(
     kernel_object: HLSEval,
     attempt: int, 
+    rag: dict,
     prev_feedback: dict=None, 
     ) -> tuple :
 
@@ -30,7 +31,7 @@ def run_kernel_attempt(
     csim_elapsed_time = None
     csynth_elapsed_time = None
 
-    llm_elapsed_time = kernel_object.llm_call(attempt, feedback=prev_feedback)
+    llm_elapsed_time = kernel_object.llm_call(attempt, rag, feedback=prev_feedback)
 
 
     if kernel_object.hls_flow == "vitis":
@@ -98,7 +99,7 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
         print(f"An unexpected error occurred: {e}")
 
 # A wrapper around the feedback loop process for each set of feedback-dependent generation attempts
-def process_kernel(kernel_object: HLSEval):
+def process_kernel(kernel_object: HLSEval, rag):
     prev_ret_code = -1
     testbench_status = "failure"
     testbench_match_status = ""
@@ -113,7 +114,7 @@ def process_kernel(kernel_object: HLSEval):
 
         logger.info(f"Kernel: {kernel_object.kernel_name} Attempt: {attempt+1}")
 
-        prev_ret_code, feedback = run_kernel_attempt(kernel_object, attempt, feedback)
+        prev_ret_code, feedback = run_kernel_attempt(kernel_object, attempt, rag, feedback)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
@@ -143,6 +144,8 @@ if __name__ == "__main__":
     parser.add_argument("--hls_flow", type=str, choices=['vitis', 'dynarapid'], help="Whether to process HLS for vitis or dynarapid") 
     parser.add_argument("--rapidwright", action='store_true', help="Add this flag to enable RapidWright") 
     parser.add_argument("--skip_behavioral", action='store_true', help="Add this flag to skip Csim" ) 
+    parser.add_argument("--rag", action='store_true', help="Add this flag to use rag" ) 
+
     parser.add_argument("-k", type=int, default=1, dest="k", help="pass@k with k number of attempts")
     args = parser.parse_args()  
 
@@ -160,6 +163,16 @@ if __name__ == "__main__":
     logger.debug(f"Pass@k: k = {args.k}")
     logger.debug(f"Rapidwright Enabled: {args.rapidwright}")
     logger.debug(f"Skipping Behavioral: {args.skip_behavioral}")
+    # Setting to turn rag on and off
+    rag = {}
+    rag["use_rag"]=args.rag
+    logger.debug(f"Using RAG: {rag['use_rag']}")
+    if args.rag:
+        rag_flag = "rag"
+    else: 
+        rag_flag = "no_rag"
+
+ 
 
     passes = int(args.attempts)
     rapidwright = args.rapidwright
@@ -178,13 +191,13 @@ if __name__ == "__main__":
     for model in models:
         for iter in range(args.k):
             logger.info("--------------------------------------------------------------")
-            pathlib.Path(f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
-            with open (f"results/solutions/{args.hls_flow}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
+            pathlib.Path(f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
+            with open (f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
                 hlseval.write_table_header(logfile)
                 for kernel in kernels:
                     logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
-                    kernel_object = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile)
-                    process_kernel(kernel_object)
+                    kernel_object = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
+                    process_kernel(kernel_object, rag)
                     
                 hlseval.write_table_footer(logfile)
  
@@ -196,13 +209,13 @@ if __name__ == "__main__":
         logger.debug(f"Error: File 'kernel.json' not found.")
     except Exception as e:
         logger.debug(f"An error occurred: {e}")
-    try:
-        os.remove("vitis_config.cfg")
-        logger.debug(f"File 'vitis_config.cfg' deleted successfully.")
-    except FileNotFoundError:
-        logger.debug(f"Error: File 'vitis_config.cfg' not found.")
-    except Exception as e:
-        logger.debug(f"An error occurred: {e}")
+    # try:
+        # os.remove("vitis_config.cfg")
+        # logger.debug(f"File 'vitis_config.cfg' deleted successfully.")
+    # except FileNotFoundError:
+    #     logger.debug(f"Error: File 'vitis_config.cfg' not found.")
+    # except Exception as e:
+    #     logger.debug(f"An error occurred: {e}")
 
 
 
