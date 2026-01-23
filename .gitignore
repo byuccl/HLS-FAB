@@ -12,7 +12,7 @@ results/solutions_backup/
 **.pyc
 dataset/kernels/*
 *.egg-info
-dataset/hlseval.jsonl
+dataset/hlsfab.jsonl
 kernel.json
 temp.cc
 **/generate.json

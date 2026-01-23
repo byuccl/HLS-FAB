@@ -1,4 +1,4 @@
-# HLSEval
+# HLS-FAB
 ## Getting Started
 ### Prerequisites
 - Have docker installed (used when running DynaRapid)
@@ -9,8 +9,8 @@
 
 ### Clone and prepare the repo 
 ```
-git clone git@github.com:Preston-Walker/hlseval.git
-cd hlseval
+git clone git@github.com:Preston-Walker/HLS-FAB.git
+cd HLS-FAB
 python3.10 -m venv venv
 source venv/bin/activate
 pip install -e .
@@ -31,7 +31,7 @@ To set which LLM models to use, edit the `dataset/llm_models.txt` file.\
 ```
 wget https://gist.githubusercontent.com/clavin-xlnx/7ff0b7238aa5f5de4ff2dac7392d5132/raw/a130d502374cfa2779e59f918a2248e61fec5363/Dockerfile.dynarapid
 docker build -t my-llvm6-dynarapid-image .
-docker run -v <Path to hlseval reposotory>/hlseval:/mount --name dynarapid_container -t my-llvm6-dynarapid-image
+docker run -v <Path to HLS-FAB reposotory>/HLS-FAB:/mount --name dynarapid_container -t my-llvm6-dynarapid-image
 ```
 
 ### Run Vitis Completions

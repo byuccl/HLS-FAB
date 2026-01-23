@@ -2,7 +2,7 @@
 from openai import OpenAI
 import os
 import pathlib
-from hlseval import HLSCoder, get_kernel_code
+from hlsfab import HLSCoder, get_kernel_code
 import json
 import argparse
 import logging

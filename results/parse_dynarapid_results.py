@@ -3,7 +3,7 @@ import os
 import csv
 from pathlib import Path
 import re
-from hlseval import parser
+from hlsfab import parser
 
 def parse_timing_log(log_path):
     """Parse the timing.log file to extract csim and csynth times."""

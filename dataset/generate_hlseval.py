@@ -2,7 +2,7 @@ import json
 import os
 
 kernels_dir = "kernels/"
-output_file = "hlseval.jsonl"
+output_file = "hlsfab.jsonl"
 # kernel_testbench_includes = "kernel_testbench_includes.h"
 kernel_name_list = "kernel_list.txt"
 # test_map_header = "test_function_map.h"

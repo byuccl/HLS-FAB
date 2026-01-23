@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from hlseval import PromptConstructor, generate_types, generate_examples
+from hlsfab import PromptConstructor, generate_types, generate_examples
 import cv2
 
 # Set the dimensions of the image

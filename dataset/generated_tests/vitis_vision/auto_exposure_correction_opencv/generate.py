@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import cv2
-from hlseval import PromptConstructor, generate_types, generate_examples
+from hlsfab import PromptConstructor, generate_types, generate_examples
 
 # Image dimensions
 height = 128

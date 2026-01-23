@@ -6,12 +6,12 @@ import pathlib
 import subprocess
 import argparse
 from datetime import datetime
-import hlseval
+import hlsfab
 import csv
-from hlseval import HLSEval
-import hlseval.utils as utils
-import hlseval.dynarapid as dynarapid
-from hlseval.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DYNARAPID_SYSTEM_PROMPT, SYSTEM_PROMPTS, feedback_prompt_dyarapid, feedback_prompt_vitis
+from hlsfab import HLSEval
+import hlsfab.utils as utils
+import hlsfab.dynarapid as dynarapid
+from hlsfab.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DYNARAPID_SYSTEM_PROMPT, SYSTEM_PROMPTS, feedback_prompt_dyarapid, feedback_prompt_vitis
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     skip_behavioral = args.skip_behavioral
 
 
-    with open("./dataset/hlseval.jsonl", "r") as f:
+    with open("./dataset/hlsfab.jsonl", "r") as f:
         kernels = [json.loads(line) for line in f]
 
     # Add any models you want completions run for to the file dataset/llm_models.txt
@@ -193,13 +193,13 @@ if __name__ == "__main__":
             logger.info("--------------------------------------------------------------")
             pathlib.Path(f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
             with open (f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
-                hlseval.write_table_header(logfile)
+                hlsfab.write_table_header(logfile)
                 for kernel in kernels:
                     logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
-                    kernel_object = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
+                    kernel_object = hlsfab.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
                     process_kernel(kernel_object, rag)
                     
-                hlseval.write_table_footer(logfile)
+                hlsfab.write_table_footer(logfile)
  
     # Delete the unecessary files after running the completions
     try:

@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from hlseval import PromptConstructor, generate_types, generate_examples
+from hlsfab import PromptConstructor, generate_types, generate_examples
 
 # Set the number of values in the signal and filter taps
 signal_size = 1024
