@@ -8,7 +8,7 @@ import argparse
 from datetime import datetime
 import hlsfab
 import csv
-from hlsfab import HLSEval
+from hlsfab import HLSFAB
 import hlsfab.utils as utils
 import hlsfab.dynarapid as dynarapid
 from hlsfab.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DYNARAPID_SYSTEM_PROMPT, SYSTEM_PROMPTS, feedback_prompt_dyarapid, feedback_prompt_vitis
@@ -20,7 +20,7 @@ logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encodi
 
 # A single attempt to generate, test, and synthesize a kernel
 def run_kernel_attempt(
-    kernel_object: HLSEval,
+    kernel_object: HLSFAB,
     attempt: int, 
     rag: dict,
     prev_feedback: dict=None, 
@@ -99,7 +99,7 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
         print(f"An unexpected error occurred: {e}")
 
 # A wrapper around the feedback loop process for each set of feedback-dependent generation attempts
-def process_kernel(kernel_object: HLSEval, rag):
+def process_kernel(kernel_object: HLSFAB, rag):
     prev_ret_code = -1
     testbench_status = "failure"
     testbench_match_status = ""
@@ -130,7 +130,7 @@ def process_kernel(kernel_object: HLSEval, rag):
 
 if __name__ == "__main__":
     """ 
-        The main function for HLSEval. 
+        The main function for HLSFAB. 
 
         Takes a list of models and kernels as well a specifier for whether to use Vitis HLS or Dynarapid.
 
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=numeric_level)
     date = datetime.now().strftime("%B %d %Y")
     logger.info("--------------------------------------------------------------")
-    logger.info(f"-  Beginning HLSEval:    {date}                ")
+    logger.info(f"-  Beginning HLSFAB:    {date}                ")
     logger.info("--------------------------------------------------------------")
     logger.debug(f"HLS Tool Chain: {args.hls_flow}")
     logger.debug(f"Attempts: {args.attempts}")
@@ -196,7 +196,7 @@ if __name__ == "__main__":
                 hlsfab.write_table_header(logfile)
                 for kernel in kernels:
                     logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
-                    kernel_object = hlsfab.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
+                    kernel_object = hlsfab.HLSFAB(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
                     process_kernel(kernel_object, rag)
                     
                 hlsfab.write_table_footer(logfile)

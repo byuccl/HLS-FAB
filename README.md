@@ -22,14 +22,15 @@ bash build_rag_dir.sh
 cd dataset
 # Add just one kernel for the test run
 cp -r examples/abs_int8 kernels
-make dataset
 cd ..
+make dataset
 ```
-To set which LLM models to use, edit the `dataset/llm_models.txt` file.\
+To set which LLM models to use, edit the `dataset/llm_models.txt` file.
 
 #### Set up docker container for dynarapid
 ```
 wget https://gist.githubusercontent.com/clavin-xlnx/7ff0b7238aa5f5de4ff2dac7392d5132/raw/a130d502374cfa2779e59f918a2248e61fec5363/Dockerfile.dynarapid
+mv Dockerfile.dynarapid Dockerfile
 docker build -t my-llvm6-dynarapid-image .
 docker run -v <Path to HLS-FAB reposotory>/HLS-FAB:/mount --name dynarapid_container -t my-llvm6-dynarapid-image
 ```

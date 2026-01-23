@@ -17,7 +17,7 @@ Produce only the code requested, no main, no additional examples or code, and no
 """
 if __name__ == "__main__":
     # Set up argument parser
-    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")
+    parser = argparse.ArgumentParser(description="A program to tests for the HLSFAB benchmark")
     kernel_name = input("Name of Kernel: ")
     user_description = input("Description: ")
 

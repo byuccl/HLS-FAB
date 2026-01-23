@@ -20,7 +20,7 @@ Produce only the code requested, no main, no additional examples or code, and no
 
 if __name__ == "__main__":
     # Set up argument parser
-    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")
+    parser = argparse.ArgumentParser(description="A program to tests for the HLSFAB benchmark")
 
     parser.add_argument("--log", dest='loglevel', help="desired loglevel", default="WARNING")
 

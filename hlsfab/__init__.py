@@ -10,5 +10,5 @@ from .vitis import run_csim
 from .vitis import run_csynth
 from .splitter import MultiContentSplitter
 from .dynarapid import run_dynarapid_w_feedback
-from .hlsobject import HLSEval
+from .hlsobject import HLSFAB
 from .prompts import feedback_prompt_dyarapid, feedback_prompt_vitis, SYSTEM_PROMPTS

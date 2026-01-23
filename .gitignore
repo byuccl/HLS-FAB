@@ -26,3 +26,4 @@ results/dcp_designs/
 **venv**
 design_files_status.csv
 vitis_results.csv
+Dockerfile

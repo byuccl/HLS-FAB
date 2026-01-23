@@ -11,7 +11,7 @@ import hlsfab.vitis as vitis
 
 logger = logging.getLogger(__name__)
 
-def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
+def run_dynarapid_w_feedback(kernel_object: hls.HLSFAB, attempt: int=0):
     new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
     if kernel_object._skip_behavioral:
         pass
@@ -37,7 +37,7 @@ def run_dynarapid_w_feedback(kernel_object: hls.HLSEval, attempt: int=0):
     return returncode, dynarapid_feedback, csim_elapsed_time, dynamatic_elapsed_time
 
 
-def run_dynarapid(kernel_object: hls.HLSEval, attempt: int=0):
+def run_dynarapid(kernel_object: hls.HLSFAB, attempt: int=0):
     dynamatic_elapsed_time = None
     java_elapsed_time = None
     new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
@@ -292,7 +292,7 @@ exit
     
     return 0, stdout, dynamatic_elapsed_time, java_elapsed_time
 
-def check_dot_dcp(kernel_object: hls.HLSEval, attempt: int=0, dynarapid_feedback = None):
+def check_dot_dcp(kernel_object: hls.HLSFAB, attempt: int=0, dynarapid_feedback = None):
     new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
 
 

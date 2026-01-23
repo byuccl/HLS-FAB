@@ -16,7 +16,7 @@ from .prompts import SYSTEM_PROMPTS
 logger = logging.getLogger("HLSOBJECT")
 
 
-class HLSEval(HLSCoder):
+class HLSFAB(HLSCoder):
     def __init__(self,
             model: str="openai/gpt-4.1-mini",
             kernel: dict=None,
