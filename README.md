@@ -34,6 +34,7 @@ mv Dockerfile.dynarapid Dockerfile
 docker build -t my-llvm6-dynarapid-image .
 docker run -v <Path to HLS-FAB reposotory>/HLS-FAB:/mount --name dynarapid_container -t my-llvm6-dynarapid-image
 ```
+Exit the docker container
 
 ### Run Vitis Completions
 Sample of run command:\
@@ -44,7 +45,7 @@ Options:
 
 ### Run DynaRapid Completions
 Sample of run command:\
-`make run_dynarapid_completions LOG=DEBUG ATTEMPTS=4 RAPIDWRIGHT=TRUE`
+`make run_dynarapid_completions LOG=DEBUG ATTEMPTS=4 RAPIDWRIGHT=TRUE`\
 Options:
 - `LOG` option: Allows you to set the logging level of the ouput log file. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
 - `ATTEMPTS` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `ATTEMPTS` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
