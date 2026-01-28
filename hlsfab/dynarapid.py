@@ -12,6 +12,8 @@ import hlsfab.vitis as vitis
 logger = logging.getLogger(__name__)
 
 def run_dynarapid_w_feedback(kernel_object: hls.HLSFAB, attempt: int=0):
+    dynarapid_feedback = {}
+
     new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
     if kernel_object._skip_behavioral:
         pass
@@ -25,14 +27,19 @@ def run_dynarapid_w_feedback(kernel_object: hls.HLSFAB, attempt: int=0):
         except vitis.CsimTimeoutError as e:
             logger.warning("Vitis timed out on Simulation")
         logger.debug(f"Dynarapid Simulation elapsed time: {csim_elapsed_time}")
-        dynarapid_feedback = parser.gather_parsed_data(kernel_object, attempt=attempt+1)
+        dynarapid_feedback["sim_feedback"] = parser.gather_parsed_data(kernel_object, attempt=attempt+1)
     
 
     returncode, stdout, dynamatic_elapsed_time, rapidwright_elapsed_time = run_dynarapid(kernel_object, attempt)
     dynarapid_feedback['compile_feedback'] = {"returncode": returncode}
 
 
-    dynarapid_feedback = check_dot_dcp(kernel_object, attempt, dynarapid_feedback)
+    dynarapid_feedback["output_files"] = check_dot_dcp(kernel_object, attempt, dynarapid_feedback)
+    logger.debug(f"dynarapid_feedback: {dynarapid_feedback}")
+
+    out_data_path = f"{new_solution_path}/{kernel_object.kernel_name}_data.json"
+
+    parser.save_feedback_data(out_data_path, dynarapid_feedback)
 
     return returncode, dynarapid_feedback, csim_elapsed_time, dynamatic_elapsed_time
 
@@ -327,7 +334,5 @@ def check_dot_dcp(kernel_object: hls.HLSFAB, attempt: int=0, dynarapid_feedback 
     dynarapid_feedback['compile_feedback']["has_dcp"] = True if check_path_dcp1.exists() or check_path_dcp2.exists() else False
 
 
-    out_data_path = f"{new_solution_path}/{kernel_object.kernel_name}_data.json"
-
-    parser.save_feedback_data(out_data_path, dynarapid_feedback)
+    
     return dynarapid_feedback

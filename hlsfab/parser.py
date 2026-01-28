@@ -142,6 +142,7 @@ def parse_sim_report(file_path=None):
         try:
             with open(file_path, 'r') as f:
                 lines = f.readlines()
+                logger.debug(f"lines: {lines}")
         except UnicodeDecodeError:
             with open(file_path, 'r', encoding='latin-1') as f:
                 lines = f.readlines()
@@ -259,6 +260,7 @@ def gather_parsed_data(hlsobject, attempt=1):
                     log.write("\n\n")
                     
                 sim_feedback = parse_sim_report(old_sim_log_file)
+                logger.debug(f"sim feedback: {sim_feedback}")
                 # with open(out_data_path, 'w') as of:
                 #     json.dump(feedback, of, indent=4)
         except UnicodeDecodeError:
@@ -279,7 +281,7 @@ def gather_parsed_data(hlsobject, attempt=1):
             #     json.dump(feedback, of, indent=4)
 
     final_feedback["sim_feedback"] = sim_feedback
-        
+    logger.debug(f"final_feedback: {final_feedback}")
     return final_feedback
 
 
