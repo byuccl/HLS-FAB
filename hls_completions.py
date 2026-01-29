@@ -15,7 +15,6 @@ from hlsfab.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DYN
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
 
 
 # A single attempt to generate, test, and synthesize a kernel
@@ -67,7 +66,7 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
                      f"{kernel_object.kernel_name}_data.json",
                     ]
     
-    print(f"Starting cleanup in: {new_solution_path}")
+    # print(f"Starting cleanup in: {new_solution_path}")
     deleted_count = 0
 
     try:
@@ -79,17 +78,17 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
             # We explicitly check that it's a file to avoid deleting sub-folders
             if os.path.isfile(item_path) and item_name not in files_to_keep:
                 
-                print(f"  Deleting file: {item_name}")
+                # print(f"  Deleting file: {item_name}")
                 # os.remove(item_path)
                 deleted_count += 1
                 
-            elif os.path.isdir(item_path):
-                print(f"  Skipping directory: {item_name}")
+            # elif os.path.isdir(item_path):
+            #     # print(f"  Skipping directory: {item_name}")
             
-            elif item_name in files_to_keep:
-                print(f"  Keeping file: {item_name}")
+            # elif item_name in files_to_keep:
+            #     print(f"  Keeping file: {item_name}")
                 
-        print(f"\nCleanup complete. Total files deleted: {deleted_count}")
+        # print(f"\nCleanup complete. Total files deleted: {deleted_count}")
 
     except FileNotFoundError:
         print(f"Error: Folder not found at {new_solution_path}")
@@ -139,7 +138,7 @@ if __name__ == "__main__":
     """ 
     # Arguments set up
     parser = argparse.ArgumentParser(description="Run HLS kernel processing.")
-    parser.add_argument("--log", dest='loglevel', help="Desired loglevel", default="WARNING")
+    parser.add_argument("--log", dest='loglevel', help="Desired loglevel", default="DEBUG")
     parser.add_argument("--attempts", dest='attempts', help="Number of results to generate within each feedback loop", default=1)
     parser.add_argument("--hls_flow", type=str, choices=['vitis', 'dynarapid'], help="Whether to process HLS for vitis or dynarapid") 
     parser.add_argument("--rapidwright", action='store_true', help="Add this flag to enable RapidWright") 
@@ -153,7 +152,19 @@ if __name__ == "__main__":
     numeric_level = getattr(logging, args.loglevel.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % args.loglevel)
-    logging.basicConfig(level=numeric_level)
+    
+    # Create results/logs directory if it doesn't exist
+    pathlib.Path("results/logs").mkdir(parents=True, exist_ok=True)
+    
+    # Configure logging with file handler and console handler
+    logging.basicConfig(
+        level=numeric_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(f"results/logs/completions_{timestamp}.log", encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
     date = datetime.now().strftime("%B %d %Y")
     logger.info("--------------------------------------------------------------")
     logger.info(f"-  Beginning HLSFAB:    {date}                ")
