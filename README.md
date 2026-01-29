@@ -40,12 +40,15 @@ Sample of run command:\
 `make run_vitis_completions LOG=DEBUG N=2 K=2`\
 Options:
 - `LOG` option: Allows you to set the logging level of the ouput log file. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-- `ATTEMPTS` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `ATTEMPTS` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
+- `N` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `ATTEMPTS` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
+- `K` option: Allows you to run the process with all feedback attempts `K` times independently.
+  - Example: K=3, N=4: Each kernel will be generated a total of 12 times. There will be three independent sets of feedback loops, each loop has four generatation attempts building on feedback from the last attempt.
 
 ### Run DynaRapid Completions
 Sample of run command:\
 `make run_dynarapid_completions LOG=DEBUG N=2 K=2 RAPIDWRIGHT=TRUE`\
 Options:
 - `LOG` option: Allows you to set the logging level of the ouput log file. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-- `ATTEMPTS` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `ATTEMPTS` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
+- `N` option: Same as above.
+- `K` option: Same as above.
 - `RAPIDWRIGHT` option: If omitted, or set to `FALSE`, Dynamatic will run without RapidWright, resulting in a `.dot` file, but no placed and routed circut. Adding the `DYNAMATIC` option and setting it to anything other than `FALSE` will run both Dynamatic and RapidWright. The value `TRUE` is used here for clarity.
