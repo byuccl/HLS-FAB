@@ -109,7 +109,7 @@ Understandably, we know that there will be a desire to create new benchmark kern
 The kernels each have one file `generate.py` which contains the following items
 ### Prompt
 The prompt will describe the function to be implemented by the LLM and will briefly describe the inputs and outputs
-**EX:** ```
+**EX:** ```python
 description = f"""
 This HLS kernel implements a function to calculate the absolute value of a vector of 32-bit integer numbers.
 Parameters to the function include two int32_t pointers:
@@ -119,7 +119,7 @@ The kernel processes each element of the input buffer, computes its absolute val
 """```
 ### Inputs and Outputs
 Each kernel has a `inputs_info` python list which holds the meta data for each parameter of the function to be implemented
-**EX:** ```
+**EX:** python```
 inputs_info = [
     {
         "name": "in_buffer",
@@ -143,7 +143,7 @@ inputs_info = [
 
 ### Behavioral Function
 Each kernel generate has a behavioral function that will take in the same inputs as the function itself and then return the outputs in order to create the expected outputs for the testbench.
-**EX:** ```
+**EX:** ```python
 def behavioral(input_vector):
     return np.abs(input_vector).astype(np.int32)
 ```
