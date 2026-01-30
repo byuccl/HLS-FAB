@@ -1,1 +1,2 @@
-deepseek/deepseek-chat-v3-0324
+qwen/qwen3-coder
+google/gemini-2.5-flash

@@ -1,3 +1,8 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
 from hlsfab import PromptConstructor, generate_examples
 

@@ -1,3 +1,9 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
+
 completions_all_cheaper_models.log
 completions_claude_sonnet45.log
 completions_gemini25_pro.log

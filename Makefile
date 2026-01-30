@@ -1,4 +1,9 @@
-.PHONY: all dataset run_completions test parse clean setup setup_docker  
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
+.PHONY: all dataset run_completions test parse clean  
 
 # ######### Help Setup #############
 # .PHONT: help
