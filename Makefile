@@ -36,6 +36,23 @@ else ifeq ($(DYNARAPID), ON)
 all: run_dynarapid_completions
 endif
 
+VENV := venv
+PYTHON := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
+
+setup:
+	python3 -m venv $(VENV)
+	$(PIP) install -e .
+	$(if $(RAG), bash build_rag_dir.sh)
+
+setup_docker:
+	wget https://gist.githubusercontent.com/clavin-xlnx/7ff0b7238aa5f5de4ff2dac7392d5132/raw/a130d502374cfa2779e59f918a2248e61fec5363/Dockerfile.dynarapid
+	mv Dockerfile.dynarapid Dockerfile
+	docker build -t my-llvm6-dynarapid-image .
+	docker run -v $$(pwd):/mount --name dynarapid_container -t my-llvm6-dynarapid-image
+
+
+
 generate_tests:  
 	@echo "Generating tests..."  
 	python3 dataset/generate_tests.py $(if $(LOG),--log $(LOG),)  

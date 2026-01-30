@@ -32,3 +32,4 @@ results/dcp_designs/
 design_files_status.csv
 vitis_results.csv
 Dockerfile
+rag_data
