@@ -1,3 +1,10 @@
+<!--
+Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+
+Author: Preston Walker, AMD
+SPDX-License-Identifier: MIT
+-->
+
 # Reproducing Results
 In order to reproduce the results for a specific kernel in your dataset follow these instructions.
 ### Prerequisites

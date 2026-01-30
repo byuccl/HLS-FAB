@@ -1,3 +1,8 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 # Set up the RAG database
 
 # Make a directory to store the files

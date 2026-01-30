@@ -1,3 +1,10 @@
+<!--
+Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+
+Author: Preston Walker, AMD
+SPDX-License-Identifier: MIT
+-->
+
 # HLSEval
 ## Overview of files and directories
 ### dataset

@@ -1,3 +1,8 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 __all__ = ["prompt_constructor", "utils"]
 
 from .prompt_constructor import PromptConstructor

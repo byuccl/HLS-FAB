@@ -1,3 +1,8 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, Settings    
 from llama_index.core.node_parser import SentenceSplitter, TokenTextSplitter  
 from llama_index.core.schema import Document, TextNode    
