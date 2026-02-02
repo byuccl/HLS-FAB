@@ -81,7 +81,7 @@ def create_csv(base_dir, output_file, runs, attempts):
     models = [line.strip() for line in lines]
 
     # Define the kernels to process same as the dataset/kernels directory
-    with open("./dataset/vitis_general_kernel_list.txt", "r") as f:
+    with open("./dataset/kernel_list.txt", "r") as f:
         kernels = f.readlines()
     kernels = [kernel.strip() for kernel in kernels]
     
