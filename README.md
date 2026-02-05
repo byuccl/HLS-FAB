@@ -31,7 +31,7 @@ cp -r examples/abs_int8 kernels
 cd ..
 make dataset
 ```
-To set which LLM models to use, edit the `dataset/llm_models.txt` file.
+To set which LLM models to use, edit the `dataset/llm_models.txt` file. We use Openrouter convention for LLM Names. `openai/gpt-4.1-mini`
 
 #### Set up docker container for dynarapid
 ```
@@ -110,6 +110,9 @@ results/
 - `attempts_{n}/`: Feedback loop attempt number for each kernel
 - `{kernel_name}_data.json`: This holds the feedback data and important data collected in the tools
 
+## Gathering and Comparing Results
+After running the scripts as described above there will be a number of result folders with various data to be collected. We have created 2 scripts to help in gathering that data into one place. `parse_vitis_results.py` and `parse_dynarapid_results.py`
+The results will be output into a csv file called ``
 
 ## Creating New Kernels
 Understandably, we know that there will be a desire to create new benchmark kernels. 

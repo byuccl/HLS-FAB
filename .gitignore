@@ -29,7 +29,7 @@ results/tests_wo_rag/*
 **.log
 results/dcp_designs/
 **venv**
-design_files_status.csv
+dynarapid_results.csv
 vitis_results.csv
 Dockerfile
 rag_data

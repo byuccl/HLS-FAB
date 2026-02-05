@@ -49,6 +49,15 @@ def parse_timing_log(log_path):
         }
     return timing_data
 
+def get_attempts(kernel_dir):
+    if not kernel_dir.exists():
+        return []
+    num_attempts = []
+    for item in kernel_dir.iterdir():
+        if item.is_dir() and item.name != "logs":
+            num_attempts.append(item.name.split('_')[1])
+    return num_attempts
+
 def get_iterations(model_dir):
     """Get all iteration directories within a model directory."""
     if not model_dir.exists():
@@ -73,7 +82,7 @@ def get_all_kernel_dirs(iteration_dir):
     
     return kernel_dirs
 
-def create_csv(base_dir, output_file, runs, attempts):
+def create_csv(base_dir, output_file, runs=0, attempts=0):
     """Process all data and create a CSV file."""
     # Define the models to process same as the most recent completions run
     with open("./dataset/llm_models.txt", "r") as f:
@@ -114,16 +123,13 @@ def create_csv(base_dir, output_file, runs, attempts):
                     continue
                 
                 print(f"Processing model: {model}")
-                
-                # Parse timing log (now might be in different locations depending on structure)
-                model_timing_log_path = model_dir / 'logs' / 'timing.log'
-                model_timing_data = parse_timing_log(str(model_timing_log_path))
+            
                 
                 # Get all iteration directories for this model
-                iterations = get_iterations(model_dir)
+                iterations = get_iterations(model_dir) if runs==0 else range(1, runs+1)
                 
                 # Process each iteration
-                for iteration in range(1, runs+1):
+                for iteration in iterations:
                     iteration_dir = model_dir / str(iteration)
                     print(iteration_dir)
                     # Iteration might have its own timing log
@@ -131,7 +137,7 @@ def create_csv(base_dir, output_file, runs, attempts):
                     iteration_timing_data = parse_timing_log(str(iteration_timing_log_path))
                     
                     # Combine timing data, with iteration data taking precedence
-                    timing_data = {**model_timing_data, **iteration_timing_data}
+                    timing_data = {**iteration_timing_data}
                     
                     # Get all kernel directories for this iteration
                     kernel_dirs = kernels
@@ -143,12 +149,11 @@ def create_csv(base_dir, output_file, runs, attempts):
                         if not kernel_path.exists():
                             # print(f"Skipping kernel directory (not found): {kernel_path}")
                             continue
-                        
-                        # print(f"  Processing iteration: {iteration}, kernel: {kernel_dir}")
-                        
+
+                        num_attempts = get_attempts(kernel_path) if attempts==0 else range(1, attempts+1)
                         # Process each attempt
                         rows_for_kernel = []
-                        for attempt in range(1, attempts+1):
+                        for attempt in num_attempts:
                             attempt_dir = kernel_path / f"attempts_{attempt}"
                             if not attempt_dir.exists():
                                 print(f"    Skipping attempt directory (not found): {attempt_dir}")
@@ -257,8 +262,8 @@ if __name__ == "__main__":
     # Arguments set up
     parser = argparse.ArgumentParser(description="Run HLS kernel processing.")
     parser.add_argument("--target", dest='target', type=str, help="Target folder to search and parse data", default="solutions")
-    parser.add_argument("--runs", dest='runs', type=int, help="Number of runs that were done (k or iterations)", default=1)
-    parser.add_argument("--attempts",  dest='attempts', type=int, help="Number of feedback attempts (n)", default=1)
+    parser.add_argument("--runs", dest='runs', type=int, help="Number of runs that were done (k or iterations)", default=0)
+    parser.add_argument("--attempts",  dest='attempts', type=int, help="Number of feedback attempts (n)", default=0)
 
     args = parser.parse_args()
     runs = args.runs
