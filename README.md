@@ -112,7 +112,9 @@ results/
 
 ## Gathering and Comparing Results
 After running the scripts as described above there will be a number of result folders with various data to be collected. We have created 2 scripts to help in gathering that data into one place. `parse_vitis_results.py` and `parse_dynarapid_results.py`
-The results will be output into a csv file called ``
+The results will be output into a csv file called `vitis_results.csv` or `dynarapid_results.csv` 
+ 
+This can easily be run by running `make get_results`
 
 ## Creating New Kernels
 Understandably, we know that there will be a desire to create new benchmark kernels. 

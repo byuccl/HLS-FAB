@@ -66,6 +66,11 @@ run_vitis_completions:
 run_dynarapid_completions: 
 	@echo "Running HLSFAB With Dynarapid"
 	python hls_completions.py --hls_flow dynarapid $(if $(LOG),--log $(LOG),) $(if $(N),--attempts $(N),) $(if $(K), -k $(K),) $(if $(RAPIDWRIGHT),--rapidwright)
+
+get_results:
+	python results/parse_vitis_results.py
+	python results/parse_dynarapid_results.py
+
 clean:  
 	make -C dataset/ clean  
 	rm -rf kernel.json temp.cc  
