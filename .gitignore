@@ -1,3 +1,8 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 .venv/
 **.cfg
 .practice/
@@ -12,7 +17,7 @@ results/solutions_backup/
 **.pyc
 dataset/kernels/*
 *.egg-info
-dataset/hlseval.jsonl
+dataset/hlsfab.jsonl
 kernel.json
 temp.cc
 **/generate.json
@@ -24,5 +29,7 @@ results/tests_wo_rag/*
 **.log
 results/dcp_designs/
 **venv**
-design_files_status.csv
+dynarapid_results.csv
 vitis_results.csv
+Dockerfile
+rag_data

@@ -1,9 +1,14 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import argparse
 import os
 import csv
 from pathlib import Path
 import re
-from hlseval import parser
+from hlsfab import parser
 
 def parse_timing_log(log_path):
     """Parse the timing.log file to extract csim and csynth times."""
@@ -58,6 +63,28 @@ def check_csim(dir_path):
 
     return compilation_status, match_status
 
+def get_attempts(kernel_dir):
+    if not kernel_dir.exists():
+        return []
+    num_attempts = []
+    for item in kernel_dir.iterdir():
+        if item.is_dir() and item.name != "logs":
+            num_attempts.append(item.name.split('_')[1])
+    return num_attempts
+
+def get_iterations(model_dir):
+    """Get all iteration directories within a model directory."""
+    if not model_dir.exists():
+        return []
+    
+    iterations = []
+    for item in model_dir.iterdir():
+        if item.is_dir() and item.name != "logs":
+            iterations.append(item.name)
+    
+    return iterations
+
+
 def search_files(base_dir, k=1, attempts=1):
     """
     Search for .dot and _routed.dcp files in the given directory structure
@@ -66,7 +93,7 @@ def search_files(base_dir, k=1, attempts=1):
     with open("./dataset/llm_models.txt", "r") as f:
         lines = f.readlines()
     models = [line.strip() for line in lines]
-    with open("./dataset/dynarapid_kernel_list.txt", "r") as f:
+    with open("./dataset/kernel_list.txt", "r") as f:
         kernels = f.readlines()
     kernels = [kernel.strip() for kernel in kernels]
     # models = ['openai/gpt-4.1-mini',
@@ -89,8 +116,10 @@ def search_files(base_dir, k=1, attempts=1):
             if not model_path.exists():
                 print(f"Warning 1: Path does not exist: {model_path}")
                 continue
-            for p in range(k):
-                p_path = model_path / f"{p+1}"
+            iterations = get_iterations(model_path) if k==0 else range(1, k+1)
+            for p in iterations:
+
+                p_path = model_path / p
                 if not model_path.exists():
                     print(f"Warning 2: Path does not exist: {model_path}")
                     continue
@@ -105,10 +134,10 @@ def search_files(base_dir, k=1, attempts=1):
                     if not kernel_path.exists():
                         print(f"Warning 3: Path does not exist: {kernel_path}")
                         continue
-                        
-                    for attempt in range(attempts):  # 0 to 3
+                    numAttempts = get_attempts(kernel_path) if attempts ==0 else range(1, attempts+1)
+                    for attempt in numAttempts:  # 0 to 3
 
-                        attempt_path = kernel_path / f"attempts_{attempt+1}" / "dcp_designs"
+                        attempt_path = kernel_path / f"attempts_{attempt}" / "dcp_designs"
                         # print(attempt_path)
                         if not attempt_path.exists():
                             print(f"Warning 4: Path does not exist: {attempt_path}")
@@ -121,7 +150,7 @@ def search_files(base_dir, k=1, attempts=1):
                         else:
                             search_path = attempt_path
                         
-                        timing_key = f"{kernel}_{attempt+1}"
+                        timing_key = f"{kernel}_{attempt}"
                         
                         llm_time = timing_data.get(timing_key, {}).get('llm_time', None)
 
@@ -136,15 +165,15 @@ def search_files(base_dir, k=1, attempts=1):
                         dcp_file = search_path / f"{kernel}_routed.dcp"
                         has_dcp = dcp_file.exists()
 
-                        compilation_status, match_status = check_csim(kernel_path / f"attempts_{attempt+1}" / "logs" / "hls_run_csim.log")
+                        compilation_status, match_status = check_csim(kernel_path / f"attempts_{attempt}" / "logs" / "hls_run_csim.log")
                         
                         # Record the result
                         results.append({
                             'model': model,
                             'rag': True if rag == "rag" else False,
                             'kernel': kernel,
-                            'run': p+1,
-                            'attempt': attempt+1,
+                            'run': p,
+                            'attempt': attempt,
                             'compiled': compilation_status,
                             'matched': match_status,
                             'has_dot': has_dot,
@@ -174,8 +203,8 @@ def main():
         # Arguments set up
     parser = argparse.ArgumentParser(description="Run HLS kernel processing.")
     parser.add_argument("--target", dest='target', type=str, help="Target folder to search and parse data", default="solutions")
-    parser.add_argument("--runs", dest='runs', type=int, help="Number of runs that were done (k or iterations)", default=1)
-    parser.add_argument("--attempts",  dest='attempts', type=int, help="Number of feedback attempts (n)", default=1)
+    parser.add_argument("--runs", dest='runs', type=int, help="Number of runs that were done (k or iterations)", default=0)
+    parser.add_argument("--attempts",  dest='attempts', type=int, help="Number of feedback attempts (n)", default=0)
 
     args = parser.parse_args()
     runs = args.runs
@@ -187,7 +216,7 @@ def main():
 
 
     
-    output_file = "design_files_status.csv"
+    output_file = "dynarapid_results.csv"
     
     print("Searching for .dot and _routed.dcp files...")
     results = search_files(base_directory, runs, attempts)

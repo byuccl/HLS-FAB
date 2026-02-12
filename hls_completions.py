@@ -1,3 +1,8 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import logging
 from openai import OpenAI
 import os
@@ -6,21 +11,20 @@ import pathlib
 import subprocess
 import argparse
 from datetime import datetime
-import hlseval
+import hlsfab
 import csv
-from hlseval import HLSEval
-import hlseval.utils as utils
-import hlseval.dynarapid as dynarapid
-from hlseval.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DYNARAPID_SYSTEM_PROMPT, SYSTEM_PROMPTS, feedback_prompt_dyarapid, feedback_prompt_vitis
+from hlsfab import HLSFAB
+import hlsfab.utils as utils
+import hlsfab.dynarapid as dynarapid
+from hlsfab.prompts import VITIS_LIBRARY_SYSTEM_PROMPT, VITIS_SYSTEM_PROMPT, DYNARAPID_SYSTEM_PROMPT, SYSTEM_PROMPTS, feedback_prompt_dyarapid, feedback_prompt_vitis
 
 logger = logging.getLogger("COMPLETIONS")
 timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-logging.basicConfig(filename=f"results/logs/completions_{timestamp}.log", encoding='utf-8', level=logging.DEBUG)
 
 
 # A single attempt to generate, test, and synthesize a kernel
 def run_kernel_attempt(
-    kernel_object: HLSEval,
+    kernel_object: HLSFAB,
     attempt: int, 
     rag: dict,
     prev_feedback: dict=None, 
@@ -67,7 +71,7 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
                      f"{kernel_object.kernel_name}_data.json",
                     ]
     
-    print(f"Starting cleanup in: {new_solution_path}")
+    # print(f"Starting cleanup in: {new_solution_path}")
     deleted_count = 0
 
     try:
@@ -79,17 +83,17 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
             # We explicitly check that it's a file to avoid deleting sub-folders
             if os.path.isfile(item_path) and item_name not in files_to_keep:
                 
-                print(f"  Deleting file: {item_name}")
+                # print(f"  Deleting file: {item_name}")
                 # os.remove(item_path)
                 deleted_count += 1
                 
-            elif os.path.isdir(item_path):
-                print(f"  Skipping directory: {item_name}")
+            # elif os.path.isdir(item_path):
+            #     # print(f"  Skipping directory: {item_name}")
             
-            elif item_name in files_to_keep:
-                print(f"  Keeping file: {item_name}")
+            # elif item_name in files_to_keep:
+            #     print(f"  Keeping file: {item_name}")
                 
-        print(f"\nCleanup complete. Total files deleted: {deleted_count}")
+        # print(f"\nCleanup complete. Total files deleted: {deleted_count}")
 
     except FileNotFoundError:
         print(f"Error: Folder not found at {new_solution_path}")
@@ -99,7 +103,7 @@ def cleanup_files(kernel_object, new_solution_path, attempt):
         print(f"An unexpected error occurred: {e}")
 
 # A wrapper around the feedback loop process for each set of feedback-dependent generation attempts
-def process_kernel(kernel_object: HLSEval, rag):
+def process_kernel(kernel_object: HLSFAB, rag):
     prev_ret_code = -1
     testbench_status = "failure"
     testbench_match_status = ""
@@ -130,7 +134,7 @@ def process_kernel(kernel_object: HLSEval, rag):
 
 if __name__ == "__main__":
     """ 
-        The main function for HLSEval. 
+        The main function for HLSFAB. 
 
         Takes a list of models and kernels as well a specifier for whether to use Vitis HLS or Dynarapid.
 
@@ -139,7 +143,7 @@ if __name__ == "__main__":
     """ 
     # Arguments set up
     parser = argparse.ArgumentParser(description="Run HLS kernel processing.")
-    parser.add_argument("--log", dest='loglevel', help="Desired loglevel", default="WARNING")
+    parser.add_argument("--log", dest='loglevel', help="Desired loglevel", default="DEBUG")
     parser.add_argument("--attempts", dest='attempts', help="Number of results to generate within each feedback loop", default=1)
     parser.add_argument("--hls_flow", type=str, choices=['vitis', 'dynarapid'], help="Whether to process HLS for vitis or dynarapid") 
     parser.add_argument("--rapidwright", action='store_true', help="Add this flag to enable RapidWright") 
@@ -153,10 +157,22 @@ if __name__ == "__main__":
     numeric_level = getattr(logging, args.loglevel.upper(), None)
     if not isinstance(numeric_level, int):
         raise ValueError('Invalid log level: %s' % args.loglevel)
-    logging.basicConfig(level=numeric_level)
+    
+    # Create results/logs directory if it doesn't exist
+    pathlib.Path("results/logs").mkdir(parents=True, exist_ok=True)
+    
+    # Configure logging with file handler and console handler
+    logging.basicConfig(
+        level=numeric_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(f"results/logs/completions_{timestamp}.log", encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
     date = datetime.now().strftime("%B %d %Y")
     logger.info("--------------------------------------------------------------")
-    logger.info(f"-  Beginning HLSEval:    {date}                ")
+    logger.info(f"-  Beginning HLSFAB:    {date}                ")
     logger.info("--------------------------------------------------------------")
     logger.debug(f"HLS Tool Chain: {args.hls_flow}")
     logger.debug(f"Attempts: {args.attempts}")
@@ -179,7 +195,7 @@ if __name__ == "__main__":
     skip_behavioral = args.skip_behavioral
 
 
-    with open("./dataset/hlseval.jsonl", "r") as f:
+    with open("./dataset/hlsfab.jsonl", "r") as f:
         kernels = [json.loads(line) for line in f]
 
     # Add any models you want completions run for to the file dataset/llm_models.txt
@@ -193,13 +209,13 @@ if __name__ == "__main__":
             logger.info("--------------------------------------------------------------")
             pathlib.Path(f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/").mkdir(parents=True, exist_ok=True)
             with open (f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/{iter+1}/logs/timing.log", "w") as logfile:
-                hlseval.write_table_header(logfile)
+                hlsfab.write_table_header(logfile)
                 for kernel in kernels:
                     logger.info(f"Running Model: {model} Kernel: {kernel['kernel_name']} Pass: {iter+1}")
-                    kernel_object = hlseval.HLSEval(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
+                    kernel_object = hlsfab.HLSFAB(model, kernel, args.hls_flow, iter, passes, skip_behavioral, rapidwright, logfile, rag["use_rag"])
                     process_kernel(kernel_object, rag)
                     
-                hlseval.write_table_footer(logfile)
+                hlsfab.write_table_footer(logfile)
  
     # Delete the unecessary files after running the completions
     try:

@@ -2,7 +2,7 @@
 from openai import OpenAI
 import os
 import pathlib
-from hlseval import HLSCoder, get_kernel_code
+from hlsfab import HLSCoder, get_kernel_code
 import json
 import argparse
 import logging
@@ -20,7 +20,7 @@ Produce only the code requested, no main, no additional examples or code, and no
 
 if __name__ == "__main__":
     # Set up argument parser
-    parser = argparse.ArgumentParser(description="A program to tests for the HLSEval benchmark")
+    parser = argparse.ArgumentParser(description="A program to tests for the HLSFAB benchmark")
 
     parser.add_argument("--log", dest='loglevel', help="desired loglevel", default="WARNING")
 
