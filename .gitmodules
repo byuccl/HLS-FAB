@@ -1,0 +1,3 @@
+[submodule "VitisVivadoMCP"]
+	path = VitisVivadoMCP
+	url = https://github.com/hoodude717/VitisVivadoMCP.git
