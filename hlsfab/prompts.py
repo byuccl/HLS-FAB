@@ -26,7 +26,7 @@ Do not use size as a function argument, instead use a constant defined at the to
 Produce only the C++ code for the requested kernel including any required headers and imports. 
 Most kernels are dependent on the arbitrary precision integer library for HLS (<ap_int.h>) or the arbitrary precision floating point library (<ap_float.h>). As such, that header almost always needs to be added.
 Some data types are represented as these arbitrary precision integers or floating point numbers, for example, a bfloat16 is represented with the type `ap_float<16,8>`.
-Keep in mind that arbitrary precision integers and floating point numbers often can't be used with standard C++ integers and floats, casting may be necessary to perform operations between them.
+Keep in mind that arbitrary precision integers and floating point numbers often can't be used with standard C++ integers and floats, casting may be necessary to perform operations between them, (particularly when using ternary operators).
 Each kernel description includes the function signature of the kernel. Follow this format exactly to allow the program to compile properly. Do not add extra parameters apart from those in the function signature given.
 Make sure the C++ code is complete and self contained in a single code block.
 Produce only the kernel function, no main, no additional examples or code.
