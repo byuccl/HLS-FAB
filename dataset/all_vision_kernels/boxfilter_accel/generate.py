@@ -1,15 +1,20 @@
 import numpy as np
+import cv2
 from hlsfab import PromptConstructor, generate_examples
 
-# --- Constants (from xf_config_params.h) ---
+# --- Constants (from config/xf_config_params.h) ---
 HEIGHT = 128
 WIDTH = 128
 FILTER_WIDTH = 3
 
-function_signature = "void boxfilter_accel(ap_uint<8>* img_inp, ap_uint<8>* img_out)"
+function_signature = (
+    "void boxfilter_accel("
+    "ap_uint<8>* img_inp, "
+    "ap_uint<8>* img_out)"
+)
 
 description = f"""
-This HLS kernel applies a 3x3 box filter (mean filter) to a grayscale image.
+This HLS kernel applies a box filter (mean filter) to a grayscale image.
 
 Parameters:
     img_inp: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values representing
@@ -17,21 +22,18 @@ Parameters:
     img_out: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values for
              the output image (same dimensions as input).
 
-The box filter computes the output pixel at position (i, j) as the average of all pixels
-in a {FILTER_WIDTH}x{FILTER_WIDTH} window centered at (i, j):
+The box filter computes each output pixel as the arithmetic mean of a {FILTER_WIDTH}x{FILTER_WIDTH}
+window centered on the corresponding input pixel. Border handling uses zero-padding: pixels
+outside the image boundary are treated as zero.
 
-    out[i, j] = (sum of all 9 pixels in window) / 9
+For each output pixel at position (i, j), the kernel:
+1. Extracts a {FILTER_WIDTH}x{FILTER_WIDTH} window centered at (i, j) from the zero-padded input
+2. Computes the sum of all {FILTER_WIDTH * FILTER_WIDTH} values in the window (including zeros for out-of-bounds pixels)
+3. Divides the sum by {FILTER_WIDTH * FILTER_WIDTH} using integer division (floor)
+4. Stores the result as uint8 (values are automatically truncated/saturated to [0, 255])
 
-Border handling: Pixels outside the image boundary are treated as zero (zero-padding).
-Border pixels are normalized by dividing by the full filter area (9), NOT by the count
-of in-bounds pixels. For example, a pixel at the top-left corner (0, 0) has only 4
-valid neighbors; the other 5 window positions are zero. The sum of these 4+1=5 pixels
-is still divided by 9.
-
-Division and output: The sum is multiplied by 3641 (which is 1/9 in Q1.15 fixed-point
-format) and right-shifted by 15 bits, which is equivalent to integer division by 9 with
-truncation (floor). The result is then stored as uint8. Values are truncated (not rounded)
-and implicitly saturated to [0, 255] by the uint8 cast.
+Border pixels are divided by the full window size ({FILTER_WIDTH * FILTER_WIDTH}), not by the count
+of in-bounds pixels only.
 """
 
 inputs_info = [
@@ -56,36 +58,8 @@ inputs_info = [
 ]
 
 def behavioral(img_inp):
-    """
-    Pure numpy implementation of the 3x3 box filter.
-    
-    C++ implementation notes (from xf_box_filter.hpp, xFApplyMask3x3):
-    - Division method: sum * 3641 >> 15, which equals floor(sum / 9)
-    - Border normalization: always divide by 9 (full window), not by in-bounds pixel count
-    - Accumulator type: sum is computed as ap_int<20>, then multiplied and shifted
-    - Output saturation: truncated to uint8 (floor cast), auto-saturates on overflow
-    """
-    img = img_inp.reshape((HEIGHT, WIDTH)).astype(np.int32)
-    
-    # Zero-pad the image: 1 pixel on each side for a 3x3 filter
-    pad = FILTER_WIDTH // 2
-    padded = np.pad(img, pad, mode='constant', constant_values=0)
-    
-    out = np.zeros((HEIGHT, WIDTH), dtype=np.int32)
-    
-    # Apply the box filter: sum of 3x3 window divided by 9
-    for i in range(HEIGHT):
-        for j in range(WIDTH):
-            window = padded[i:i+FILTER_WIDTH, j:j+FILTER_WIDTH]
-            window_sum = window.sum()
-            # Mimic the C++ fixed-point arithmetic: multiply by 3641, then right-shift by 15
-            # This is equivalent to floor(sum / 9)
-            result = (window_sum * 3641) >> 15
-            out[i, j] = result
-    
-    # Clip to [0, 255] and cast to uint8 (mimics hardware saturation)
-    out = np.clip(out, 0, 255).astype(np.uint8)
-    
+    img = img_inp.reshape((128, 128))
+    out = cv2.boxFilter(img, -1, (3, 3), normalize=True, borderType=cv2.BORDER_CONSTANT)
     return out.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
