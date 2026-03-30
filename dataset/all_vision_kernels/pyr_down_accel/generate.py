@@ -9,11 +9,11 @@ OUT_HEIGHT = (HEIGHT + 1) >> 1   # = 64
 OUT_WIDTH  = (WIDTH  + 1) >> 1   # = 64
 # IN_TYPE = XF_8UC1, OUT_TYPE = XF_8UC1
 
-# Algorithm (from accel source / OpenCV pyrDown):
-#   1. Apply 5x5 Gaussian blur with replicate border on all 4 sides.
+# Algorithm (from accel source / Vitis pyrDown with XF_BORDER_CONSTANT):
+#   1. Apply 5x5 Gaussian blur with zero (constant) border on all 4 sides.
 #   2. Downsample by 2: take pixels at even rows and even columns
 # Division: integer sum rounded via (sum+128)>>8.
-# Border: replicate (edge) padding on all sides.
+# Border: zero (constant) padding on all sides.
 # Coefficients: standard separable Gaussian [1, 4, 6, 4, 1] / 16 per axis = /256 total.
 
 # XF_8UC1 -> ap_uint<8>, dtype: uint8
@@ -35,9 +35,8 @@ Parameters:
 
 The kernel applies the following steps:
 
-1. Convolve the input with a 5x5 Gaussian kernel using replicate (edge) border padding
-   on all 4 sides: the 2 rows/columns outside each edge are filled by replicating the
-   nearest edge row/column.
+1. Convolve the input with a 5x5 Gaussian kernel using zero (constant) border padding
+   on all 4 sides: the 2 rows/columns outside each edge are treated as zero.
 
        [1  4  6  4  1]
        [4 16 24 16  4]   / 256
@@ -73,7 +72,7 @@ inputs_info = [
 
 def behavioral(img_inp):
     img = img_inp.reshape((128, 128))
-    out = cv2.pyrDown(img, borderType=cv2.BORDER_REPLICATE)
+    out = cv2.pyrDown(img, borderType=cv2.BORDER_CONSTANT)
     return out.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)

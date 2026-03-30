@@ -44,10 +44,11 @@ Border handling uses zero-padding: pixels outside the image boundary are treated
 For each output pixel:
 1. Apply the Sobel X kernel to compute the raw horizontal gradient (range: -1020 to 1020)
 2. Apply the Sobel Y kernel to compute the raw vertical gradient (range: -1020 to 1020)
-3. Take the absolute value of each gradient
-4. Saturate to [0, 255] and store as uint8
+3. Clamp each signed gradient to [0, 255]: negative values become 0, values above 255 become 255
+4. Store as uint8
 
-The saturation clamps any values above 255 to 255.
+Note: negative gradient values are clamped to 0 (NOT absolute value). Only the positive
+portion of each gradient is retained.
 """
 
 inputs_info = [
@@ -83,8 +84,8 @@ def behavioral(img_inp):
     img = img_inp.reshape((128, 128))
     gx = cv2.Sobel(img, cv2.CV_16S, 1, 0, ksize=3, borderType=cv2.BORDER_CONSTANT)
     gy = cv2.Sobel(img, cv2.CV_16S, 0, 1, ksize=3, borderType=cv2.BORDER_CONSTANT)
-    gx_out = np.clip(np.abs(gx), 0, 255).astype(np.uint8)
-    gy_out = np.clip(np.abs(gy), 0, 255).astype(np.uint8)
+    gx_out = np.clip(gx, 0, 255).astype(np.uint8)
+    gy_out = np.clip(gy, 0, 255).astype(np.uint8)
     return gx_out.flatten(), gy_out.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)

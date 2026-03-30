@@ -89,8 +89,9 @@ def behavioral(img_in):
     mask = np.zeros((128, 128), dtype=np.uint8)
     for lo, hi in ranges:
         mask |= cv2.inRange(hsv, np.array(lo, dtype=np.uint8), np.array(hi, dtype=np.uint8))
-    # Morphology: erode -> dilate -> dilate -> erode with cross SE
-    se = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    # Morphology: erode -> dilate -> dilate -> erode with rectangular (all-ones) SE
+    # KERNEL_SHAPE=0 in xf_config_params.h => XF_SHAPE_RECT
+    se = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     mask = cv2.erode(mask, se, borderType=cv2.BORDER_CONSTANT, borderValue=255)
     mask = cv2.dilate(mask, se, borderType=cv2.BORDER_CONSTANT, borderValue=0)
     mask = cv2.dilate(mask, se, borderType=cv2.BORDER_CONSTANT, borderValue=0)

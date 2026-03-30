@@ -27,7 +27,7 @@ neighborhood centered on that pixel.
 
 For each output pixel at position (i, j):
 1. Extract a {WINDOW_SIZE}x{WINDOW_SIZE} window centered at (i, j)
-2. Border pixels use zero-padding (pixels outside the image are treated as 0)
+2. Border pixels use replicate border (edge pixels are repeated for out-of-bounds access)
 3. Sort all {WINDOW_SIZE * WINDOW_SIZE} values in the window
 4. Select the median value (middle value after sorting)
 5. Store the median as the output pixel value (uint8)
@@ -59,7 +59,7 @@ inputs_info = [
 
 def behavioral(img_in):
     img = img_in.reshape((128, 128))
-    padded = cv2.copyMakeBorder(img, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=0)
+    padded = cv2.copyMakeBorder(img, 1, 1, 1, 1, cv2.BORDER_REPLICATE)
     out = cv2.medianBlur(padded, 3)
     return out[1:-1, 1:-1].flatten()
 

@@ -9,13 +9,12 @@ OUT_HEIGHT = 2 * HEIGHT   # = 256
 OUT_WIDTH  = 2 * WIDTH    # = 256
 # IN_TYPE = XF_8UC1, OUT_TYPE = XF_8UC1
 
-# Algorithm (from accel source / OpenCV pyrUp):
+# Algorithm (from accel source / Vitis pyrUp with XF_BORDER_DEFAULT = XF_BORDER_REFLECT_101):
 #   1. Upsample by 2: create 2H x 2W zero array, copy input to even positions.
-#   2. Apply 5x5 Gaussian kernel scaled by 4 on the 2H x 2W upsampled image with mixed
-#      border: replicate top/left/right, zero bottom. (sum+32)>>6; cast to uint8 (wrap-around).
+#   2. Apply 5x5 Gaussian kernel scaled by 4 on the 2H x 2W upsampled image.
+#      Border: XF_BORDER_REFLECT_101 (same as OpenCV default / BORDER_REFLECT_101).
 #      kernel = [[1,4,6,4,1],...] / 64  (= [[1,4,6,4,1],...] * 4 / 256)
-#   Border on the upsampled image: replicate top/left/right, zero bottom.
-#   Output wraps around (no saturation) when result > 255 near replicated borders.
+#   cv2.pyrUp() uses XF_BORDER_REFLECT_101 by default, matching Vitis exactly.
 
 # XF_8UC1 -> ap_uint<8>, dtype: uint8
 function_signature = (
@@ -39,19 +38,16 @@ The kernel applies the following steps:
 1. Upsample by 2: create a {OUT_HEIGHT}x{OUT_WIDTH} array of zeros. Copy each input pixel
    inp[r][c] to out[2*r][2*c]. All odd-row or odd-column positions remain zero.
 
-2. Convolve the upsampled array with a 5x5 Gaussian kernel scaled by 4, using mixed border
-   on the 2H x 2W upsampled image:
-   - Top border: replicate row 0 of the upsampled image for the 2 rows above.
-   - Left and right borders: replicate the leftmost/rightmost column.
-   - Bottom border: zero-pad.
+2. Convolve the upsampled array with a 5x5 Gaussian kernel scaled by 4, using
+   reflect-101 (BORDER_REFLECT_101) border on the 2H x 2W upsampled image.
 
        [1  4  6  4  1]
        [4 16 24 16  4]   / 64
        [6 24 36 24  6]
        [4 16 24 16  4]
        [1  4  6  4  1]
-   The convolution sum is computed as (sum + 32) >> 6 and cast to uint8 with wrap-around
-   (no saturation). Near replicated borders, the sum can exceed 255 and wraps modulo 256.
+   The Vitis kernel uses XF_BORDER_DEFAULT = XF_BORDER_REFLECT_101, which matches
+   OpenCV's default border for cv2.pyrUp().
 """
 
 inputs_info = [

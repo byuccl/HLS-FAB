@@ -17,7 +17,8 @@ function_signature = (
 )
 
 description = f"""
-This HLS kernel computes a weighted sum of two grayscale images.
+This HLS kernel computes a weighted accumulation of two grayscale images using Q0.23
+fixed-point arithmetic, matching the Xilinx xf::cv::accumulateWeighted implementation.
 
 Parameters:
     img_in1: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values representing
@@ -27,20 +28,14 @@ Parameters:
     img_out: Pointer to a flat array of {HEIGHT * WIDTH} uint16 pixel values for
              the output image (same dimensions as inputs).
 
-The kernel computes the weighted sum using the formula:
-    img_out[i] = alpha * img_in1[i] + (1 - alpha) * img_in2[i]
+The kernel uses Q0.23 fixed-point arithmetic as follows (alpha = {ALPHA}):
+    alpha_fp  = (uint32_t)(alpha * ((2^23) - 1))   // truncated via ap_uint<24> cast
+    beta_fp   = ((2^23) - 1) - alpha_fp + 1
+    img_out[i] = (img_in1[i] * alpha_fp + img_in2[i] * beta_fp) >> 23
 
-Where alpha = {ALPHA} is a fixed compile-time constant.
-
-For each pixel:
-1. Multiply img_in1[i] by alpha ({ALPHA})
-2. Multiply img_in2[i] by (1 - alpha) ({1.0 - ALPHA})
-3. Add the two weighted values
-4. Truncate (floor) the result to the nearest integer and store as uint16
-
-The uint16 output type accommodates the full range of possible results. The computation
-uses floating-point arithmetic internally, then converts the final result to uint16 by
-truncation (floor cast).
+Both multiplications use 40-bit unsigned intermediate products before summing and
+right-shifting by 23. The result is stored as uint16 (no saturation needed since
+inputs are uint8 and weights sum to approximately 2^23).
 """
 
 inputs_info = [
@@ -75,9 +70,14 @@ inputs_info = [
 ]
 
 def behavioral(img_in1, img_in2):
-    a = img_in1.astype(np.float64)
-    b = img_in2.astype(np.float64)
-    return np.clip(0.76 * a + 0.24 * b, 0, 65535).astype(np.uint16)
+    # Exact Q0.23 fixed-point arithmetic matching xf::cv::accumulateWeighted
+    # ap_uint<24> temp = (ap_uint<24>)(alpha * ((1<<23) - 1))
+    alpha_fp = np.uint32(np.float32(ALPHA) * np.float32((1 << 23) - 1))
+    beta_fp  = np.uint32(((1 << 23) - 1) - alpha_fp + 1)
+    a = img_in1.astype(np.uint64)
+    b = img_in2.astype(np.uint64)
+    result = (a * np.uint64(alpha_fp) + b * np.uint64(beta_fp)) >> np.uint64(23)
+    return result.astype(np.uint16)
 
 examples = generate_examples(inputs_info=inputs_info)
 

@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 from hlsfab import PromptConstructor, generate_examples
 
 # --- Constants (from config/xf_config_params.h) ---
@@ -26,24 +25,21 @@ Parameters:
              the output image (same dimensions as input).
 
 The kernel computes each output pixel using the formula:
-    out[i] = saturate_cast<uint8>(abs(scale * img_in[i] + shift))
+    out[i] = saturate_cast<uint8>(scale * img_in[i] + shift)
 
 Where:
 - scale = {SCALE}
 - shift = {SHIFT}
-- abs() takes the absolute value
 - saturate_cast clamps the result to the range [0, 255]
 
 Processing steps for each pixel:
-1. Multiply input pixel by scale: temp = {SCALE} * pixel
-2. Add shift: temp = temp + {SHIFT}
-3. Take absolute value: temp = abs(temp)
-4. Saturate to [0, 255] and convert to uint8
+1. Multiply input pixel by scale (fixed-point: scale * 2^23): temp = {SCALE} * pixel
+2. Add shift (fixed-point: shift * 2^23): temp = temp + {SHIFT}
+3. Right-shift by 23 bits to recover the integer result
+4. Saturate to [0, 255] and store as uint8: values below 0 become 0, above 255 become 255
 
-The saturation ensures that:
-- Values less than 0 become 0
-- Values greater than 255 become 255
-- Values in [0, 255] are truncated (floor) to the nearest integer
+Note: The Vitis implementation does NOT apply absolute value. With scale={SCALE} and
+shift={SHIFT}, the result is always positive for uint8 inputs, so no clamping to 0 occurs.
 """
 
 inputs_info = [
@@ -68,8 +64,8 @@ inputs_info = [
 ]
 
 def behavioral(img_in):
-    img = img_in.reshape((128, 128))
-    out = cv2.convertScaleAbs(img, alpha=1.5, beta=10.0)
+    img = img_in.reshape((128, 128)).astype(np.float64)
+    out = np.clip(SCALE * img + SHIFT, 0, 255).astype(np.uint8)
     return out.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)

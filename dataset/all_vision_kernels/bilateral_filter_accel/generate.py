@@ -64,7 +64,7 @@ inputs_info = [
 
 def behavioral(img_in):
     img = img_in.reshape((128, 128))
-    out = cv2.bilateralFilter(img, 3, 10.0, 0.5)
+    out = cv2.bilateralFilter(img, 3, 10.0, 0.5, borderType=cv2.BORDER_REPLICATE)
     return out.flatten()
 
 
