@@ -253,8 +253,9 @@ def _compute_undistort_coords(cameraMatrix, distCoeffs, ir, rows, cols):
     # C cast (uint32_t)(float) truncates toward zero, then reinterpret as int32
     # For positive values: floor. For negative: truncate toward zero.
     # np.uint32(float) does the same truncation.
-    map_x_q = np.int32(np.uint32(u * 256.0))
-    map_y_q = np.int32(np.uint32(v * 256.0))
+    with np.errstate(invalid='ignore', over='ignore'):
+        map_x_q = np.int32(np.uint32(u * 256.0))
+        map_y_q = np.int32(np.uint32(v * 256.0))
 
     return map_x_q, map_y_q
 
@@ -531,7 +532,8 @@ def _stereo_bm(left_rect, right_rect, bm_state):
     num = (p_cost - n_cost) << 8
     denom = p_cost + n_cost - 2 * minsad + np.abs(p_cost - n_cost)
     # Avoid division by zero
-    delta = np.where(denom != 0, num // denom, 0).astype(np.int32)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        delta = np.where(denom != 0, num // denom, 0).astype(np.int32)
 
     # Output = (best_disparity * 256 + delta + 15) >> 4
     out_val = ((d_best * 256 + delta + 15) >> 4).astype(np.int32)

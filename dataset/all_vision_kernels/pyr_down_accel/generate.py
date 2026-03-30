@@ -1,5 +1,4 @@
 import numpy as np
-import cv2
 from hlsfab import PromptConstructor, generate_examples
 
 # --- Constants (from config/xf_config_params.h) ---
@@ -70,9 +69,21 @@ inputs_info = [
     },
 ]
 
+_GAUSS5 = np.array([
+    [ 1,  4,  6,  4,  1],
+    [ 4, 16, 24, 16,  4],
+    [ 6, 24, 36, 24,  6],
+    [ 4, 16, 24, 16,  4],
+    [ 1,  4,  6,  4,  1]], dtype=np.int32)
+
 def behavioral(img_inp):
-    img = img_inp.reshape((128, 128))
-    out = cv2.pyrDown(img, borderType=cv2.BORDER_CONSTANT)
+    from numpy.lib.stride_tricks import sliding_window_view
+    img = img_inp.reshape((HEIGHT, WIDTH)).astype(np.int32)
+    padded = np.pad(img, 2, mode='constant', constant_values=0)
+    windows = sliding_window_view(padded, (5, 5))  # (H, W, 5, 5)
+    acc = np.sum(windows * _GAUSS5, axis=(-2, -1)).astype(np.int32)
+    blurred = np.clip((acc + 128) >> 8, 0, 255).astype(np.uint8)
+    out = blurred[0::2, 0::2]
     return out.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
