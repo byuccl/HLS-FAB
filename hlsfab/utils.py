@@ -158,6 +158,7 @@ def generate_examples(inputs_info):
     # Combine the inputs and types into a single list
     examples = [example1, example2]
     return examples
+
 def generate_types(inputs):  
     """
     Generate comprehensive type information for a list of inputs/outputs,
