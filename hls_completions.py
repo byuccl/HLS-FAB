@@ -114,6 +114,10 @@ def process_kernel(kernel_object: HLSFAB, rag):
     # Use a feedback loop to iterate on a design n times
     for attempt in range(kernel_object._num_attempts):
         new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
+        data_file = f"{new_solution_path}/{kernel_object.kernel_name}_data.json"
+        if os.path.exists(data_file):
+            logger.info(f"Skipping {kernel_object.kernel_name} attempt {attempt+1} — results already exist")
+            continue
         os.makedirs(new_solution_path, exist_ok=True)
 
         logger.info(f"Kernel: {kernel_object.kernel_name} Attempt: {attempt+1}")
