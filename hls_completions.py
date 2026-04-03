@@ -227,6 +227,7 @@ if __name__ == "__main__":
     # Process each individual kernel through each model etc.
     for model in models:
         kernel_args = []
+        pathlib.Path(f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/logs/").mkdir(parents=True, exist_ok=True)
         with open (f"results/solutions/{args.hls_flow}/{rag_flag}/{model}/logs/timing.log", "w") as logfile:
             hlseval.write_table_header(logfile)
 
