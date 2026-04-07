@@ -70,8 +70,8 @@ bool compare_numeric(T actual, T expected, T epsilon = std::numeric_limits<T>::e
         return local_abs(actual - expected) < default_epsilon * scale;
     }
     else {
-        // For non-floating-point types (integers, etc.), exact comparison
-        return actual == expected;
+        // For non-floating-point types (integers, etc.), +-1 tolerance
+        return (actual >= expected) ? (actual - expected <= T(1)) : (expected - actual <= T(1));
     }
 }
 

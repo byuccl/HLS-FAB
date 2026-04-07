@@ -561,25 +561,41 @@ def run_csim(model_dir="./results/solutions/gpt-4o/axpy_int32/attempts_1", kerne
         if result_success:
             try:
                 logger.info("Running CSIM")
-                sim_result = subprocess.run(
-                    sim_cmd,
-                    capture_output=True,
-                    check=False,
-                    timeout=180,  # Timeout after 3 minutes
-                )
-                sim_stdout = sim_result.stdout.decode('utf-8', errors='replace')  
-                sim_stderr = sim_result.stderr.decode('utf-8', errors='replace') 
+                MAX_LOG_SIZE = 50 * 1024 * 1024  # 50 MB cap on CSIM output
+                LOG_CHECK_INTERVAL = 5  # Check log size every 5 seconds
+                csim_log_path = os.path.join(project_dir, "csim_output.log")
+                with open(csim_log_path, 'w') as log_file:
+                    proc = subprocess.Popen(
+                        sim_cmd,
+                        stdout=log_file,
+                        stderr=subprocess.STDOUT,
+                    )
+                    # Poll the process while monitoring log file size
+                    elapsed = 0
+                    while proc.poll() is None:
+                        try:
+                            proc.wait(timeout=LOG_CHECK_INTERVAL)
+                        except subprocess.TimeoutExpired:
+                            elapsed += LOG_CHECK_INTERVAL
+                            if elapsed >= 180:
+                                proc.kill()
+                                proc.wait()
+                                raise CsimTimeoutError(
+                                    f"CSIM timed out after 180 seconds."
+                                )
+                            log_size = os.path.getsize(csim_log_path)
+                            if log_size > MAX_LOG_SIZE:
+                                logger.warning(f"CSIM log exceeded {MAX_LOG_SIZE // (1024*1024)} MB ({log_size / (1024*1024):.1f} MB) — killing process.")
+                                proc.kill()
+                                proc.wait()
+                                raise CsimTimeoutError(
+                                    f"CSIM killed: log size exceeded {MAX_LOG_SIZE // (1024*1024)} MB — kernel likely spamming warnings."
+                                )
+                sim_result = subprocess.CompletedProcess(sim_cmd, proc.returncode)
                 csim_elapsed_time = dt.now() - csim_begin
                 return sim_result, csim_elapsed_time, var_metadata
-            except subprocess.TimeoutExpired as e:
-                logger.warning(f"Timeout occured: {e}")
-                # IMPORTANT: Access stdout and stderr from the exception object 'e'
-                # Decode them just like you would from the result object
-                sim_stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
-                sim_stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-                raise CsimTimeoutError(
-                    f"CSIM timed out after {e.timeout} seconds. Output: {sim_stdout}, Error: {sim_stderr}"
-                )
+            except CsimTimeoutError:
+                raise
             except Exception as e:
                 logger.error(f"An unexpected error occurred during CSIM: {e}")
                 csim_elapsed_time = dt.now() - csim_begin

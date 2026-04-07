@@ -283,7 +283,7 @@ def call_llm_api(coder, tools=None):
         body["max_tokens"] = 8000
     logger.debug(f"HLS CODER: API Request body: {json.dumps(body, indent=2)}")
 
-    response = requests.post(url=coder.url, json=body, headers=coder.headers) 
+    response = requests.post(url=coder.url, json=body, headers=coder.headers, timeout=120)
     # Log the raw response for debugging  
     logger.debug(f"API Response status: {response.status_code}")  
     try:  

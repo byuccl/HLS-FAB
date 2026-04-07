@@ -186,7 +186,6 @@ class PromptConstructor:
             # func = parsedcpp.functions[0]
             # Parse the function signature  
             result = parse_function_signature(function_signature)  
-            
             # Correctly assign the values from the dictionary  
             self.name = result['name']  
             self.parameters = result['parameters']  

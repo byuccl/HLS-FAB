@@ -28,14 +28,15 @@ def run_kernel_attempt(
     attempt: int, 
     rag: dict,
     prev_feedback: dict=None, 
+    skip_llm = False
     ) -> tuple :
 
     llm_elapsed_time = None
     dynamatic_elapsed_time = None
     csim_elapsed_time = None
     csynth_elapsed_time = None
-
-    llm_elapsed_time = kernel_object.llm_call(attempt, rag, feedback=prev_feedback)
+    if (not skip_llm):
+        llm_elapsed_time = kernel_object.llm_call(attempt, rag, feedback=prev_feedback)
 
 
     if kernel_object.hls_flow == "vitis":
@@ -114,11 +115,16 @@ def process_kernel(kernel_object: HLSFAB, rag):
     # Use a feedback loop to iterate on a design n times
     for attempt in range(kernel_object._num_attempts):
         new_solution_path = f"{kernel_object.solution_path}/attempts_{attempt+1}"
+        data_file = f"{new_solution_path}/{kernel_object.kernel_name}_data.json"
+        skip_llm = False
+        if os.path.exists(data_file):
+            logger.info(f"Skipping {kernel_object.kernel_name} attempt {attempt+1} — results already exist")
+            skip_llm = True
         os.makedirs(new_solution_path, exist_ok=True)
 
         logger.info(f"Kernel: {kernel_object.kernel_name} Attempt: {attempt+1}")
 
-        prev_ret_code, feedback = run_kernel_attempt(kernel_object, attempt, rag, feedback)
+        prev_ret_code, feedback = run_kernel_attempt(kernel_object, attempt, rag, feedback, skip_llm=skip_llm)
         logger.debug(feedback)
 
         if prev_ret_code == 0 and testbench_status == "success" and testbench_match_status == "match":
