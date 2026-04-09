@@ -120,6 +120,7 @@ def process_kernel(kernel_object: HLSFAB, rag):
         if os.path.exists(data_file):
             logger.info(f"Skipping {kernel_object.kernel_name} attempt {attempt+1} — results already exist")
             skip_llm = True
+            continue
         os.makedirs(new_solution_path, exist_ok=True)
 
         logger.info(f"Kernel: {kernel_object.kernel_name} Attempt: {attempt+1}")
