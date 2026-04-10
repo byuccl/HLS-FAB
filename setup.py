@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='hlseval',
+    name='hlsfab',
     version='0.1',
     packages=find_packages(),
     include_package_data=True,
@@ -14,6 +14,7 @@ setup(
         "llama_index", 
         "ml_dtypes",
         "scipy",
-        'tiktoken'
+        'tiktoken',
+        "opencv-python"
     ]
 )

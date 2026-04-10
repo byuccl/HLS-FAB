@@ -1,5 +1,5 @@
 import numpy as np
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 # Constants
 VECTOR_SIZE = 256

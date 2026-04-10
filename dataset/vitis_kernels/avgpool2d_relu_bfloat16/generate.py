@@ -1,6 +1,6 @@
 import numpy as np
 from ml_dtypes import bfloat16
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 # Constants for the input and output dimensions
 input_rows = 32

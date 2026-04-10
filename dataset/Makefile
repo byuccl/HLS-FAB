@@ -6,11 +6,11 @@ kernels:
 	./generate_kernels.sh
 
 dataset:
-	python3 generate_hlseval.py
+	python3 generate_hlsfab.py
 tests: 
 	python3 generate_tests.py $(WORKFLOW)
 clean:
-	rm -f hlseval.jsonl
+	rm -f hlsfab.jsonl
 	rm -f kernels/*/kernel.json
 	rm -rf kernels/*/__pycache__/
 	rm -f kernel_list.txt

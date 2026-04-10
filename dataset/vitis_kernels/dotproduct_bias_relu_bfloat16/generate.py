@@ -1,6 +1,11 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
 from ml_dtypes import bfloat16
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 # Constants
 vector_size = 64

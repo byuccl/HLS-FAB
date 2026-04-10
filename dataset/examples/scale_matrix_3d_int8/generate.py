@@ -1,6 +1,11 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
 import os
-from hlseval import PromptConstructor, generate_types, generate_examples
+from hlsfab import PromptConstructor, generate_types, generate_examples
 
 # Matrix dimensions    
 matrix_height = 32    
