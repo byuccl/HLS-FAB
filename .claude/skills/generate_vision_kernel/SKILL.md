@@ -10,18 +10,31 @@ Each `generate.py` is part of the HLS-FAB dataset and describes a kernel's funct
 
 ---
 
-## Path Configuration
+## Path Resolution (MUST run before any other step)
 
-Before using this skill, read the config file `vision_skill_paths.cfg` in the project root to resolve two external paths:
+Before doing anything else, resolve the two required external paths. Check **environment variables first**, then fall back to the **config file**.
 
-- `VITIS_LIBRARIES` — root of the Vitis Libraries repository (contains `vision/L1/examples/`, etc.)
-- `VITIS_HLS` — root of the Vitis HLS installation (contains `bin/vitis_hls`)
+1. Check if the environment variables `VITIS_LIBRARIES` and `VITIS_HLS` are set:
+   ```bash
+   echo "VITIS_LIBRARIES=${VITIS_LIBRARIES:-NOT SET}"
+   echo "VITIS_HLS=${VITIS_HLS:-NOT SET}"
+   ```
 
-All other paths are relative to the HLS-FAB project root:
+2. For any variable that is **NOT SET**, read `vision_skill_paths.cfg` in the repository root and parse the values from there. The config file format is `KEY=VALUE` (lines starting with `#` are comments).
+
+3. If a path is neither in the environment nor in the config file, **stop and ask the user** to either:
+   - Set the environment variable (`export VITIS_LIBRARIES=/path/to/Vitis_Libraries`), or
+   - Edit `vision_skill_paths.cfg` in the repository root (copy from `vision_skill_paths.cfg.example` if it doesn't exist).
+
+4. **Validate** that the resolved paths exist before proceeding. If they don't, tell the user which path is invalid.
+
+Use these resolved values everywhere this skill references `${VITIS_LIBRARIES}` or `${VITIS_HLS}`.
+
+All other paths are relative to the HLS-FAB project root (`${REPO_ROOT}`, i.e. the current working directory):
 
 - **Kernel source**: `${VITIS_LIBRARIES}/vision/L1/examples/<kernel>/`
-- **Output**: `dataset/kernels/<top_function_name>/generate.py`
-- **Python venv**: `venv/bin/python3`
+- **Output**: `${REPO_ROOT}/dataset/kernels/<top_function_name>/generate.py`
+- **Python venv**: `${REPO_ROOT}/venv/bin/python3`
 
 ---
 
