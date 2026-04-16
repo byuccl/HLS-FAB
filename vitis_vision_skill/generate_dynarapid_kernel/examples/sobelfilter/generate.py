@@ -32,20 +32,20 @@ FILTER_WIDTH = 3
 
 function_signature = (
     "void sobel_accel("
-    "uint8_t* img_inp, "
-    "int16_t* img_out1, "
-    "int16_t* img_out2)"
+    "uint32_t* img_inp, "
+    "int32_t* img_out1, "
+    "int32_t* img_out2)"
 )
 
 description = f"""
 This HLS kernel applies a Sobel edge detection filter to a grayscale image.
 
 Parameters:
-    img_inp:  Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values
-              representing a {HEIGHT}x{WIDTH} grayscale input image (row-major).
-    img_out1: Pointer to a flat array of {HEIGHT * WIDTH} int16 values containing
-              the horizontal gradient (Gx) of the input image.
-    img_out2: Pointer to a flat array of {HEIGHT * WIDTH} int16 values containing
+    img_inp:  Pointer to a flat array of {HEIGHT * WIDTH} uint32 pixel values
+              representing a {HEIGHT}x{WIDTH} grayscale input image (row-major). Range from 0-255
+    img_out1: Pointer to a flat array of {HEIGHT * WIDTH} int32 values containing
+              the horizontal gradient (Gx) of the input image. 
+    img_out2: Pointer to a flat array of {HEIGHT * WIDTH} int32 values containing
               the vertical gradient (Gy) of the input image.
 
 The kernel computes the horizontal gradient (Gx) and vertical gradient (Gy) of the
@@ -109,8 +109,8 @@ def behavioral(img_inp):
     img = img_inp.reshape((HEIGHT, WIDTH)).astype(np.float32)
     gx = _convolve2d(img, _SOBEL_X)
     gy = _convolve2d(img, _SOBEL_Y)
-    gx_int16 = np.clip(gx, -32768, 32767).astype(np.int16)
-    gy_int16 = np.clip(gy, -32768, 32767).astype(np.int16)
+    gx_int16 = np.clip(gx, -32768, 32767).astype(np.int32)
+    gy_int16 = np.clip(gy, -32768, 32767).astype(np.int32)
     # Return a TUPLE: one flat array per "out" entry in inputs_info (in order).
     return gx_int16.flatten(), gy_int16.flatten()
 

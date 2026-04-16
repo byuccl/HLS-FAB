@@ -26,27 +26,27 @@ GAMMA = 0.0
 
 function_signature = (
     "void add_weighted_accel("
-    "uint8_t* img_in1, "
-    "uint8_t* img_in2, "
-    "uint8_t* img_out)"
+    "uint32_t* img_in1, "
+    "uint32_t* img_in2, "
+    "uint32_t* img_out)"
 )
 
 description = f"""
 This HLS kernel computes a weighted blend of two grayscale images.
 
 Parameters:
-    img_in1: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values
+    img_in1: Pointer to a flat array of {HEIGHT * WIDTH} uint32 values representing 8bit pixel values
              representing the first {HEIGHT}x{WIDTH} grayscale input image (row-major).
-    img_in2: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values
+    img_in2: Pointer to a flat array of {HEIGHT * WIDTH} uint32 values representing 8bit pixel values
              representing the second {HEIGHT}x{WIDTH} grayscale input image (row-major).
-    img_out: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values for
+    img_out: Pointer to a flat array of {HEIGHT * WIDTH} uint32 values representing 8bit pixel values for
              the blended output image (same dimensions as inputs).
 
 Each output pixel is computed as:
     out = clip(alpha * in1 + beta * in2 + gamma, 0, 255)
 
 where alpha={ALPHA}, beta={BETA}, gamma={GAMMA} are fixed compile-time constants.
-The intermediate result is computed in float32, then truncated (floor cast) to uint8.
+The intermediate result is computed in float32, then truncated (floor cast) to uint32.
 Values below 0 are clamped to 0; values above 255 are clamped to 255.
 """
 
@@ -58,7 +58,7 @@ inputs_info = [
         "array_dimension": 2,
         "shape": (HEIGHT, WIDTH),
         "total_elements": HEIGHT * WIDTH,
-        "dtype": "uint8",
+        "dtype": "uint32",
         "iotype": "in",
         "min": 0,
         "max": 255,
@@ -68,7 +68,7 @@ inputs_info = [
         "array_dimension": 2,
         "shape": (HEIGHT, WIDTH),
         "total_elements": HEIGHT * WIDTH,
-        "dtype": "uint8",
+        "dtype": "uint32",
         "iotype": "in",
         "min": 0,
         "max": 255,
@@ -78,7 +78,7 @@ inputs_info = [
         "array_dimension": 2,
         "shape": (HEIGHT, WIDTH),
         "total_elements": HEIGHT * WIDTH,
-        "dtype": "uint8",
+        "dtype": "uint23",
         "iotype": "out",
     },
 ]
@@ -88,7 +88,7 @@ def behavioral(img_in1, img_in2):
     a = img_in1.reshape((HEIGHT, WIDTH)).astype(np.float32)
     b = img_in2.reshape((HEIGHT, WIDTH)).astype(np.float32)
     # Weighted blend: alpha*a + beta*b + gamma, clamped to [0, 255], truncated to uint8
-    out = np.clip(ALPHA * a + BETA * b + GAMMA, 0, 255).astype(np.uint8)
+    out = np.clip(ALPHA * a + BETA * b + GAMMA, 0, 255).astype(np.uint32)
     return out.flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
