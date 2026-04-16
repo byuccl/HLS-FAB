@@ -1,16 +1,21 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 # Constants
 num_values = 1024
 
-function_signature = "void inverse_uint8(ap_int<8> *in_buffer, ap_int<8>* out_buffer)"
+function_signature = "void inverse_uint8(ap_uint<8> *in_buffer, ap_uint<8>* out_buffer)"
 
 description = f"""
 This HLS kernel inverts all input values of a buffer containing a uint8 array.
-Parameters to the function include two ap_int<8> pointers:
-    The first pointer points to the start of a {num_values}-element array of ap_int<8> values to be used as input data.
-    The second pointer also points to the start of a {num_values}-element array of ap_int<8> values to be modified and viewed as the output to the function.
+Parameters to the function include two ap_uint<8> pointers:
+    The first pointer points to the start of a {num_values}-element array of ap_uint<8> values to be used as input data.
+    The second pointer also points to the start of a {num_values}-element array of ap_uint<8> values to be modified and viewed as the output to the function.
 The kernel computes the inverse of each element in the input buffer by subtracting the element from 255 and stores the result in the output buffer.
 """
 

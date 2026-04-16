@@ -34,6 +34,40 @@ docker build -t my-llvm6-dynarapid-image .
 docker run -v <Path to hlseval reposotory>/hlseval:/mount --name dynarapid_container -t my-llvm6-dynarapid-image
 ```
 
+### Generate Vision Kernel Dataset (Claude Code Skill)
+The `/generate_vision_kernel` skill uses Claude Code to generate `generate.py` files for kernels from the [Xilinx Vitis Vision Library](https://github.com/xilinx/vitis_libraries). Each `generate.py` describes a kernel's function signature, I/O buffers, a pure-numpy behavioral model, and example data for AI-assisted HLS code generation.
+
+#### Additional prerequisites
+- Clone the Vitis Libraries repository:
+```
+git clone https://github.com/xilinx/vitis_libraries.git
+```
+- Have [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
+
+#### Configure paths
+The skill needs to know where Vitis Libraries and Vitis HLS are on your system. You can configure this in one of two ways:
+
+**Option A — Environment variables** (take priority):
+```
+export VITIS_LIBRARIES=/path/to/Vitis_Libraries
+export VITIS_HLS=/path/to/Vitis_HLS/2024.2
+```
+
+**Option B — Config file**:
+```
+cp vision_skill_paths.cfg.example vision_skill_paths.cfg
+# Edit vision_skill_paths.cfg with your paths
+```
+
+#### Usage
+From within Claude Code, run the skill with a kernel name, `all`, or a path to a list file:
+```
+/generate_vision_kernel boxfilter
+/generate_vision_kernel all
+/generate_vision_kernel @kernels_todo.txt
+```
+Generated files are saved to `dataset/kernels/<top_function_name>/generate.py`.
+
 ### Run Vitis Completions
 Sample of run command:\
 `make run_vitis_completions LOG=DEBUG ATTEMPTS=5`\

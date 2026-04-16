@@ -1,0 +1,5 @@
+{
+  "name": "generate_dynarapid_vision_kernel",
+  "description": "Generates a generate.py file for one, a listed subset, or all Vitis Vision Library L1 kernels adapted for DynaRapid HLS (int32-only), compatible with the HLS-FAB dataset format.",
+  "trigger": "/generate_dynarapid_vision_kernel"
+}

@@ -1,6 +1,11 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
 from ml_dtypes import bfloat16
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 num_values = 256  # Length of the input vector
 
@@ -37,23 +42,7 @@ inputs_info = [
 
 def behavioral(input_buffer):
     x = input_buffer.astype(np.float32)
-    xi = np.trunc(x).astype(np.int32)
-    floor_x = np.where(
-        x >= 0,
-        xi,
-        np.where(x == xi, xi, xi - 1)
-    )
-    frac = x - floor_x.astype(np.float32)
-    even_floor = (floor_x & 1) == 0
-    r = np.where(
-        frac < 0.5,
-        floor_x,
-        np.where(
-            frac > 0.5,
-            floor_x + 1,
-            np.where(even_floor, floor_x, floor_x + 1)
-        )
-    )
+    r = np.trunc(x + np.sign(x) * 0.5)
     r = np.clip(r, -128, 127)
     return r.astype(np.int8)
 

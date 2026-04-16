@@ -1,5 +1,10 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 # Constants
 matrix_size = 16
@@ -50,7 +55,7 @@ def behavioral(a, b):
     # Matrix multiplication for int8, result clamped to int8.
     a = a.reshape((matrix_size, matrix_size))
     b = b.reshape((matrix_size, matrix_size))
-    res = np.zeros((matrix_size,matrix_size, np.int32))
+    res = np.zeros((matrix_size,matrix_size), np.int32)
     res = np.matmul(a.astype(np.int32), b.astype(np.int32))
     res = np.clip(res, -128, 127).astype(np.int8)
     return res.flatten()

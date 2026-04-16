@@ -1,6 +1,6 @@
 import numpy as np
 from ml_dtypes import bfloat16
-from hlseval import PromptConstructor, generate_types, generate_examples
+from hlsfab import PromptConstructor, generate_types, generate_examples
 
 vector_size = 64  # Size of the input vectors
 

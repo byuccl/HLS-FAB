@@ -1,5 +1,10 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 # Constants
 vector_size = 256
@@ -16,8 +21,6 @@ This HLS kernel performs a 1D padding operation on an input vector of 32-bit int
 Parameters to the function include:
     - A pointer to the input vector of {vector_size} int32_t values.
     - A pointer to the output padded vector of int32_t values.
-    - An integer pad_size indicating the number of padding elements to add on each side of the input vector.
-    - An integer pad_value specifying the value to use for padding.
 The output padded vector will have a length of {padded_length}, with the input vector centered and surrounded by pad_value.
 """
 

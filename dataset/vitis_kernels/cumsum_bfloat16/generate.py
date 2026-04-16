@@ -1,6 +1,11 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc.  All rights reserved.
+#
+# Author: Preston Walker, AMD
+# SPDX-License-Identifier: MIT
+
 import numpy as np
 from ml_dtypes import bfloat16
-from hlseval import PromptConstructor, generate_examples
+from hlsfab import PromptConstructor, generate_examples
 
 num_values = 256  # Length of the input vector
 
@@ -36,7 +41,7 @@ inputs_info = [
 ]
 
 def behavioral(input_buffer):
-    return np.cumsum(input_buffer.astype(np.float32)).astype(bfloat16)
+    return np.cumsum(input_buffer.astype(bfloat16)).astype(bfloat16)
 
 examples = generate_examples(inputs_info=inputs_info)
 
