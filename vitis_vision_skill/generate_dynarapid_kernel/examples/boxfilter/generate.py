@@ -25,18 +25,18 @@ WIDTH = 128
 FILTER_WIDTH = 3  # FILTER_SIZE_3=1 -> FILTER_WIDTH 3
 
 function_signature = (
-    "void boxfilter_accel("
-    "uint8_t* img_inp, "
-    "uint8_t* img_out)"
+    "void boxfilter("
+    "uint32_t* img_inp, "
+    "uint32_t* img_out)"
 )
 
 description = f"""
 This HLS kernel applies a box filter (mean filter) to a grayscale image.
 
 Parameters:
-    img_inp: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values representing
+    img_inp: Pointer to a flat array of {HEIGHT * WIDTH} uint32 values representing 8bit pixel values representing
              a {HEIGHT}x{WIDTH} grayscale input image (row-major, one byte per pixel).
-    img_out: Pointer to a flat array of {HEIGHT * WIDTH} uint8 pixel values for the
+    img_out: Pointer to a flat array of {HEIGHT * WIDTH} uint32 values representing 8bit pixel values for the
              filtered output image (same dimensions as input).
 
 The kernel wraps each pixel value in an xf::cv::Mat, applies a {FILTER_WIDTH}x{FILTER_WIDTH}
@@ -49,7 +49,7 @@ inputs_info = [
         "array_dimension": 2,
         "shape": (HEIGHT, WIDTH),
         "total_elements": HEIGHT * WIDTH,
-        "dtype": "uint8",
+        "dtype": "uint32",
         "iotype": "in",
         "min": 0,
         "max": 255,
@@ -59,7 +59,7 @@ inputs_info = [
         "array_dimension": 2,
         "shape": (HEIGHT, WIDTH),
         "total_elements": HEIGHT * WIDTH,
-        "dtype": "uint8",
+        "dtype": "uint32",
         "iotype": "out",
     },
 ]
@@ -74,7 +74,7 @@ def behavioral(img_inp):
     for i in range(HEIGHT):
         for j in range(WIDTH):
             out[i, j] = padded[i:i+FILTER_WIDTH, j:j+FILTER_WIDTH].mean()
-    return out.astype(np.uint8).flatten()
+    return out.astype(np.uint32).flatten()
 
 examples = generate_examples(inputs_info=inputs_info)
 

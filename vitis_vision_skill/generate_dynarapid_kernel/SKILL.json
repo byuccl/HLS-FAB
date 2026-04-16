@@ -1,5 +1,5 @@
 {
-  "name": "generate_dynarapid_vision_kernel",
+  "name": "generate_dynarapid_kernel",
   "description": "Generates a generate.py file for a given Dynarapid Vision Library L1 kernel, compatible with the HLS-FAB dataset format.",
   "trigger": "/generate_dynarapid_vision_kernel"
 }

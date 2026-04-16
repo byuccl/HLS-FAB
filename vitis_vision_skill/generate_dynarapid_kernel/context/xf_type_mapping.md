@@ -1,7 +1,9 @@
-# Vitis Vision XF Type to NumPy Mapping
+# Vitis Vision XF Type to NumPy Mapping (for Dynarapid)
 
 This reference table maps Vitis Vision `XF_*` pixel types (used in `xf_config_params.h`)
-to their numpy equivalents for use in `inputs_info` and `behavioral()`.
+to their container types for use in `inputs_info` and function signatures in Dynarapid kernels.
+
+**Important for Dynarapid:** The **function signature and inputs_info** use container types (`int32_t*` or `uint32_t*`), while the **behavioral function** casts to/from the original Vitis pixel types internally. See `conversion_from_vision.md` for the container approach.
 
 ## Pixel Type Mapping
 
@@ -65,3 +67,43 @@ For combined multi-output (e.g., Sobel Gx + Gy):
 "total_elements": 2 * HEIGHT * WIDTH,
 "array_dimension": 3,
 ```
+
+---
+
+## Dynarapid: Container Types in Signature and inputs_info
+
+**Function signature (int32_t or uint32_t container):**
+```python
+function_signature = "void boxfilter_accel(int32_t* img_inp, int32_t* img_out)"
+# OR
+function_signature = "void boxfilter_accel(uint32_t* img_inp, uint32_t* img_out)"
+```
+
+**inputs_info (matches container type):**
+```python
+inputs_info = [
+    {
+        "name": "img_inp",
+        "dtype": "int32",      # Matches int32_t* signature (or "uint32" for uint32_t*)
+        ...
+    },
+    {
+        "name": "img_out",
+        "dtype": "int32",      # Matches int32_t* signature (or "uint32" for uint32_t*)
+        ...
+    },
+]
+```
+
+**behavioral() (casts to/from original pixel type):**
+```python
+def behavioral(img_inp):
+    # Cast from container type (int32/uint32) to original Vitis pixel type
+    img = img_inp.reshape((HEIGHT, WIDTH)).astype(np.uint8)  # Original type from XF_8UC1
+    # ... process using original pixel type (uint8) ...
+    return out.astype(np.uint8).flatten()  # Cast back via container if needed
+```
+
+The function signature and inputs_info use container types (`int32_t*` or `uint32_t*`) because Dynarapid requires uniform pointer types. The behavioral function casts to the original Vitis pixel type (uint8, int16, etc.) for processing, which is the internal logic. This lets Dynarapid work with Vitis Vision kernels while maintaining the correct pixel value ranges and semantics.
+
+For more details, see `conversion_from_vision.md`.
