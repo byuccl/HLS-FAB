@@ -6,15 +6,16 @@
 - Have Vitis installed and sourced (We use version 2024.2)
 - Set api_key environment variable:
 `export OPENROUTER_API_KEY=<Add API Key>`
+`export OPENAI_API_KEY=<OPENAI KEY>` This is if you would like to use any GPT model
 
 ### Clone and prepare the repo 
 ```
-git clone git@github.com:Preston-Walker/hlseval.git
-cd hlseval
-python3.10 -m venv venv
+git clone git@github.com:Preston-Walker/HLS-FAB.git
+cd HLF-FAB
+python3 -m venv venv
 source venv/bin/activate
 pip install -e .
-bash build_rag_dir.sh
+<!-- bash build_rag_dir.sh -->
 ```
 
 ### Prep for run
@@ -70,15 +71,17 @@ Generated files are saved to `dataset/kernels/<top_function_name>/generate.py`.
 
 ### Run Vitis Completions
 Sample of run command:\
-`make run_vitis_completions LOG=DEBUG ATTEMPTS=5`\
+`make run_vitis_completions LOG=DEBUG N=5 K=1`\
 Options:
 - `LOG` option: Allows you to set the logging level of the ouput log file. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-- `ATTEMPTS` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `ATTEMPTS` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
+- `N` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `N` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
+- `K` option: Allows you to determine the number of independent runs to do sequentially. Setting this to `2` would run N number of feedback attempts 2 times. 
 
 ### Run DynaRapid Completions
 Sample of run command:\
-`make run_dynarapid_completions LOG=DEBUG ATTEMPTS=4 RAPIDWRIGHT=TRUE`
+`make run_dynarapid_completions LOG=DEBUG N=4 RAPIDWRIGHT=TRUE`
 Options:
 - `LOG` option: Allows you to set the logging level of the ouput log file. Options: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-- `ATTEMPTS` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `ATTEMPTS` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
+- `N` option: Allows you to determine the number of generation attempts per kernel. Setting this to `1` would make an LLM call for each kernel without incorporating feedback. Setting `N` to a value of `2` or more will incorporate a feedback loop where the results from each attempt are passed back to the LLM to improve upon the result each time.
+- `K` option: Allows you to determine the number of independent runs to do sequentially. Setting this to `2` would run N number of feedback attempts 2 times. 
 - `RAPIDWRIGHT` option: If omitted, or set to `FALSE`, Dynamatic will run without RapidWright, resulting in a `.dot` file, but no placed and routed circut. Adding the `DYNAMATIC` option and setting it to anything other than `FALSE` will run both Dynamatic and RapidWright. The value `TRUE` is used here for clarity.

@@ -10,11 +10,9 @@ setup(
         "openai",
         "numpy",
         "requests",
-        "torch",
         "llama_index", 
         "ml_dtypes",
         "scipy",
-        'tiktoken',
-        "opencv-python"
+        'tiktoken'
     ]
 )
