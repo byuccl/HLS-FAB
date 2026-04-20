@@ -1,0 +1,17 @@
+# Vision Kernel Skill — External Path Configuration
+#
+# Copy this file to vision_skill_paths.cfg and set the paths for your system:
+#   cp vision_skill_paths.cfg.example vision_skill_paths.cfg
+#
+# Alternatively, you can set VITIS_LIBRARIES and VITIS_HLS as environment variables
+# instead of editing this file. Environment variables take priority over this config.
+#   export VITIS_LIBRARIES=/path/to/Vitis_Libraries
+#   export VITIS_HLS=/path/to/Vitis_HLS/2024.2
+
+# Path to the Vitis Libraries repository root (contains vision/L1/examples/, etc.)
+# Clone from: https://github.com/Xilinx/Vitis_Libraries
+VITIS_LIBRARIES=
+
+# Path to the Vitis HLS installation directory
+# (contains bin/vitis_hls)
+VITIS_HLS=
