@@ -96,6 +96,26 @@ After all kernels are processed, print a summary: total processed, skipped, skip
 
 Follow these steps for every kernel:
 
+### Step 0 — Check for existing Vitis generate.py (shortcut)
+
+Before reading C++ source from scratch, check if a Vitis HLS `generate.py` already exists:
+
+```
+${REPO_ROOT}/dataset/all_vision_kernels/<top_function_name>_accel/generate.py
+```
+
+(or similar name variants — check both `<kernel>_accel` and `<top_function>` patterns.)
+
+If found, **use it as the starting point**: the `behavioral()`, `description`, `inputs_info`, and algorithm details are already implemented. The DynaRapid adaptation is then mechanical:
+1. Change all `dtype` fields from `"uint8"` / `"int16"` etc. to `"int32"`
+2. Change pointer types in `function_signature` from `ap_uint<N>*` to `int32_t*`
+3. Add `_int32` suffix to the function name
+4. Change numpy casts from `.astype(np.uint8)` to `.astype(np.int32)`
+5. Adjust `min`/`max` ranges if needed (keep the logical pixel range, e.g. 0–255)
+6. Optionally reduce `HEIGHT`/`WIDTH` for DynaRapid-friendly sizes (e.g. 128x128)
+
+This is much faster and more reliable than reverse-engineering from C++ source.
+
 ### Step 1 — Read the kernel source files
 
 For a kernel named `<kernel>`, read all of the following files (they may not all exist, use what is available):
