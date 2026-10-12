@@ -71,6 +71,11 @@ bool compare_numeric(T actual, T expected, T epsilon = std::numeric_limits<T>::e
     }
     else {
         // For non-floating-point types (integers, etc.), +-1 tolerance
+        // TODO: this was added after the NPUEval results were gathered (which used an exact-match
+        // criterion) to accommodate the Vitis Vision dataset's multi-step kernels. It is NOT
+        // dataset-aware and currently applies to all integer outputs, including NPUEval. If NPUEval
+        // needs to go back to strict exact-match, this must be changed manually (e.g. by passing
+        // epsilon=0 explicitly for that dataset, or adding dataset-specific dispatch).
         return (actual >= expected) ? (actual - expected <= T(1)) : (expected - actual <= T(1));
     }
 }
